@@ -57,28 +57,4 @@ export namespace CourseHelpers {
 		case 3: return distance;
 		}
 	}
-
-	export function isUphill(course: CourseData, pos: number) {
-		for (var i = 0; i < course.slopes.length; ++i) {
-			const slope = course.slopes[i];
-			if (pos >= slope.start && pos <= slope.start + slope.length && slopePer(course, i) > 1.0) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	export function posToSlopeIdx(course: CourseData, pos: number) {
-		for (var i = 0; i < course.slopes.length; ++i) {
-			const slope = course.slopes[i];
-			if (pos >= slope.start && pos <= slope.start + slope.length) {
-				return i;
-			}
-		}
-		return -1;
-	}
-
-	export function slopePer(course: CourseData, slopeIdx: number) {
-		return Math.tan(course.slopes[slopeIdx].slope / 10000 * Math.PI / 180.0) * 100.0;
-	}
 }

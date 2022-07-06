@@ -115,7 +115,7 @@ export class RaceIntegrator {
 		this.hillEnd = this.course.slopes.map(s => s.start + s.length).reverse();
 		this.hillIdx = -1;
 		if (this.hillStart.length > 0 && this.hillStart[this.hillStart.length - 1] == 0) {
-			if (CourseHelpers.slopePer(this.course, 0) > 1.0) {
+			if (this.course.slopes[0].slope > 0) {
 				this.hillIdx = 0;
 			} else {
 				this.hillEnd.pop();
@@ -164,7 +164,7 @@ export class RaceIntegrator {
 			this.targetSpeed += this.activeSpeedSkills.reduce((a,b) => a + b.skill.modifier, 0);
 		}
 		if (this.hillIdx != -1) {
-			this.targetSpeed -= CourseHelpers.slopePer(this.course, this.hillIdx) * 200 / this.horse.power;
+			this.targetSpeed -= this.course.slopes[this.hillIdx].slope / 10000 * 200 / this.horse.power;
 		}
 	}
 
@@ -185,7 +185,7 @@ export class RaceIntegrator {
 
 	updateHills() {
 		if (this.hillIdx == -1 && this.hillStart.length > 0 && this.pos >= this.hillStart[this.hillStart.length - 1]) {
-			if (CourseHelpers.slopePer(this.course, this.nHills - this.hillStart.length) > 1.0) {
+			if (this.course.slopes[this.nHills - this.hillStart.length].slope > 0) {
 				this.hillIdx = this.nHills - this.hillStart.length;
 			} else {
 				this.hillEnd.pop();

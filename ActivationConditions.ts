@@ -350,7 +350,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	down_slope_random: random({
 		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
 			assert(one == 1, 'must be down_slope_random==1');
-			const slopes = course.slopes.filter((_,i) => CourseHelpers.slopePer(course, i) < -1.0).map(s => new Region(s.start, s.start + s.length));
+			const slopes = course.slopes.filter(s => s.slope < 0).map(s => new Region(s.start, s.start + s.length));
 			return regions.rmap(r => slopes.map(s => r.intersect(s)));
 		}
 	}),
@@ -431,10 +431,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			// (sometimes?) sorted first by uphill/downhill and then by start. They should be sorted when the course is loaded.
 			assert(CourseHelpers.isSortedByStart(course.slopes), 'course slopes must be sorted by slope start');
 			var lastEnd = 0;
-			const slopes = course.slopes.filter((s,i) => {
-				const slopePer = CourseHelpers.slopePer(course, i);
-				return (slopeType != 2 && slopePer > 1.0) || (slopeType != 1 && slopePer < -1.0);
-			});
+			const slopes = course.slopes.filter(s => (slopeType != 2 && s.slope > 0) || (slopeType != 1 && s.slope < 0));
 			const slopeR = slopeType == 0 ? slopes.map(s => {
 				const r = new Region(lastEnd, s.start);
 				lastEnd = s.start + s.length;
@@ -449,7 +446,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	up_slope_random: random({
 		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
 			assert(one == 1, 'must be up_slope_random==1');
-			const slopes = course.slopes.filter((_,i) => CourseHelpers.slopePer(course, i) > 1.0).map(s => new Region(s.start, s.start + s.length));
+			const slopes = course.slopes.filter(s => s.slope > 0).map(s => new Region(s.start, s.start + s.length));
 			return regions.rmap(r => slopes.map(s => r.intersect(s)));
 		}
 	})
