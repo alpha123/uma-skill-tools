@@ -414,6 +414,12 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
+	rotation: asap({
+		filterEq(regions: RegionList, rotation: number, course: CourseData, _: HorseParameters) {
+			CourseHelpers.assertIsOrientation(rotation);
+			return course.turn == rotation ? regions : new RegionList();
+		}
+	}),
 	running_style: asap({
 		filterEq(regions: RegionList, strategy: number, _: CourseData, horse: HorseParameters) {
 			StrategyHelpers.assertIsStrategy(strategy);

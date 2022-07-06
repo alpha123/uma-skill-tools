@@ -1,11 +1,13 @@
 export type Phase = 0 | 1 | 2 | 3;
 export const enum Surface { Turf, Dirt }
 export const enum DistanceType { Short = 1, Mile, Mid, Long }
+export const enum Orientation { Clockwise = 1, Counterclockwise }
 
 export interface CourseData {
 	distance: number
 	distanceType: DistanceType
 	surface: Surface
+	turn: Orientation
 	corners: {start: number, length: number}[]
 	straights: {start: number, end: number}[]
 	slopes: {start: number, length: number, slope: number}[]
@@ -23,6 +25,12 @@ export namespace CourseHelpers {
 		|| distanceType == DistanceType.Mid
 		|| distanceType == DistanceType.Long)) {
 			throw new Error('bad distance type');
+		}
+	}
+
+	export function assertIsOrientation(orientation: number): asserts orientation is Orientation {
+		if (!(orientation == Orientation.Clockwise || orientation == Orientation.Counterclockwise)) {
+			throw new Error('bad track orientation');
 		}
 	}
 
