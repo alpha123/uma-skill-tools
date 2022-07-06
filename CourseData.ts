@@ -9,9 +9,6 @@ export interface CourseData {
 	corners: {start: number, length: number}[]
 	straights: {start: number, end: number}[]
 	slopes: {start: number, length: number, slope: number}[]
-
-	//isUphill(m: number): boolean
-	//slopePer(m: number): number
 }
 
 export namespace CourseHelpers {
@@ -33,11 +30,11 @@ export namespace CourseHelpers {
 		// typescript seems to have some trouble inferring tuple types, presumably because it doesn't really
 		// sufficiently distinguish tuples from arrays
 		// so dance around a little bit to make it work
-		const init: [boolean, number] = [true, arr.length > 0 ? arr[0].start : 0];
+		const init: [boolean, number] = [true, -1];
 		function isSorted(a: [boolean, number], b: {start: number}): [boolean,number] {
 			return [a[0] && b.start > a[1], b.start];
 		}
-		return arr.slice(1).reduce(isSorted, init)[0];
+		return arr.reduce(isSorted, init)[0];
 	}
 
 	export function phaseStart(distance: number, phase: Phase) {
