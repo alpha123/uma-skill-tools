@@ -53,9 +53,9 @@ namespace Acceleration {
 const BaseAccel = 0.0006;
 const UphillBaseAccel = 0.0004;
 
-function baseAccel(baseAccel: number, horse: HorseParameters) {
+function baseAccel(baseAccel: number, horse: HorseParameters, phase: Phase) {
 	return baseAccel * Math.sqrt(500.0 * horse.power) *
-	  Acceleration.StrategyPhaseCoefficient[horse.strategy][2] *
+	  Acceleration.StrategyPhaseCoefficient[horse.strategy][phase] *
 	  Acceleration.GroundTypeProficiencyModifier[horse.surfaceAptitude] *
 	  Acceleration.DistanceProficiencyModifier[horse.distanceAptitude];
 }
@@ -76,6 +76,7 @@ export class RaceIntegrator {
 	horse: HorseParameters
 	course: CourseData
 	startDash: boolean
+	phase: Phase
 	activeSpeedSkills: {remainingDuration: number, skill: SkillData}[]
 	activeAccelSkills: {remainingDuration: number, skill: SkillData}[]
 	pendingSkills: {activationPoint: number, skill: SkillData}[]
@@ -89,6 +90,7 @@ export class RaceIntegrator {
 		this.horse = horse;
 		this.course = course;
 		this.accumulatetime = 0.0;
+		this.phase = 0;
 		this.pos = 0.0;
 		this.accel = 0.0;
 		this.currentSpeed = 0.0;
@@ -149,16 +151,21 @@ export class RaceIntegrator {
 		if (!this.startDash && this.currentSpeed < this.minSpeed) {
 			this.currentSpeed = this.minSpeed;
 		}
+		if (this.pos >= this.course.distance * 2/3) {
+			// NB. there is actually a phase 3 which starts at 5/6 distance, but for purposes of
+			// strategy phase modifiers etc it is the same as phase 2 so don't bother with it here
+			this.phase = 2;
+		} else if (this.pos >= this.course.distance * 1/6) {
+			this.phase = 1;
+		}
 		this.currentSpeedModifier = 0.0;
 	}
 
 	updateTargetSpeed() {
-		if (this.pos >= this.course.distance * 2/3) {
+		if (this.phase == 2) {
 			this.targetSpeed = lastSpurtSpeed(this.horse, this.course);
-		} else if (this.pos >= this.course.distance * 1/6) {
-			this.targetSpeed = baseTargetSpeed(this.horse, this.course, 1);
 		} else if (!this.startDash) {
-			this.targetSpeed = baseTargetSpeed(this.horse, this.course, 0);
+			this.targetSpeed = baseTargetSpeed(this.horse, this.course, this.phase);
 		}
 		if (!this.startDash) {
 			this.targetSpeed += this.activeSpeedSkills.reduce((a,b) => a + b.skill.modifier, 0);
@@ -173,7 +180,7 @@ export class RaceIntegrator {
 			this.accel = decel(this.pos, this.course.distance);
 			return;
 		}
-		this.accel = baseAccel(this.hillIdx != -1 ? UphillBaseAccel : BaseAccel, this.horse);
+		this.accel = baseAccel(this.hillIdx != -1 ? UphillBaseAccel : BaseAccel, this.horse, this.phase);
 		if (this.startDash && this.currentSpeed >= this.targetSpeed) {
 			this.startDash = false;
 		}
@@ -259,7 +266,7 @@ const f = new RegionList();
 f.push(new Region(0, course.distance));
 //const op = parse(tokenize('distance_type==3&phase_random==2&order_rate>50'));
 //const op = parse(tokenize('running_style==3&phase_random==1'));
-const op = parse(tokenize('distance_type==3&phase_random==1&order_rate>50'));
+const op = parse(tokenize('running_style==2&down_slope_random==1'));
 const samples = op.samplePolicy.sample(op.apply(f, course, uma), 500);
 
 //const op_dober = parse(tokenize('distance_rate>=60&slope==2&phase==1&order_rate>=40&order_rate<=80&remain_distance>=500'));
@@ -268,13 +275,14 @@ const samples = op.samplePolicy.sample(op.apply(f, course, uma), 500);
 //const pos_dia = op_dia.samplePolicy.sample(op_dia.apply(f, course, uma), 1)[0];
 
 const gain = [];
-for (var i = 0; i < samples.length; ++i) {
+for (var i = 0; i < 1/*samples.length*/; ++i) {
 
-const pos = samples[i];
+//const pos = samples[i];
 
 const s = new RaceIntegrator(uma, course);
-s.pendingSkills.push(nsg);
-s.pendingSkills.push({activationPoint: pos, skill: {name: 'inazuma step', type: SkillType.Accel, baseDuration: 4, modifier: 0.2}});
+//s.pendingSkills.push(nsg);
+s.pendingSkills.push(bariki);
+//s.pendingSkills.push({activationPoint: pos, skill: {name: 'straight down resolution', type: SkillType.Accel, baseDuration: 3, modifier: 0.3}});
 //s.pendingSkills.push({activationPoint: pos_dober, skill: {name: 'alt dober', type: SkillType.TargetSpeed, baseDuration: 5, modifier: 0.35}});
 //s.pendingSkills.push({activationPoint: pos, skill: {name: 'ikuno gold', type: SkillType.TargetSpeed, baseDuration: 2.4, modifier: 0.45}});
 //s.pendingSkills.push({activationPoint: course.distance - 200, skill: {name: 'alt taiki', type: SkillType.TargetSpeed, baseDuration: 5, modifier: 0.35}});
@@ -295,7 +303,7 @@ while (s.pos < course.distance) {
 //console.log(JSON.stringify(plotData));
 
 const s2 = new RaceIntegrator(uma, course);
-s2.pendingSkills.push(nsg);
+//s2.pendingSkills.push(nsg);
 //s2.pendingSkills.push({activationPoint: pos_dia, skill: {name: 'dia', type: SkillType.TargetSpeed, baseDuration: 5, modifier: 0.45}});
 //s2.pendingSkills.push({activationPoint: pos, skill: {name: 'monopolizer', type: SkillType.TargetSpeed, baseDuration: 3, modifier: -0.25}});
 //s2.pendingSkills.push({activationPoint: pos, skill: {name: 'monopolizer (current speed)', type: SkillType.CurrentSpeed, baseDuration: 0, modifier: -0.25}});
@@ -316,4 +324,4 @@ const mid = Math.floor(gain.length / 2);
 console.log('median: ' + (gain.length % 2 == 0 ? (gain[mid-1] + gain[mid]) / 2 : gain[mid]));
 console.log('mean: ' + gain.reduce((a,b) => a + b) / gain.length);
 
-console.log(gain.reduce((a,b) => a + +(b > 0.5), 0) / gain.length);
+console.log(gain.reduce((a,b) => a + +(b > 1), 0) / gain.length);
