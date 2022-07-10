@@ -3,15 +3,9 @@ import {
 	Condition, Conditions
 } from './ActivationConditions';
 
-class ParseError {
-	s: string
-	pos: number
-	msg: string
-
+class ParseError extends Error {
 	constructor(msg: string) {
-		this.s = '';
-		this.pos = 0;
-		this.msg = msg;
+		super(msg);
 	}
 }
 
