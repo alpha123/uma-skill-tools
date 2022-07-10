@@ -1,9 +1,9 @@
 import { Strategy, Aptitude, HorseParameters } from './HorseTypes';
-import { CourseData, CourseHelpers, Surface, Phase } from './CourseData';
+import { CourseData, CourseHelpers, Phase } from './CourseData';
 
-const enum SkillType { TargetSpeed, Accel, CurrentSpeed }
+export const enum SkillType { TargetSpeed, Accel, CurrentSpeed }
 
-interface SkillData {
+export interface SkillData {
 	name: string
 	type: SkillType
 	baseDuration: number
@@ -237,91 +237,3 @@ export class RaceIntegrator {
 		}
 	}
 }
-
-const uma: HorseParameters = {
-    speed: 1200*1.04*1.2,
-    stamina: 800*1.04,
-    power: 1100*1.04,
-    guts: 1100*1.04,
-    int: 1100*1.04,
-    strategy: Strategy.Sasi,
-    distanceAptitude: Aptitude.S,
-    surfaceAptitude: Aptitude.A
-};
-
-import tracks from '../course_data.json';
-import {Conditions, Region, RegionList} from './ActivationConditions';
-import {parse, tokenize} from './ParseConditions';
-
-const course = tracks['10009'].courses['10906']; // hansin 2200
-//const course = tracks['10006'].courses['10602']; // tokyo 1600
-
-course.slopes.sort((a,b) => a.start - b.start);
-course.slopes.pop();
-
-const nsg = {activationPoint: course.distance*2/3, skill: {name: 'nsg', type: SkillType.Accel, baseDuration: 3, modifier: 0.4}};
-const bariki = {activationPoint: 295, skill: {name: 'bariki', type: SkillType.TargetSpeed, baseDuration: 2.4, modifier: 0.15}};
-
-const f = new RegionList();
-f.push(new Region(0, course.distance));
-//const op = parse(tokenize('distance_type==3&phase_random==2&order_rate>50'));
-//const op = parse(tokenize('running_style==3&phase_random==1'));
-const op = parse(tokenize('running_style==2&down_slope_random==1'));
-const samples = op.samplePolicy.sample(op.apply(f, course, uma), 500);
-
-//const op_dober = parse(tokenize('distance_rate>=60&slope==2&phase==1&order_rate>=40&order_rate<=80&remain_distance>=500'));
-//const op_dia = parse(tokenize('is_last_straight_onetime==1&order>=2&order<=5&distance_diff_top<=5'));
-//const pos_dober = op_dober.samplePolicy.sample(op_dober.apply(f, course, uma), 1)[0];
-//const pos_dia = op_dia.samplePolicy.sample(op_dia.apply(f, course, uma), 1)[0];
-
-const gain = [];
-for (var i = 0; i < 1/*samples.length*/; ++i) {
-
-//const pos = samples[i];
-
-const s = new RaceIntegrator(uma, course);
-//s.pendingSkills.push(nsg);
-s.pendingSkills.push(bariki);
-//s.pendingSkills.push({activationPoint: pos, skill: {name: 'straight down resolution', type: SkillType.Accel, baseDuration: 3, modifier: 0.3}});
-//s.pendingSkills.push({activationPoint: pos_dober, skill: {name: 'alt dober', type: SkillType.TargetSpeed, baseDuration: 5, modifier: 0.35}});
-//s.pendingSkills.push({activationPoint: pos, skill: {name: 'ikuno gold', type: SkillType.TargetSpeed, baseDuration: 2.4, modifier: 0.45}});
-//s.pendingSkills.push({activationPoint: course.distance - 200, skill: {name: 'alt taiki', type: SkillType.TargetSpeed, baseDuration: 5, modifier: 0.35}});
-//s.pendingSkills.push({activationPoint: course.distance - 200, skill: {name: 'alt taiki (22)', type: SkillType.CurrentSpeed, baseDuration: 0, modifier: 0.15}});
-//s.pendingSkills.push({activationPoint: 1785, skill: {name: 'monopolizer', type: SkillType.TargetSpeed, baseDuration: 3, modifier: -0.25}});
-//s.pendingSkills.push({activationPoint: 1785, skill: {name: 'monopolizer (current speed)', type: SkillType.CurrentSpeed, baseDuration: 0, modifier: -0.25}});
-const plotData = {t: [0], pos: [0], v: [0], targetv: [s.targetSpeed], a: [0]};
-while (s.pos < course.distance) {
-	s.step(1/60);
-	plotData.t.push(s.accumulatetime);
-	plotData.pos.push(s.pos);
-	plotData.v.push(s.currentSpeed);
-	plotData.targetv.push(s.targetSpeed);
-	plotData.a.push(s.accel);
-}
-//console.log('travelled ' + s.pos + 'm in ' + s.accumulatetime);
-//console.log(s.targetSpeed);
-//console.log(JSON.stringify(plotData));
-
-const s2 = new RaceIntegrator(uma, course);
-//s2.pendingSkills.push(nsg);
-//s2.pendingSkills.push({activationPoint: pos_dia, skill: {name: 'dia', type: SkillType.TargetSpeed, baseDuration: 5, modifier: 0.45}});
-//s2.pendingSkills.push({activationPoint: pos, skill: {name: 'monopolizer', type: SkillType.TargetSpeed, baseDuration: 3, modifier: -0.25}});
-//s2.pendingSkills.push({activationPoint: pos, skill: {name: 'monopolizer (current speed)', type: SkillType.CurrentSpeed, baseDuration: 0, modifier: -0.25}});
-//s2.pendingSkills.push({activationPoint: course.distance - 200, skill: {name: 'alt taiki', type: SkillType.TargetSpeed, baseDuration: 5, modifier: 0.35}});
-while (s2.accumulatetime < s.accumulatetime) {
-	s2.step(1/60);
-}
-//console.log('travelled ' + s2.pos + 'm in ' + s2.accumulatetime);
-//console.log('basin gain: ' + (s.pos - s2.pos) / 2.5);
-gain.push((s.pos - s2.pos) / 2.5);
-
-}
-
-gain.sort((a,b) => a - b);
-console.log('min: ' + gain[0]);
-console.log('max: ' + gain[gain.length-1]);
-const mid = Math.floor(gain.length / 2);
-console.log('median: ' + (gain.length % 2 == 0 ? (gain[mid-1] + gain[mid]) / 2 : gain[mid]));
-console.log('mean: ' + gain.reduce((a,b) => a + b) / gain.length);
-
-console.log(gain.reduce((a,b) => a + +(b > 1), 0) / gain.length);
