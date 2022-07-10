@@ -1,3 +1,5 @@
+const assert = require('assert').strict;
+
 import { CourseData, CourseHelpers, Phase } from './CourseData';
 import { HorseParameters, StrategyHelpers } from './HorseTypes';
 
@@ -229,18 +231,9 @@ export interface Condition {
 	filterGte(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters): RegionList
 }
 
-class AssertionError extends Error {
-	constructor(msg: string) {
-		super('Assertion failed: ' + msg);
-	}
-}
-
-function assert(cond: boolean, msg: string): asserts cond {
-	if (!cond) throw new AssertionError(msg);
-}
-
 function notSupported(_0: RegionList, _1: number, _2: CourseData, _3: HorseParameters): never {
 	assert(false, 'unsupported comparison');
+	throw 0; // appease typescript
 }
 
 function noop(regions: RegionList, _1: number, _2: CourseData, _3: HorseParameters) {

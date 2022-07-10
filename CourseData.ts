@@ -1,3 +1,5 @@
+const assert = require('assert').strict;
+
 export type Phase = 0 | 1 | 2 | 3;
 export const enum Surface { Turf, Dirt }
 export const enum DistanceType { Short = 1, Mile, Mid, Long }
@@ -15,23 +17,19 @@ export interface CourseData {
 
 export namespace CourseHelpers {
 	export function assertIsPhase(phase: number): asserts phase is Phase {
-		if (!(phase == 0 || phase == 1 || phase == 2 || phase == 3)) throw new Error('bad phase');
+		assert(phase == 0 || phase == 1 || phase == 2 || phase == 3);
 	}
 
 	export function assertIsDistanceType(distanceType: number): asserts distanceType is DistanceType {
-		if (!(
+		assert(
 		   distanceType == DistanceType.Short
 		|| distanceType == DistanceType.Mile
 		|| distanceType == DistanceType.Mid
-		|| distanceType == DistanceType.Long)) {
-			throw new Error('bad distance type');
-		}
+		|| distanceType == DistanceType.Long);
 	}
 
 	export function assertIsOrientation(orientation: number): asserts orientation is Orientation {
-		if (!(orientation == Orientation.Clockwise || orientation == Orientation.Counterclockwise)) {
-			throw new Error('bad track orientation');
-		}
+		assert(orientation == Orientation.Clockwise || orientation == Orientation.Counterclockwise);
 	}
 
 	export function isSortedByStart(arr: {start: number}[]) {

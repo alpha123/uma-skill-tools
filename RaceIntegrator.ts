@@ -1,3 +1,5 @@
+const assert = require('assert').strict;
+
 import { Strategy, Aptitude, HorseParameters } from './HorseTypes';
 import { CourseData, CourseHelpers, Phase } from './CourseData';
 
@@ -108,9 +110,7 @@ export class RaceIntegrator {
 		// note that slopes are not always sorted by start location in course_data.json
 		// sometimes (?) they are sorted by hill type and then by start
 		// require this here because the code relies on encountering them sequentially
-		if (!CourseHelpers.isSortedByStart(this.course.slopes)) {
-			throw new Error('slopes must be sorted by start location');
-		}
+		assert(CourseHelpers.isSortedByStart(this.course.slopes), 'slopes must be sorted by start location');
 
 		this.nHills = this.course.slopes.length;
 		this.hillStart = this.course.slopes.map(s => s.start).reverse();
