@@ -90,6 +90,8 @@ export class RaceIntegrator {
 	hillIdx: number
 	hillStart: number[]
 	hillEnd: number[]
+	onSkillActivate: (s: SkillData) => void
+	onSkillDeactivate: (s: SkillData) => void
 
 	constructor(horse: HorseParameters, course: CourseData) {
 		this.horse = horse;
@@ -106,6 +108,8 @@ export class RaceIntegrator {
 		this.activeAccelSkills = [];
 		this.pendingSkills = [];
 		this.currentSpeedModifier = 0.0;
+		this.onSkillActivate = () => {}
+		this.onSkillDeactivate = () => {}
 		this.initHills();
 	}
 
@@ -212,12 +216,14 @@ export class RaceIntegrator {
 			const s = this.activeSpeedSkills[i];
 			if ((s.remainingDuration -= dt) <= 0) {
 				this.activeSpeedSkills.splice(i,1);
+				this.onSkillDeactivate(s.skill);
 			}
 		}
 		for (var i = this.activeAccelSkills.length; --i >= 0;) {
 			const s = this.activeAccelSkills[i];
 			if ((s.remainingDuration -= dt) <= 0) {
 				this.activeAccelSkills.splice(i,1);
+				this.onSkillDeactivate(s.skill);
 			}
 		}
 		for (var i = this.pendingSkills.length; --i >= 0;) {
@@ -238,6 +244,7 @@ export class RaceIntegrator {
 					this.currentSpeedModifier += s.skill.modifier;
 					break;
 				}
+				this.onSkillActivate(s.skill);
 				this.pendingSkills.splice(i,1);
 			}
 		}

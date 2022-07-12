@@ -132,7 +132,13 @@ horseDesc.skills.concat(opts.skills).concat(opts.skill).forEach(skillId => {
     }
 });
 
-const plotData = {trackId: course.raceTrackId, courseId: opts.course, t: [0], pos: [0], v: [0], targetv: [s.targetSpeed], a: [0]};
+const plotData = {trackId: course.raceTrackId, courseId: opts.course, t: [0], pos: [0], v: [0], targetv: [s.targetSpeed], a: [0], skills: {}};
+
+s.onSkillActivate = (sk) => { plotData.skills[sk.name] = [sk.type,s.accumulatetime,0,s.pos,0]; }
+s.onSkillDeactivate = (sk) => {
+    plotData.skills[sk.name][2] = s.accumulatetime;
+    plotData.skills[sk.name][4] = s.pos;
+}
 
 while (s.pos < course.distance) {
 	s.step(1/60);
@@ -142,5 +148,13 @@ while (s.pos < course.distance) {
 	plotData.targetv.push(s.targetSpeed);
 	plotData.a.push(s.accel);
 }
+
+// clean up skills that haven't deactivated by the end of the race
+Object.keys(plotData.skills).forEach(sk => {
+    if (plotData.skills[sk][2] == 0) {
+        plotData.skills[sk][2] = s.accumulatetime;
+        plotData.skills[sk][4] = s.pos;
+    }
+});
 
 console.log(JSON.stringify(plotData));

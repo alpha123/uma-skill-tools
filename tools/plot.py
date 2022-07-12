@@ -16,6 +16,7 @@ opts.add_argument('--hills', '-h', action='store_true')
 opts.add_argument('--corners', '-c', action='store_true')
 opts.add_argument('--straights', '-s', action='store_true')
 opts.add_argument('--phase', '-p', action='store_true')
+opts.add_argument('--skills', '-k', action='store_true')
 args = opts.parse_args()
 
 data = json.load(sys.stdin)
@@ -75,6 +76,12 @@ if args.phase:
 	plt.axvline(pos_to_t(course['distance'] * 1/6), color='dimgray', alpha=0.2, ls='--', label=f"Mid leg start ({round(course['distance']*1/6)}m)")
 	plt.axvline(pos_to_t(course['distance'] * 2/3), color='dimgray', alpha=0.2, ls='--', label=f"Last leg start ({round(course['distance']*2/3)}m)")
 	plt.axvline(pos_to_t(course['distance'] * 5/6), color='dimgray', alpha=0.2, ls=':')
+
+if args.skills:
+	for skill,info in data['skills'].items():
+		color = ['red','orangered','firebrick'][info[0]]
+		hatch = ['/', '//', '\\'][info[0]]
+		plt.axvspan(info[1], info[2], color=color, alpha=0.2, hatch=hatch, label=f"{skill} {round(info[3])}m~{round(info[4])}m")
 
 plt.xlim([0, data['t'][-1]])
 plt.legend()
