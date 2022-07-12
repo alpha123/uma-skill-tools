@@ -14,6 +14,7 @@ export interface SkillData {
 
 namespace Speed {
 	export const StrategyPhaseCoefficient = Object.freeze([
+		[], // strategies start numbered at 1
 		[1.0, 0.98, 0.962],
 		[0.978, 0.991, 0.975],
 		[0.938, 0.998, 0.994],
@@ -42,6 +43,7 @@ function lastSpurtSpeed(horse: HorseParameters, course: CourseData) {
 
 namespace Acceleration {
 	export const StrategyPhaseCoefficient = Object.freeze([
+		[],
 		[1.0, 1.0, 0.996],
 		[0.985, 1.0, 0.996],
 		[0.975, 1.0, 1.0],
