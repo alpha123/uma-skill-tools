@@ -2,6 +2,7 @@ const assert = require('assert').strict;
 
 import { Strategy, Aptitude, HorseParameters } from './HorseTypes';
 import { CourseData, CourseHelpers, Phase } from './CourseData';
+import { Region } from './ActivationConditions';
 
 export const enum SkillType { TargetSpeed, Accel, CurrentSpeed }
 
@@ -83,7 +84,7 @@ export class RaceIntegrator {
 	phase: Phase
 	activeSpeedSkills: {remainingDuration: number, skill: SkillData}[]
 	activeAccelSkills: {remainingDuration: number, skill: SkillData}[]
-	pendingSkills: {activationPoint: number, skill: SkillData}[]
+	pendingSkills: {trigger: Region, skill: SkillData}[]
 	currentSpeedModifier: number
 	nHills: number
 	hillIdx: number
@@ -221,7 +222,10 @@ export class RaceIntegrator {
 		}
 		for (var i = this.pendingSkills.length; --i >= 0;) {
 			const s = this.pendingSkills[i];
-			if (this.pos >= s.activationPoint) {
+			if (this.pos >= s.trigger.end) { // NB. `Region`s are half-open [start,end) intervals. If pos == end we are out of the trigger.
+				// skill failed to activate
+				this.pendingSkills.splice(i,1);
+			} else if (this.pos >= s.trigger.start) {
 				const scaledDuration = s.skill.baseDuration * this.course.distance / 1000;
 				switch (s.skill.type) {
 				case SkillType.TargetSpeed:

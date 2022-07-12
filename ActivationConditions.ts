@@ -179,7 +179,7 @@ export class OrOperator {
 }
 
 export interface ActivationSamplePolicy {
-	sample(regions: RegionList, nsamples: number): number[]
+	sample(regions: RegionList, nsamples: number): Region[]
 	reconcile(other: ActivationSamplePolicy): ActivationSamplePolicy
 	reconcileAsap(other: ActivationSamplePolicy): ActivationSamplePolicy
 	reconcileRandom(other: ActivationSamplePolicy): ActivationSamplePolicy
@@ -187,7 +187,7 @@ export interface ActivationSamplePolicy {
 }
 
 const AsapPolicy = Object.freeze({
-	sample(regions: RegionList, _: number) { return regions.length > 0 ? [regions[0].start] : []; },
+	sample(regions: RegionList, _: number) { return regions.slice(0,1); },
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileAsap(this); },
 	reconcileAsap(other: ActivationSamplePolicy) { return other; },
 	reconcileRandom(other: ActivationSamplePolicy) { return other; },
@@ -207,7 +207,7 @@ const RandomPolicy = Object.freeze({
 			const region = regions.find((_,i) => weights[i] > threshold)!;
 			samples.push(region.start + Math.floor(Math.random() * (region.end - region.start + 1)));
 		}
-		return samples;
+		return samples.map(pos => new Region(pos, pos + 10));
 	},
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileRandom(this); },
 	reconcileAsap(_: ActivationSamplePolicy) { return this; },
