@@ -352,6 +352,36 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => slopes.map(s => r.intersect(s)));
 		}
 	}),
+	// TODO in order to properly simulate skills that depend on hp_per this condition should pass a dynamic condition on to the
+	// race solver. This is a bit more long-term since that would require simulating stamina, and therefore recoveries, and honestly
+	// would be kind of a pain in general, and probably impossible to do accurately due to things like 位置取り争い that depend on other
+	// umas, as well as random factors like downhill accel mode.
+	// The only skill likely severely affected by this is Akebono's unique.
+	hp_per: noopAsap,
+	// it might make more sense infront_near_lane_time this to be noopRandom, but Nonstop Girl uses this condition and afaict
+	// hoffe's numbers assume instant nsg activation, so for hoffe compatibility assume nsg always activates instantly
+	// since a condition's sample policy is only really a recommendation, callers are still free to use a different samplePolicy
+	// or eg allow the end user to choose
+	infront_near_lane_time: noopAsap,
+	is_finalcorner: asap({
+		filterEq(regions: RegionList, flag: number, course: CourseData, _: HorseParameters) {
+			assert(flag == 0 || flag == 1, 'must be is_finalcorner==0 or is_finalcorner==1');
+			assert(CourseHelpers.isSortedByStart(course.corners), 'course corners must be sorted by start');
+			if (course.corners.length == 0) {
+				return new RegionList();
+			}
+			const finalCornerStart = course.corners[course.corners.length - 1].start;
+			const bounds = flag ? new Region(finalCornerStart, course.distance) : new Region(0, finalCornerStart);
+			return regions.rmap(r => r.intersect(bounds));
+		}
+	}),
+	is_lastspurt: asap({
+		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
+			assert(one == 1, 'must be is_lastspurt==1');
+			const bounds = new Region(CourseHelpers.phaseStart(course.distance, 2), course.distance);
+			return regions.rmap(r => r.intersect(bounds));
+		}
+	}),
 	is_last_straight_onetime: asap({
 		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
 			assert(one == 1, 'must be is_last_straight_onetime==1');
@@ -447,6 +477,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => slopeR.map(s => r.intersect(s)));
 		}
 	}),
+	temptation_count: noopAsap,
 	up_slope_random: random({
 		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
 			assert(one == 1, 'must be up_slope_random==1');
