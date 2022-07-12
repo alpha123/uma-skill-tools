@@ -7,15 +7,17 @@ export const enum Orientation { Clockwise = 1, Counterclockwise }
 export const enum ThresholdStat { Speed = 1, Stamina, Power, Guts, Int }
 
 export interface CourseData {
-	distance: number
-	distanceType: DistanceType
-	surface: Surface
-	turn: Orientation
-	courseSetStatus: ThresholdStat[]
-	corners: {start: number, length: number}[]
-	straights: {start: number, end: number}[]
-	slopes: {start: number, length: number, slope: number}[]
+	readonly distance: number
+	readonly distanceType: DistanceType
+	readonly surface: Surface
+	readonly turn: Orientation
+	readonly courseSetStatus: readonly ThresholdStat[]
+	readonly corners: readonly {readonly start: number, readonly length: number}[]
+	readonly straights: readonly {readonly start: number, readonly end: number}[]
+	readonly slopes: readonly {readonly start: number, readonly length: number, readonly slope: number}[]
 }
+
+import tracks from './data/course_data.json';
 
 export namespace CourseHelpers {
 	export function assertIsPhase(phase: number): asserts phase is Phase {
@@ -34,7 +36,7 @@ export namespace CourseHelpers {
 		assert(orientation == Orientation.Clockwise || orientation == Orientation.Counterclockwise);
 	}
 
-	export function isSortedByStart(arr: {start: number}[]) {
+	export function isSortedByStart(arr: readonly {readonly start: number}[]) {
 		// typescript seems to have some trouble inferring tuple types, presumably because it doesn't really
 		// sufficiently distinguish tuples from arrays
 		// so dance around a little bit to make it work
@@ -63,10 +65,24 @@ export namespace CourseHelpers {
 		}
 	}
 
-	export function courseSpeedModifier(course: CourseData, stats: {speed: number, stamina: number, power: number, guts: number, int: number}) {
+	export function courseSpeedModifier(
+		course: CourseData,
+		stats: Readonly<{speed: number, stamina: number, power: number, guts: number, int: number}>
+	) {
 		const statvalues = [0, stats.speed, stats.stamina, stats.power, stats.guts, stats.int];
 		return 1 + course.courseSetStatus.map(
 			stat => (1 + Math.floor(statvalues[stat] / 300.01)) * 0.05
 		).reduce((a,b) => a + b, 0) / Math.max(course.courseSetStatus.length,1);
+	}
+
+	export function getCourse(courseId: number): CourseData {
+		// course id to location id is mostly but not completely regular
+		// generally it's something like 10602 → 10006, but for Ooi racetracks it's different (eg., 11101 → 10101)
+		// TODO should probably fix this or just search all course ids for the one provided
+		const locationId = 11100 < courseId && courseId < 11200 ? 10101 : Math.floor(courseId / 100) - 100 + 10000;
+		const course = tracks[locationId].courses[courseId];
+		course.slopes.sort((a,b) => a.start - b.start);
+		Object.keys(course).forEach(k => Object.freeze(course[k]));
+		return Object.freeze(course);
 	}
 }

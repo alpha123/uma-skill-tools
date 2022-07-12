@@ -2,15 +2,15 @@ export const enum Strategy { Nige = 1, Senkou, Sasi, Oikomi, Oonige }
 export const enum Aptitude { S, A, B, C, D, E, F, G }
 
 export interface HorseParameters {
-	speed: number
-	stamina: number
-	power: number
-	guts: number
-	int: number
-	strategy: Strategy
-	distanceAptitude: Aptitude
-	surfaceAptitude: Aptitude
-	strategyAptitude: Aptitude
+	readonly speed: number
+	readonly stamina: number
+	readonly power: number
+	readonly guts: number
+	readonly int: number
+	readonly strategy: Strategy
+	readonly distanceAptitude: Aptitude
+	readonly surfaceAptitude: Aptitude
+	readonly strategyAptitude: Aptitude
 }
 
 export namespace StrategyHelpers {
