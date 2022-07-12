@@ -2,6 +2,7 @@ import sys
 import argparse
 import json
 from bisect import bisect_left
+from collections import defaultdict
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
 
@@ -86,10 +87,18 @@ if args.skills:
 	with open('skillnames.json', 'r', encoding='utf-8') as f:
 		skillnames = json.load(f)
 
+	xtr = plt.gca().get_xaxis_transform()
+
+	starts = sorted(list(map(lambda i: i[1], data['skills'].values())))
+	ends = sorted(list(map(lambda i: i[2], data['skills'].values())))
+	n_at = defaultdict(lambda: 0)
 	for skill,info in data['skills'].items():
 		color = ['red','orangered','firebrick'][info[0]]
 		hatch = ['/', '//', '\\'][info[0]]
-		plt.axvspan(info[1], info[2], color=color, alpha=0.2, hatch=hatch, label=f"{skillnames[skill][args.lang == 'en']} {round(info[3])}m~{round(info[4])}m")
+		nactive = bisect_left(starts, info[1]) - bisect_left(ends, info[1]) + n_at[info[1]]
+		n_at[info[1]] += 1
+		plt.axvspan(info[1], info[2], ymin=nactive*0.03, ymax=nactive*0.03+0.03, color=color, alpha=0.5, label=f"{skillnames[skill][args.lang == 'en']} {round(info[3])}m~{round(info[4])}m")
+		plt.text(info[1], nactive*0.03, skillnames[skill][args.lang == 'en'], transform=xtr, fontproperties=font, fontsize='small')
 
 plt.xlim([0, data['t'][-1]])
 if args.lang == 'jp':
