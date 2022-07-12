@@ -10,11 +10,12 @@ opts.add_argument('--help', action='help', help='show this help message and exit
 opts.add_argument('--accel', '-a', action='store_true')
 opts.add_argument('--velocity', '-v', action='store_true')
 opts.add_argument('--target-velocity', '-r', action='store_true')
-opts.add_argument('--position', '-p', action='store_true')
+opts.add_argument('--position', action='store_true')
 opts.add_argument('--velocity-offset', '-o', type=int, default=0)
 opts.add_argument('--hills', '-h', action='store_true')
 opts.add_argument('--corners', '-c', action='store_true')
 opts.add_argument('--straights', '-s', action='store_true')
+opts.add_argument('--phase', '-p', action='store_true')
 args = opts.parse_args()
 
 data = json.load(sys.stdin)
@@ -69,6 +70,11 @@ if args.straights:
 		end_t = pos_to_t(straight['end'])
 		orient = '→' if right else '←'
 		plt.axvspan(start_t, end_t, color='#d1ebff', alpha=0.2, label=f"{orient} {straight['start']}m~{straight['end']}m")
+
+if args.phase:
+	plt.axvline(pos_to_t(course['distance'] * 1/6), color='dimgray', alpha=0.2, ls='--', label=f"Mid leg start ({round(course['distance']*1/6)}m)")
+	plt.axvline(pos_to_t(course['distance'] * 2/3), color='dimgray', alpha=0.2, ls='--', label=f"Last leg start ({round(course['distance']*2/3)}m)")
+	plt.axvline(pos_to_t(course['distance'] * 5/6), color='dimgray', alpha=0.2, ls=':')
 
 plt.xlim([0, data['t'][-1]])
 plt.legend()
