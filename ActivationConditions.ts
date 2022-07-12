@@ -71,6 +71,11 @@ export interface Operator {
 	apply(regions: RegionList, course: CourseData, horse: HorseParameters): RegionList
 }
 
+export interface CmpOperator extends Operator {
+	condition: Condition
+	argument: number
+}
+
 export class EqOperator {
 	samplePolicy: ActivationSamplePolicy
 
