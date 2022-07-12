@@ -26,11 +26,11 @@ with open('../data/course_data.json', 'r', encoding='utf-8') as f:
 plt.figure(figsize=(15,5))
 
 if args.accel:
-	plt.plot(data['t'], data['a'], color='limegreen')
+	plt.plot(data['t'], data['a'], color='limegreen', label='Acceleration')
 if args.velocity:
-	plt.plot(data['t'], list(map(lambda x: max(args.velocity_offset, x), data['v'])), color='navy')
+	plt.plot(data['t'], list(map(lambda x: max(args.velocity_offset, x), data['v'])), color='navy', label='Current speed')
 if args.target_velocity:
-	plt.plot(data['t'], list(map(lambda x: max(args.velocity_offset, x), data['targetv'])), color='cornflowerblue')
+	plt.plot(data['t'], list(map(lambda x: max(args.velocity_offset, x), data['targetv'])), color='cornflowerblue', label='Target speed')
 if args.position:
 	plt.plot(data['t'], data['pos'])
 
