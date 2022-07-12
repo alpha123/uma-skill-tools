@@ -7,6 +7,7 @@ export const enum Orientation { Clockwise = 1, Counterclockwise }
 export const enum ThresholdStat { Speed = 1, Stamina, Power, Guts, Int }
 
 export interface CourseData {
+	readonly raceTrackId: number
 	readonly distance: number
 	readonly distanceType: DistanceType
 	readonly surface: Surface

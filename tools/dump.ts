@@ -132,7 +132,7 @@ horseDesc.skills.concat(opts.skills).concat(opts.skill).forEach(skillId => {
     }
 });
 
-const plotData = {t: [0], pos: [0], v: [0], targetv: [s.targetSpeed], a: [0]};
+const plotData = {trackId: course.raceTrackId, courseId: opts.course, t: [0], pos: [0], v: [0], targetv: [s.targetSpeed], a: [0]};
 
 while (s.pos < course.distance) {
 	s.step(1/60);
