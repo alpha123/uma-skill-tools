@@ -10,6 +10,7 @@ export interface HorseParameters {
 	strategy: Strategy
 	distanceAptitude: Aptitude
 	surfaceAptitude: Aptitude
+	strategyAptitude: Aptitude
 }
 
 export namespace StrategyHelpers {
