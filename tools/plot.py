@@ -3,7 +3,7 @@ import argparse
 import json
 from bisect import bisect_left
 import matplotlib.pyplot as plt
-
+from matplotlib import font_manager
 
 opts = argparse.ArgumentParser(add_help=False)
 opts.add_argument('--help', action='help', help='show this help message and exit')
@@ -17,6 +17,7 @@ opts.add_argument('--corners', '-c', action='store_true')
 opts.add_argument('--straights', '-s', action='store_true')
 opts.add_argument('--phase', '-p', action='store_true')
 opts.add_argument('--skills', '-k', action='store_true')
+opts.add_argument('--lang', choices=('jp','en'), default='jp', help='language for skill names')
 args = opts.parse_args()
 
 data = json.load(sys.stdin)
@@ -24,6 +25,10 @@ data = json.load(sys.stdin)
 with open('../data/course_data.json', 'r', encoding='utf-8') as f:
 	tracks = json.load(f)
 	course = tracks[str(data['trackId'])]['courses'][str(data['courseId'])]
+
+if args.lang == 'jp':
+	font = font_manager.FontProperties()
+	font.set_family('MS Gothic')
 
 plt.figure(figsize=(15,5))
 
@@ -78,12 +83,18 @@ if args.phase:
 	plt.axvline(pos_to_t(course['distance'] * 5/6), color='dimgray', alpha=0.2, ls=':')
 
 if args.skills:
+	with open('skillnames.json', 'r', encoding='utf-8') as f:
+		skillnames = json.load(f)
+
 	for skill,info in data['skills'].items():
 		color = ['red','orangered','firebrick'][info[0]]
 		hatch = ['/', '//', '\\'][info[0]]
-		plt.axvspan(info[1], info[2], color=color, alpha=0.2, hatch=hatch, label=f"{skill} {round(info[3])}m~{round(info[4])}m")
+		plt.axvspan(info[1], info[2], color=color, alpha=0.2, hatch=hatch, label=f"{skillnames[skill][args.lang == 'en']} {round(info[3])}m~{round(info[4])}m")
 
 plt.xlim([0, data['t'][-1]])
-plt.legend()
+if args.lang == 'jp':
+	plt.legend(prop=font)
+else:
+	plt.legend()
 plt.tight_layout()
 plt.show()
