@@ -4,12 +4,14 @@ export type Phase = 0 | 1 | 2 | 3;
 export const enum Surface { Turf, Dirt }
 export const enum DistanceType { Short = 1, Mile, Mid, Long }
 export const enum Orientation { Clockwise = 1, Counterclockwise }
+export const enum ThresholdStat { Speed = 1, Stamina, Power, Guts, Int }
 
 export interface CourseData {
 	distance: number
 	distanceType: DistanceType
 	surface: Surface
 	turn: Orientation
+	courseSetStatus: ThresholdStat[]
 	corners: {start: number, length: number}[]
 	straights: {start: number, end: number}[]
 	slopes: {start: number, length: number, slope: number}[]
@@ -59,5 +61,12 @@ export namespace CourseHelpers {
 		case 2: return distance * 5/6;
 		case 3: return distance;
 		}
+	}
+
+	export function courseSpeedModifier(course: CourseData, stats: {speed: number, stamina: number, power: number, guts: number, int: number}) {
+		const statvalues = [0, stats.speed, stats.stamina, stats.power, stats.guts, stats.int];
+		return 1 + course.courseSetStatus.map(
+			stat => (1 + Math.floor(statvalues[stat] / 300.01)) * 0.05
+		).reduce((a,b) => a + b, 0) / Math.max(course.courseSetStatus.length,1);
 	}
 }
