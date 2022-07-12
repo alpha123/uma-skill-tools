@@ -10,7 +10,7 @@ export class Region {
 	intersect(other: {start: number, end: number}) {
 		const start = Math.max(this.start, other.start);
 		const end = Math.min(this.end, other.end);
-		if (end < start) {
+		if (end <= start) {
 			return new Region(-1, -1);
 		} else {
 			return new Region(start, end);
