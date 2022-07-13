@@ -36,9 +36,9 @@ plt.figure(figsize=(15,5))
 if args.accel:
 	plt.plot(data['t'], data['a'], color='limegreen', label='Acceleration')
 if args.velocity:
-	plt.plot(data['t'], list(map(lambda x: max(args.velocity_offset, x), data['v'])), color='navy', label='Current speed')
+	plt.plot(data['t'], data['v'], color='navy', label='Current speed')
 if args.target_velocity:
-	plt.plot(data['t'], list(map(lambda x: max(args.velocity_offset, x), data['targetv'])), color='cornflowerblue', label='Target speed')
+	plt.plot(data['t'], data['targetv'], color='cornflowerblue', label='Target speed')
 if args.position:
 	plt.plot(data['t'], data['pos'])
 
@@ -106,6 +106,12 @@ seconds = range(0, round(data['t'][-1])+1)
 plt.xticks(seconds, list(map(lambda t: '{:d}:{:02d}'.format(*divmod(t,60)), seconds)), rotation=45, rotation_mode='anchor', fontsize='xx-small', ha='right')
 
 plt.xlim([0, data['t'][-1]])
+if args.target_velocity:
+	plt.ylim([args.velocity_offset, max(data['targetv'])+1])
+elif args.velocity:
+	plt.ylim([args.velocity_offset, max(data['v'])+1])
+	# NB. if they are both specified, max(targetv) >= max(v)
+
 if args.lang == 'jp':
 	plt.legend(prop=font)
 else:
