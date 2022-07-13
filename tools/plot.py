@@ -54,15 +54,17 @@ if args.hills:
 			color = '#7dffbe'
 			dir = '↓'
 			orient = '↘' if right else '↙'
+			hatch = '\\'
 		else:
 			color = '#f0eb69'
 			dir = '↑'
+			hatch = '/'
 			orient = '↗' if right else '↖'
 
 		label = f"{orient} {hill['start']}m~{hill['start']+hill['length']}m ({dir}{abs(hill['slope']) / 10000})"
 		start_t = pos_to_t(hill['start'])
 		end_t = pos_to_t(hill['start'] + hill['length'])
-		plt.axvspan(start_t, end_t, color=color, alpha=0.2, label=label)
+		plt.axvspan(start_t, end_t, color=color, alpha=0.3, hatch=hatch, label=label)
 
 if args.corners:
 	for corner in course['corners']:
@@ -76,7 +78,7 @@ if args.straights:
 		start_t = pos_to_t(straight['start'])
 		end_t = pos_to_t(straight['end'])
 		orient = '→' if right else '←'
-		plt.axvspan(start_t, end_t, color='#d1ebff', alpha=0.2, label=f"{orient} {straight['start']}m~{straight['end']}m")
+		plt.axvspan(start_t, end_t, color='#d1ebff', alpha=0.3, hatch='-', label=f"{orient} {straight['start']}m~{straight['end']}m")
 
 if args.phase:
 	plt.axvline(pos_to_t(course['distance'] * 1/6), color='dimgray', alpha=0.2, ls='--', label=f"Mid leg start ({round(course['distance']*1/6)}m)")
@@ -94,11 +96,14 @@ if args.skills:
 	n_at = defaultdict(lambda: 0)
 	for skill,info in data['skills'].items():
 		color = ['red','orangered','firebrick'][info[0]]
-		hatch = ['/', '//', '\\'][info[0]]
 		nactive = bisect_left(starts, info[1]) - bisect_left(ends, info[1]) + n_at[info[1]]
 		n_at[info[1]] += 1
-		plt.axvspan(info[1], info[2], ymin=nactive*0.03, ymax=nactive*0.03+0.03, color=color, alpha=0.5, label=f"{skillnames[skill][args.lang == 'en']} {round(info[3])}m~{round(info[4])}m")
-		plt.text(info[1], nactive*0.03, skillnames[skill][args.lang == 'en'], transform=xtr, fontproperties=font, fontsize='small')
+		h = 0.04
+		plt.axvspan(info[1], info[2], ymin=nactive*h, ymax=nactive*h+h, color=color, alpha=0.5, label=f"{skillnames[skill][args.lang == 'en']} {round(info[3])}m~{round(info[4])}m")
+		plt.text(info[1], nactive*h+0.01, skillnames[skill][args.lang == 'en'], transform=xtr, fontproperties=font, fontsize='small')
+
+seconds = range(0, round(data['t'][-1])+1)
+plt.xticks(seconds, list(map(lambda t: '{:d}:{:02d}'.format(*divmod(t,60)), seconds)), rotation=45, rotation_mode='anchor', fontsize='xx-small', ha='right')
 
 plt.xlim([0, data['t'][-1]])
 if args.lang == 'jp':
