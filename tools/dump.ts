@@ -5,7 +5,7 @@ import { HorseParameters, Strategy, Aptitude } from '../HorseTypes';
 import { CourseData, CourseHelpers } from '../CourseData';
 import { Conditions, Region, RegionList } from '../ActivationConditions';
 import { parse, tokenize } from '../ConditionParser';
-import { SkillType, RaceIntegrator } from '../RaceIntegrator';
+import { SkillType, RaceSolver } from '../RaceSolver';
 
 import skills from '../data/skill_data.json';
 
@@ -95,7 +95,7 @@ const wholeCourse = new RegionList();
 wholeCourse.push(new Region(0, course.distance));
 Object.freeze(wholeCourse);
 
-const s = new RaceIntegrator(uma, course);
+const s = new RaceSolver(uma, course);
 
 horseDesc.skills.concat(opts.skills).concat(opts.skill).forEach(skillId => {
     if (!(skillId in skills)) {

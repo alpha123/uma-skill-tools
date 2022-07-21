@@ -71,7 +71,7 @@ function decel(pos: number, distance: number) {
 	else return -1.2;
 }
 
-export class RaceIntegrator {
+export class RaceSolver {
 	accumulatetime: number
 	pos: number
 	minSpeed: number
