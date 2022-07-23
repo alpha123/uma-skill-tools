@@ -346,6 +346,8 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return [regions, (s: RaceState) => s.accumulatetime >= t] as [RegionList, DynamicCondition];
 		}
 	}),
+	blocked_side_continuetime: noopRandom,
+	change_order_onetime: noopRandom,
 	corner: asap({
 		filterEq(regions: RegionList, cornerNum: number, course: CourseData, _: HorseParameters) {
 			if (cornerNum == 0) {
