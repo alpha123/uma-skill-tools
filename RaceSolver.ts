@@ -71,6 +71,14 @@ function decel(pos: number, distance: number) {
 	else return -1.2;
 }
 
+export interface RaceState {
+	readonly course: Readonly<CourseData>
+	readonly horse: Readonly<HorseParameters>
+	readonly accumulatetime: number
+}
+
+export type DynamicCondition = (state: RaceState) => boolean;
+
 export class RaceSolver {
 	accumulatetime: number
 	pos: number
@@ -84,7 +92,7 @@ export class RaceSolver {
 	phase: Phase
 	activeSpeedSkills: {remainingDuration: number, skill: SkillData}[]
 	activeAccelSkills: {remainingDuration: number, skill: SkillData}[]
-	pendingSkills: {trigger: Region, skill: SkillData}[]
+	pendingSkills: {trigger: Region, extraCondition: DynamicCondition, skill: SkillData}[]
 	currentSpeedModifier: number
 	nHills: number
 	hillIdx: number
@@ -231,7 +239,7 @@ export class RaceSolver {
 			if (this.pos >= s.trigger.end) { // NB. `Region`s are half-open [start,end) intervals. If pos == end we are out of the trigger.
 				// skill failed to activate
 				this.pendingSkills.splice(i,1);
-			} else if (this.pos >= s.trigger.start) {
+			} else if (this.pos >= s.trigger.start && s.extraCondition(this)) {
 				const scaledDuration = s.skill.baseDuration * this.course.distance / 1000;
 				switch (s.skill.type) {
 				case SkillType.TargetSpeed:

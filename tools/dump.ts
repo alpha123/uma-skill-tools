@@ -106,12 +106,13 @@ horseDesc.skills.concat(opts.skills).concat(opts.skill).forEach(skillId => {
         const skill = alternatives[i];
         if (skill.precondition) {
             const pre = parse(tokenize(skill.precondition));
-            if (pre.samplePolicy.sample(pre.apply(wholeCourse, course, uma), 1).length == 0) {
+            if (pre.samplePolicy.sample(pre.apply(wholeCourse, course, uma)[0], 1).length == 0) {
                 continue;
             }
         }
         const op = parse(tokenize(skill.condition));
-        const triggers = op.samplePolicy.sample(op.apply(wholeCourse, course, uma), 1);
+        const [regions, extraCondition] = op.apply(wholeCourse, course, uma);
+        const triggers = op.samplePolicy.sample(regions, 1);
         if (triggers.length == 0) {
             continue;
         }
@@ -125,6 +126,7 @@ horseDesc.skills.concat(opts.skills).concat(opts.skill).forEach(skillId => {
             if (type != -1) {
                 s.pendingSkills.push({
                     trigger: triggers[0],
+                    extraCondition: extraCondition,
                     skill: {name: skillId, type: type, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000}
                 });
             }

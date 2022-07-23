@@ -2,6 +2,7 @@ const assert = require('assert').strict;
 
 import { CourseData, CourseHelpers, Phase } from './CourseData';
 import { HorseParameters, StrategyHelpers } from './HorseTypes';
+import { RaceState, DynamicCondition } from './RaceSolver';
 
 // half-open interval [start,end)
 export class Region {
@@ -66,9 +67,21 @@ export class RegionList extends Array<Region> {
 	}
 }
 
+// K as in SKI combinators
+function kTrue(_: RaceState) {
+	return true;
+}
+
+function withDefaultCond(r: RegionList | [RegionList, DynamicCondition]) {
+	if (r instanceof RegionList) {
+		return [r, kTrue] as [RegionList, DynamicCondition];
+	}
+	return r;
+}
+
 export interface Operator {
 	samplePolicy: ActivationSamplePolicy
-	apply(regions: RegionList, course: CourseData, horse: HorseParameters): RegionList
+	apply(regions: RegionList, course: CourseData, horse: HorseParameters): [RegionList, DynamicCondition]
 }
 
 export interface CmpOperator extends Operator {
@@ -84,7 +97,7 @@ export class EqOperator {
 	}
 
 	apply(regions: RegionList, course: CourseData, horse: HorseParameters) {
-		return this.condition.filterEq(regions, this.argument, course, horse);
+		return withDefaultCond(this.condition.filterEq(regions, this.argument, course, horse));
 	}
 }
 
@@ -96,7 +109,7 @@ export class NeqOperator {
 	}
 
 	apply(regions: RegionList, course: CourseData, horse: HorseParameters) {
-		return this.condition.filterNeq(regions, this.argument, course, horse);
+		return withDefaultCond(this.condition.filterNeq(regions, this.argument, course, horse));
 	}
 }
 
@@ -108,7 +121,7 @@ export class LtOperator {
 	}
 
 	apply(regions: RegionList, course: CourseData, horse: HorseParameters) {
-		return this.condition.filterLt(regions, this.argument, course, horse);
+		return withDefaultCond(this.condition.filterLt(regions, this.argument, course, horse));
 	}
 }
 
@@ -120,7 +133,7 @@ export class LteOperator {
 	}
 
 	apply(regions: RegionList, course: CourseData, horse: HorseParameters) {
-		return this.condition.filterLte(regions, this.argument, course, horse);
+		return withDefaultCond(this.condition.filterLte(regions, this.argument, course, horse));
 	}
 }
 
@@ -132,7 +145,7 @@ export class GtOperator {
 	}
 
 	apply(regions: RegionList, course: CourseData, horse: HorseParameters) {
-		return this.condition.filterGt(regions, this.argument, course, horse);
+		return withDefaultCond(this.condition.filterGt(regions, this.argument, course, horse));
 	}
 }
 
@@ -144,7 +157,7 @@ export class GteOperator {
 	}
 
 	apply(regions: RegionList, course: CourseData, horse: HorseParameters) {
-		return this.condition.filterGte(regions, this.argument, course, horse);
+		return withDefaultCond(this.condition.filterGte(regions, this.argument, course, horse));
 	}
 }
 
@@ -156,8 +169,13 @@ export class AndOperator {
 	}
 
 	apply(regions: RegionList, course: CourseData, horse: HorseParameters) {
-		const leftval = this.left.apply(regions, course, horse);
-		return this.right.apply(leftval, course, horse);
+		const [leftval, leftcond] = this.left.apply(regions, course, horse);
+		const [rightval, rightcond] = this.right.apply(leftval, course, horse);
+		if (leftcond === kTrue && rightcond === kTrue) {
+			// avoid allocating an unnecessary closure object in the common case of no dynamic conditions
+			return [rightval, kTrue] as [RegionList, DynamicCondition];
+		}
+		return [rightval, (s) => leftcond(s) && rightcond(s)] as [RegionList, DynamicCondition];
 	}
 }
 
@@ -172,9 +190,20 @@ export class OrOperator {
 	}
 
 	apply(regions: RegionList, course: CourseData, horse: HorseParameters) {
-		const leftval = this.left.apply(regions, course, horse);
-		const rightval = this.right.apply(regions, course, horse);
-		return leftval.union(rightval);
+		const [leftval, leftcond] = this.left.apply(regions, course, horse);
+		const [rightval, rightcond] = this.right.apply(regions, course, horse);
+		// FIXME this is, technically, completely broken. really the correct way to do this is to tie dynamic conditions to regions
+		// and propagate them during union and intersection. however, that's really annoying, and it turns out in practice that
+		// dynamic conditions never actually change between branches of an or operator if the static conditions differ, in which case
+		// this works out just fine. specifically, it's fine if /either/ the dynamic conditions differ or the static conditions differ
+		// between branches, but not both.
+		// eg, consider something like phase==0&accumulatetime>=20@phase==1&accumulatetime>=30
+		// suppose phase 0 lasts 21 seconds, in which case the left branch would not trigger. the right branch then should not trigger
+		// until 30 seconds, but this obviously does because it's broken. conditions like this do not currently appear on any skills.
+		// unfortunately, there's not really a way here to assert that leftcond and rightcond are the same.
+		// this is rather risky. i don't like it.
+		// TODO actually, it's perfectly possible to just inspect the tree to make sure the above limitations are satisfied.
+		return [leftval.union(rightval), (s) => leftcond(s) || rightcond(s)] as [RegionList, DynamicCondition];
 	}
 }
 
@@ -228,12 +257,12 @@ const AllCornerRandomPolicy = Object.freeze({
 
 export interface Condition {
 	samplePolicy: ActivationSamplePolicy
-	filterEq(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters): RegionList
-	filterNeq(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters): RegionList
-	filterLt(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters): RegionList
-	filterLte(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters): RegionList
-	filterGt(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters): RegionList
-	filterGte(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters): RegionList
+	filterEq(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters): RegionList | [RegionList, DynamicCondition]
+	filterNeq(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters): RegionList | [RegionList, DynamicCondition]
+	filterLt(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters): RegionList | [RegionList, DynamicCondition]
+	filterLte(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters): RegionList | [RegionList, DynamicCondition]
+	filterGt(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters): RegionList | [RegionList, DynamicCondition]
+	filterGte(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters): RegionList | [RegionList, DynamicCondition]
 }
 
 function notSupported(_0: RegionList, _1: number, _2: CourseData, _3: HorseParameters): never {
