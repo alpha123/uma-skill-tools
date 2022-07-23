@@ -341,6 +341,11 @@ function random(o) {
 */
 
 export const Conditions: {[cond: string]: Condition} = Object.freeze({
+	accumulatetime: asap({
+		filterGte(regions: RegionList, t: number, _0: CourseData, _1: HorseParameters) {
+			return [regions, (s: RaceState) => s.accumulatetime >= t] as [RegionList, DynamicCondition];
+		}
+	}),
 	corner: asap({
 		filterEq(regions: RegionList, cornerNum: number, course: CourseData, _: HorseParameters) {
 			if (cornerNum == 0) {
