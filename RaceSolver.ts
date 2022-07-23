@@ -72,8 +72,6 @@ function decel(pos: number, distance: number) {
 }
 
 export interface RaceState {
-	readonly course: Readonly<CourseData>
-	readonly horse: Readonly<HorseParameters>
 	readonly accumulatetime: number
 }
 
