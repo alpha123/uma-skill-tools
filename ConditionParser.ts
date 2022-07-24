@@ -79,14 +79,19 @@ interface Token {
 	nud(state: ParserState): Node
 }
 
-const enum NodeType { Int, Cond, Op }
-type Node = {type: NodeType.Int, value: number} | {type: NodeType.Cond, cond: Condition} | {type: NodeType.Op, op: Operator};
+export const enum NodeType { Int, Cond, Op }
+export type Node = {type: NodeType.Int, value: number} | {type: NodeType.Cond, cond: Condition} | {type: NodeType.Op, op: Operator};
 
-type ParserState = {current: Token, next: Token, tokens: Iterator<Token>};
+type ParserState = {current: Token, next: Token, tokens: Iterator<Token>, conditions: {[cond: string]: Condition}};
 
-export function parse(tokens: Iterator<Token,Token>) {
-	const state = {current: Eof, next: tokens.next().value, tokens: tokens};
-	const node = expression(state, 0);
+export function parseAny(tokens: Iterator<Token,Token>, options={}) {
+	const opts = Object.assign({conditions: Conditions}, options);
+	const state = {current: Eof, next: tokens.next().value, tokens: tokens, conditions: opts.conditions};
+	return expression(state, 0);
+}
+
+export function parse(tokens: Iterator<Token,Token>, options={}) {
+	const node = parseAny(tokens, options);
 	if (node.type != NodeType.Op) {
 		throw new ParseError('expected comparison or operator');
 	}
@@ -182,6 +187,6 @@ class Identifier implements Token {
 	}
 
 	nud(state: ParserState) {
-		return {type: NodeType.Cond, cond: Conditions[this.value as keyof Condition]} as Node;
+		return {type: NodeType.Cond, cond: state.conditions[this.value as keyof typeof Conditions]} as Node;
 	}
 }
