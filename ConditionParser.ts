@@ -10,7 +10,7 @@ class ParseError extends Error {
 }
 
 function isId(c: number) {
-	return ('a'.charCodeAt(0) <= c && c <= 'z'.charCodeAt(0)) || c == '_'.charCodeAt(0);
+	return ('a'.charCodeAt(0) <= c && c <= 'z'.charCodeAt(0)) || ('0'.charCodeAt(0) <= c && c <= '9'.charCodeAt(0)) || c == '_'.charCodeAt(0);
 }
 
 export function* tokenize(s: string) {
