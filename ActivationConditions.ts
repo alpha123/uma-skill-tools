@@ -430,6 +430,11 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	}),
 	order: noopAsap,
 	order_rate: noopAsap,
+	order_rate_in20_continue: noopAsap,
+	order_rate_in40_continue: noopAsap,
+	order_rate_out40_continue: noopAsap,
+	order_rate_out50_continue: noopAsap,
+	order_rate_out70_continue: noopAsap,
 	phase: {
 		samplePolicy: AsapPolicy,
 		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
