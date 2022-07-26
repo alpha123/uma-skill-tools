@@ -412,8 +412,19 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	change_order_onetime: noopRandom,
 	corner: asap({
 		filterEq(regions: RegionList, cornerNum: number, course: CourseData, _: HorseParameters) {
+			assert(CourseHelpers.isSortedByStart(course.corners), 'course corners must be sorted by start');
 			if (cornerNum == 0) {
-				return regions.rmap(r => course.straights.map(s => r.intersect(s)));
+				// can't simply use straights here as there may be parts of a course which are neither corners nor straights
+				let lastEnd = 0;
+				const nonCorners = course.corners.map(c => {
+					const r = new Region(lastEnd, c.start);
+					lastEnd = c.start + c.length;
+					return r;
+				});
+				if (lastEnd != course.distance) {
+					nonCorners.push(new Region(lastEnd, course.distance));
+				}
+				return regions.rmap(r => nonCorners.map(s => r.intersect(s)));
 			} else {
 				const corner = course.corners[cornerNum];
 				const cornerBounds = new Region(corner.start, corner.start + corner.length);
