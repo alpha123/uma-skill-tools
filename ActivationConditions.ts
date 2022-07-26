@@ -460,6 +460,18 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
+	is_finalcorner_random: random({
+		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
+			assert(one == 1, 'must be is_finalcorner_random==1');
+			assert(CourseHelpers.isSortedByStart(course.corners), 'course corners must be sorted by start');
+			if (course.corners.length == 0) {
+				return new RegionList();
+			}
+			const fc = course.corners[course.corners.length - 1];
+			const bounds = new Region(fc.start, fc.start + fc.length);
+			return regions.rmap(r => r.intersect(bounds));
+		}
+	}),
 	is_lastspurt: asap({
 		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
 			assert(one == 1, 'must be is_lastspurt==1');
@@ -515,6 +527,15 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	},
+	phase_laterhalf_random: random({
+		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
+			CourseHelpers.assertIsPhase(phase);
+			const start = CourseHelpers.phaseStart(course.distance, phase);
+			const end = CourseHelpers.phaseEnd(course.distance, phase);
+			const bounds = new Region((start + end) / 2, end);
+			return regions.rmap(r => r.intersect(bounds));
+		}
+	}),
 	phase_random: random({
 		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
 			CourseHelpers.assertIsPhase(phase);
