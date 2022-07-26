@@ -411,6 +411,18 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
+	is_finalcorner_laterhalf: asap({
+		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
+			assert(one == 1, 'must be is_finalcorner_laterhalf==1');
+			assert(CourseHelpers.isSortedByStart(course.corners), 'course corners must be sorted by start');
+			if (course.corners.length == 0) {
+				return new RegionList();
+			}
+			const fc = course.corners[course.corners.length - 1];
+			const bounds = new Region((fc.start + fc.start + fc.length) / 2, fc.start + fc.length);
+			return regions.rmap(r => r.intersect(bounds));
+		}
+	}),
 	is_lastspurt: asap({
 		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
 			assert(one == 1, 'must be is_lastspurt==1');
