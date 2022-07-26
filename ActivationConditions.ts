@@ -245,9 +245,33 @@ const RandomPolicy = Object.freeze({
 });
 
 const AllCornerRandomPolicy = Object.freeze({
+	placeTriggers(regions: RegionList) {
+		const triggers = [];
+		const candidates = regions.slice();
+		candidates.sort((a,b) => a.start - b.start);
+		while (triggers.length < 4 && candidates.length > 0) {
+			const ci = Math.floor(Math.random() * candidates.length);
+			const c = candidates[ci];
+			const start = c.start + Math.floor(Math.random() * (c.end - c.start - 10));
+			// note that as each corner's end cannot come after the start of the next corner, this maintains that the candidates
+			// are sorted by start
+			if (start + 20 <= c.end) {
+				candidates.splice(ci, 1, new Region(start + 10, c.end));
+			} else {
+				candidates.splice(ci, 1);
+			}
+			candidates.splice(0, ci);  // everything before this corner in the array is guaranteed to be before it in distance
+			triggers.push(new Region(start, start + 10));
+		}
+		// TODO support multiple triggers for skills with cooldown
+		return triggers[0];  // guaranteed to be the earliest trigger since each trigger is guaranteed to be placed after the last one
+	},
 	sample(regions: RegionList, nsamples: number) {
-		//TODO
-		return [0];
+		const samples = [];
+		for (let i = 0; i < nsamples; ++i) {
+			samples.push(this.placeTriggers(regions));
+		}
+		return samples;
 	},
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileAllCornerRandom(this); },
 	reconcileAsap(_: ActivationSamplePolicy) { return this; },
@@ -346,6 +370,19 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return [regions, (s: RaceState) => s.accumulatetime >= t] as [RegionList, DynamicCondition];
 		}
 	}),
+	all_corner_random: {
+		samplePolicy: AllCornerRandomPolicy,
+		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
+			assert(one == 1, 'must be all_corner_random==1');
+			const corners = course.corners.map(c => new Region(c.start, c.start + c.length));
+			return regions.rmap(r => corners.map(c => r.intersect(c)));
+		},
+		filterNeq: notSupported,
+		filterLt: notSupported,
+		filterLte: notSupported,
+		filterGt: notSupported,
+		filterGte: notSupported
+	},
 	blocked_side_continuetime: noopRandom,
 	change_order_onetime: noopRandom,
 	corner: asap({
