@@ -426,7 +426,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 				}
 				return regions.rmap(r => nonCorners.map(s => r.intersect(s)));
 			} else {
-				const corner = course.corners[cornerNum];
+				const corner = course.corners[course.corners.length + cornerNum - 5];
 				const cornerBounds = new Region(corner.start, corner.start + corner.length);
 				return regions.rmap(r => r.intersect(cornerBounds));
 			}
