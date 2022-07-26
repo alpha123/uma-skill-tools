@@ -285,10 +285,10 @@ const AllCornerRandomPolicy = Object.freeze({
 				candidates.splice(ci, 1);
 			}
 			candidates.splice(0, ci);  // everything before this corner in the array is guaranteed to be before it in distance
-			triggers.push(new Region(start, start + 10));
+			triggers.push(start);
 		}
 		// TODO support multiple triggers for skills with cooldown
-		return triggers[0];  // guaranteed to be the earliest trigger since each trigger is guaranteed to be placed after the last one
+		return new Region(triggers[0], triggers[0] + 10);  // guaranteed to be the earliest trigger since each trigger is placed after the last one
 	},
 	sample(regions: RegionList, nsamples: number) {
 		const samples = [];
