@@ -212,6 +212,7 @@ export interface ActivationSamplePolicy {
 	reconcile(other: ActivationSamplePolicy): ActivationSamplePolicy
 	reconcileAsap(other: ActivationSamplePolicy): ActivationSamplePolicy
 	reconcileRandom(other: ActivationSamplePolicy): ActivationSamplePolicy
+	reconcileStraightRandom(other: ActivationSamplePolicy): ActivationSamplePolicy
 	reconcileAllCornerRandom(other: ActivationSamplePolicy): ActivationSamplePolicy
 }
 
@@ -220,6 +221,7 @@ const AsapPolicy = Object.freeze({
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileAsap(this); },
 	reconcileAsap(other: ActivationSamplePolicy) { return other; },
 	reconcileRandom(other: ActivationSamplePolicy) { return other; },
+	reconcileStraightRandom(other: ActivationSamplePolicy) { return other; },
 	reconcileAllCornerRandom(other: ActivationSamplePolicy) { return other; }
 });
 
@@ -241,7 +243,29 @@ const RandomPolicy = Object.freeze({
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileRandom(this); },
 	reconcileAsap(_: ActivationSamplePolicy) { return this; },
 	reconcileRandom(other: ActivationSamplePolicy) { return other; },
+	reconcileStraightRandom(other: ActivationSamplePolicy) { return other; },
 	reconcileAllCornerRandom(other: ActivationSamplePolicy) { return other; }
+});
+
+const StraightRandomPolicy = Object.freeze({
+	sample(regions: RegionList, nsamples: number) {
+		// regular RandomPolicy weights regions by their length, so any given point has an equal chance to be chosen across all regions
+		// StraightRandomPolicy first picks a region with equal chance regardless of length, and then picks a random point on that region
+		if (regions.length == 0) {
+			return [];
+		}
+		const samples = [];
+		for (let i = 0; i < nsamples; ++i) {
+			const r = regions[Math.floor(Math.random() * regions.length)];
+			samples.push(r.start + Math.floor(Math.random() * (r.end - r.start - 10)));
+		}
+		return samples.map(pos => new Region(pos, pos + 10));
+	},
+	reconcile(other: ActivationSamplePolicy) { return other.reconcileStraightRandom(this); },
+	reconcileAsap(_: ActivationSamplePolicy) { return this; },
+	reconcileRandom(_: ActivationSamplePolicy) { return this; },
+	reconcileStraightRandom(other: ActivationSamplePolicy) { return other; },
+	reconcileAllCornerRandom(other: ActivationSamplePolicy) { throw new Error('cannot reconcile StraightRandomPolicy with AllCornerRandomPolicy'); }
 });
 
 const AllCornerRandomPolicy = Object.freeze({
@@ -276,6 +300,7 @@ const AllCornerRandomPolicy = Object.freeze({
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileAllCornerRandom(this); },
 	reconcileAsap(_: ActivationSamplePolicy) { return this; },
 	reconcileRandom(_: ActivationSamplePolicy) { return this; },
+	reconcileStraightRandom(_: ActivationSamplePolicy) { throw new Error('cannot reconcile StraightRandomPolicy with AllCornerRandomPolicy'); },
 	reconcileAllCornerRandom(_: ActivationSamplePolicy) { return this; }
 });
 
@@ -588,6 +613,18 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => slopeR.map(s => r.intersect(s)));
 		}
 	}),
+	straight_random: {
+		samplePolicy: StraightRandomPolicy,
+		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
+			assert(one == 1, 'must be straight_random==1');
+			return regions.rmap(r => course.straights.map(s => r.intersect(s)));
+		},
+		filterNeq: notSupported,
+		filterLt: notSupported,
+		filterLte: notSupported,
+		filterGt: notSupported,
+		filterGte: notSupported
+	},
 	temptation_count: noopAsap,
 	up_slope_random: random({
 		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {

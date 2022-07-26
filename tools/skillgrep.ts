@@ -105,6 +105,7 @@ const mockSamplePolicy = Object.freeze({
 	reconcile(_) { return this; },
 	reconcileAsap(_) { return this; },
 	reconcileRandom(_) { return this; },
+	reconcileStraightRandom(_) { return this; },
 	reconcileAllCornerRandom(_) { return this; }
 });
 const mockConditions = new Proxy({}, {
