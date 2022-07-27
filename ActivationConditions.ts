@@ -236,7 +236,7 @@ const RandomPolicy = Object.freeze({
 		for (var i = 0; i < nsamples; ++i) {
 			const threshold = Math.random() * weights[weights.length-1];
 			const region = regions.find((_,i) => weights[i] > threshold)!;
-			samples.push(region.start + Math.floor(Math.random() * (region.end - region.start + 1)));
+			samples.push(region.start + Math.floor(Math.random() * (region.end - region.start - 10)));
 		}
 		return samples.map(pos => new Region(pos, pos + 10));
 	},
