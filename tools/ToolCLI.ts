@@ -9,7 +9,7 @@ import { DynamicCondition, SkillType, SkillEffect } from '../RaceSolver';
 
 import skills from '../data/skill_data.json';
 
-function strategy(s: string) {
+export function parseStrategy(s: string) {
 	switch (s.toUpperCase()) {
 	case 'NIGE': return Strategy.Nige;
 	case 'SENKOU': return Strategy.Senkou;
@@ -21,7 +21,7 @@ function strategy(s: string) {
 	}
 }
 
-function aptitude(a: string, type: string) {
+export function parseAptitude(a: string, type: string) {
 	switch (a.toUpperCase()) {
 	case 'S': return Aptitude.S;
 	case 'A': return Aptitude.A;
@@ -155,11 +155,11 @@ export class ToolCLI {
 			stamina: baseStats.stamina,
 			power: baseStats.power + GroundPowerModifier[course.surface][opts.ground],
 			guts: baseStats.guts,
-			int: baseStats.int * StrategyProficiencyModifier[aptitude(horseDesc.strategyAptitude, 'strategy')],
-			strategy: strategy(horseDesc.strategy),
-			distanceAptitude: aptitude(horseDesc.distanceAptitude, 'distance'),
-			surfaceAptitude: aptitude(horseDesc.surfaceAptitude, 'surface'),
-			strategyAptitude: aptitude(horseDesc.strategyAptitude, 'strategy')
+			int: baseStats.int * StrategyProficiencyModifier[parseAptitude(horseDesc.strategyAptitude, 'strategy')],
+			strategy: parseStrategy(horseDesc.strategy),
+			distanceAptitude: parseAptitude(horseDesc.distanceAptitude, 'distance'),
+			surfaceAptitude: parseAptitude(horseDesc.surfaceAptitude, 'surface'),
+			strategyAptitude: parseAptitude(horseDesc.strategyAptitude, 'strategy')
 		});
 
 		const wholeCourse = new RegionList();
