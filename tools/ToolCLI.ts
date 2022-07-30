@@ -112,7 +112,11 @@ export class ToolCLI {
 		this.program
 			.argument('<horsefile>', 'path to a JSON file describing the horse\'s parameters')
 			.requiredOption('-c, --course <id>', 'course ID')
-			.addOption(new Option('-m, --mood <mood>', 'the uma\'s mood').choices(['-2', '-1', '0', '+1', '+2']).default('0').argParser(parseInt))
+			.addOption(new Option('-m, --mood <mood>', 'the uma\'s mood')
+				.choices(['-2', '-1', '0', '+1', '+2'])
+				.default('0')
+				.argParser(x => parseInt(x,10))  // can't just use .argParser(parseInt) because it also gets passed the default value
+			)
 			.addOption(new Option('-g, --ground <condition>', 'track condition').choices(['good', 'yielding', 'soft', 'heavy']).default('good'))
 			.option('-s, --skill <id>', 'skill to test', (value,list) => list.concat([parseInt(value,10)]), [])
 			.option('--skills <ids>', 'comma-separated list of skill IDs', (value,_) => value.split(',').map(id => parseInt(id,10)), [])
