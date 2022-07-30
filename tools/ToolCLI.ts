@@ -114,7 +114,7 @@ export class ToolCLI {
 			.requiredOption('-c, --course <id>', 'course ID')
 			.addOption(new Option('-m, --mood <mood>', 'the uma\'s mood')
 				.choices(['-2', '-1', '0', '+1', '+2'])
-				.default('0')
+				.default('+2')
 				.argParser(x => parseInt(x,10))  // can't just use .argParser(parseInt) because it also gets passed the default value
 			)
 			.addOption(new Option('-g, --ground <condition>', 'track condition').choices(['good', 'yielding', 'soft', 'heavy']).default('good'))
