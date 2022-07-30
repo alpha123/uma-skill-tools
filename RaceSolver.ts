@@ -4,15 +4,6 @@ import { Strategy, Aptitude, HorseParameters } from './HorseTypes';
 import { CourseData, CourseHelpers, Phase } from './CourseData';
 import { Region } from './ActivationConditions';
 
-export const enum SkillType { TargetSpeed, Accel, CurrentSpeed }
-
-export interface SkillData {
-	name: string
-	type: SkillType
-	baseDuration: number
-	modifier: number
-}
-
 namespace Speed {
 	export const StrategyPhaseCoefficient = Object.freeze([
 		[], // strategies start numbered at 1
@@ -77,6 +68,21 @@ export interface RaceState {
 
 export type DynamicCondition = (state: RaceState) => boolean;
 
+export const enum SkillType { TargetSpeed, Accel, CurrentSpeed }
+
+export interface SkillEffect {
+	skillId: string
+	type: SkillType
+	baseDuration: number
+	modifier: number
+}
+
+export interface PendingSkill {
+	trigger: Region
+	extraCondition: DynamicCondition
+	effect: SkillEffect
+}
+
 export class RaceSolver {
 	accumulatetime: number
 	pos: number
@@ -88,16 +94,16 @@ export class RaceSolver {
 	course: CourseData
 	startDash: boolean
 	phase: Phase
-	activeSpeedSkills: {remainingDuration: number, skill: SkillData}[]
-	activeAccelSkills: {remainingDuration: number, skill: SkillData}[]
-	pendingSkills: {trigger: Region, extraCondition: DynamicCondition, skill: SkillData}[]
+	activeSpeedSkills: {remainingDuration: number, effect: SkillEffect}[]
+	activeAccelSkills: {remainingDuration: number, effect: SkillEffect}[]
+	pendingSkills: PendingSkill[]
 	currentSpeedModifier: number
 	nHills: number
 	hillIdx: number
 	hillStart: number[]
 	hillEnd: number[]
-	onSkillActivate: (s: SkillData) => void
-	onSkillDeactivate: (s: SkillData) => void
+	onSkillActivate: (s: SkillEffect) => void
+	onSkillDeactivate: (s: SkillEffect) => void
 
 	constructor(horse: HorseParameters, course: CourseData) {
 		this.horse = horse;
@@ -181,7 +187,7 @@ export class RaceSolver {
 			this.targetSpeed = baseTargetSpeed(this.horse, this.course, this.phase);
 		}
 		if (!this.startDash) {
-			this.targetSpeed += this.activeSpeedSkills.reduce((a,b) => a + b.skill.modifier, 0);
+			this.targetSpeed += this.activeSpeedSkills.reduce((a,b) => a + b.effect.modifier, 0);
 		}
 		if (this.hillIdx != -1) {
 			this.targetSpeed -= this.course.slopes[this.hillIdx].slope / 10000 * 200 / this.horse.power;
@@ -200,7 +206,7 @@ export class RaceSolver {
 		if (this.startDash) {
 			this.accel += 24.0;
 		}
-		this.accel += this.activeAccelSkills.reduce((a,b) => a + b.skill.modifier, 0);
+		this.accel += this.activeAccelSkills.reduce((a,b) => a + b.effect.modifier, 0);
 	}
 
 	updateHills() {
@@ -222,14 +228,14 @@ export class RaceSolver {
 			const s = this.activeSpeedSkills[i];
 			if ((s.remainingDuration -= dt) <= 0) {
 				this.activeSpeedSkills.splice(i,1);
-				this.onSkillDeactivate(s.skill);
+				this.onSkillDeactivate(s.effect);
 			}
 		}
 		for (var i = this.activeAccelSkills.length; --i >= 0;) {
 			const s = this.activeAccelSkills[i];
 			if ((s.remainingDuration -= dt) <= 0) {
 				this.activeAccelSkills.splice(i,1);
-				this.onSkillDeactivate(s.skill);
+				this.onSkillDeactivate(s.effect);
 			}
 		}
 		for (var i = this.pendingSkills.length; --i >= 0;) {
@@ -238,19 +244,19 @@ export class RaceSolver {
 				// skill failed to activate
 				this.pendingSkills.splice(i,1);
 			} else if (this.pos >= s.trigger.start && s.extraCondition(this)) {
-				const scaledDuration = s.skill.baseDuration * this.course.distance / 1000;
-				switch (s.skill.type) {
+				const scaledDuration = s.effect.baseDuration * this.course.distance / 1000;
+				switch (s.effect.type) {
 				case SkillType.TargetSpeed:
-					this.activeSpeedSkills.push({remainingDuration: scaledDuration, skill: s.skill});
+					this.activeSpeedSkills.push({remainingDuration: scaledDuration, effect: s.effect});
 					break;
 				case SkillType.Accel:
-					this.activeAccelSkills.push({remainingDuration: scaledDuration, skill: s.skill});
+					this.activeAccelSkills.push({remainingDuration: scaledDuration, effect: s.effect});
 					break;
 				case SkillType.CurrentSpeed:
-					this.currentSpeedModifier += s.skill.modifier;
+					this.currentSpeedModifier += s.effect.modifier;
 					break;
 				}
-				this.onSkillActivate(s.skill);
+				this.onSkillActivate(s.effect);
 				this.pendingSkills.splice(i,1);
 			}
 		}
