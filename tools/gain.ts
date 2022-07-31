@@ -31,8 +31,28 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 	function addTriggers(sd: SkillData) {
 		triggers.push(sd.samplePolicy.sample(sd.regions, nsamples));
 	}
+
+	const debuffs = [];
+	for (let i = cliSkills.length; --i >= 0;) {
+		const ef = cliSkills[i].effects;
+		if (ef.some(e => e.modifier < 0)) {
+			const debuffEffects = [];
+			debuffs.push(Object.assign({}, cliSkills[i], {effects: debuffEffects}));
+			for (let j = ef.length; --j >= 0;) {
+				if (ef[j].modifier < 0) {
+					debuffEffects.push(ef[j]);
+					ef.splice(j,1);
+				}
+			}
+			if (ef.length == 0) {
+				cliSkills.splice(i,1);
+			}
+		}
+	}
+
 	defSkills.forEach(addTriggers);
 	cliSkills.forEach(addTriggers);
+	debuffs.forEach(addTriggers);
 
 	function addSkill(s: RaceSolver, sd: SkillData, triggers: Region[], i: number) {
 		sd.effects.forEach(ef => {
@@ -60,6 +80,7 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 
 		const s2 = new RaceSolver(horse, course);
 		defSkills.forEach((sd,sdi) => addSkill(s2, sd, triggers[sdi], i));
+		debuffs.forEach((sd,sdi) => addSkill(s2, sd, triggers[sdi + defSkills.length + cliSkills.length], i));
 		while (s2.accumulatetime < s.accumulatetime) {
 			s2.step(1/60);
 		}

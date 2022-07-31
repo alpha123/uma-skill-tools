@@ -78,6 +78,10 @@ function buildSkillData(horse: HorseParameters, course: CourseData, wholeCourse:
 		const effects = skill.effects.reduce((acc,ef) => {
 			var type: SkillType | -1 = -1;
 			switch (ef.type) {
+			case 21:  // debuffs
+				acc.push({skillId: skillId, type: SkillType.CurrentSpeed, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
+				acc.push({skillId: skillId, type: SkillType.TargetSpeed, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
+				return acc;
 			case 22: type = SkillType.CurrentSpeed; break;
 			case 27: type = SkillType.TargetSpeed; break;
 			case 31: type = SkillType.Accel; break;
