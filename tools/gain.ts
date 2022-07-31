@@ -98,6 +98,6 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		console.log('');
 	}
 	cliOptions.thresholds.forEach(n => {
-	    console.log('≥' + n.toFixed(1) + ' | ' + (gain.reduce((a,b) => a + +(b >= n), 0) / gain.length * 100).toFixed(1) + '%');
+	    console.log('≥' + n.toFixed(2) + ' | ' + (gain.reduce((a,b) => a + +(b >= n), 0) / gain.length * 100).toFixed(1) + '%');
 	});
 });
