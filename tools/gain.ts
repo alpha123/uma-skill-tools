@@ -23,7 +23,8 @@ cli.options((program) => {
 		.addOption(new Option('--thresholds <cutoffs>', 'comma-separated list of values; print the percentage of the time they are exceeded')
 			.default([0.5,1.0,1.5,2.0,2.5])
 			.argParser(t => t.split(',').map(parseFloat))
-		);
+		)
+		.option('--dump', 'instead of printing a summary, dump data. intended to be piped into histogram.py.');
 });
 cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cliSkills: SkillData[], cliOptions: any) => {
 	const nsamples = cliOptions.nsamples;
@@ -86,8 +87,13 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		}
 		gain.push((s.pos - s2.pos) / 2.5);
 	}
-
 	gain.sort((a,b) => a - b);
+
+	if (cliOptions.dump) {
+		console.log(JSON.stringify(gain));
+		return;
+	}
+
 	console.log('min:\t' + gain[0].toFixed(2));
 	console.log('max:\t' + gain[gain.length-1].toFixed(2));
 	const mid = Math.floor(gain.length / 2);
