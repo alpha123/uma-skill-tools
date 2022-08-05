@@ -444,6 +444,12 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
+	distance_rate_after_random: random({
+		filterEq(regions: RegionList, rate: number, course: CourseData, _: HorseParameters) {
+			const bounds = new Region(course.distance * rate / 100, course.distance);
+			return regions.rmap(r => r.intersect(bounds));
+		}
+	}),
 	distance_type: asap({
 		filterEq(regions: RegionList, distanceType: number, course: CourseData, _: HorseParameters) {
 			CourseHelpers.assertIsDistanceType(distanceType);
