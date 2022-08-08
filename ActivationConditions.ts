@@ -211,6 +211,7 @@ export interface ActivationSamplePolicy {
 	sample(regions: RegionList, nsamples: number): Region[]
 	reconcile(other: ActivationSamplePolicy): ActivationSamplePolicy
 	reconcileAsap(other: ActivationSamplePolicy): ActivationSamplePolicy
+	reconcileLogNormalRandom(other: ActivationSamplePolicy): ActivationSamplePolicy
 	reconcileRandom(other: ActivationSamplePolicy): ActivationSamplePolicy
 	reconcileStraightRandom(other: ActivationSamplePolicy): ActivationSamplePolicy
 	reconcileAllCornerRandom(other: ActivationSamplePolicy): ActivationSamplePolicy
@@ -220,6 +221,7 @@ const AsapPolicy = Object.freeze({
 	sample(regions: RegionList, _: number) { return regions.slice(0,1); },
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileAsap(this); },
 	reconcileAsap(other: ActivationSamplePolicy) { return other; },
+	reconcileLogNormalRandom(other: ActivationSamplePolicy) { return other; },
 	reconcileRandom(other: ActivationSamplePolicy) { return other; },
 	reconcileStraightRandom(other: ActivationSamplePolicy) { return other; },
 	reconcileAllCornerRandom(other: ActivationSamplePolicy) { return other; }
@@ -230,11 +232,11 @@ const RandomPolicy = Object.freeze({
 		if (regions.length == 0) {
 			return [];
 		}
-		var acc = 0;
+		let acc = 0;
 		const weights = regions.map(r => acc += r.end - r.start);
 		const samples = [];
 		for (var i = 0; i < nsamples; ++i) {
-			const threshold = Math.random() * weights[weights.length-1];
+			const threshold = Math.random() * weights[weights.length - 1];
 			const region = regions.find((_,i) => weights[i] > threshold)!;
 			samples.push(region.start + Math.floor(Math.random() * (region.end - region.start - 10)));
 		}
@@ -242,10 +244,67 @@ const RandomPolicy = Object.freeze({
 	},
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileRandom(this); },
 	reconcileAsap(_: ActivationSamplePolicy) { return this; },
+	reconcileLogNormalRandom(other: ActivationSamplePolicy) { return this; },
 	reconcileRandom(other: ActivationSamplePolicy) { return other; },
 	reconcileStraightRandom(other: ActivationSamplePolicy) { return other; },
 	reconcileAllCornerRandom(other: ActivationSamplePolicy) { return other; }
 });
+
+class LogNormalRandomPolicy {
+	constructor(readonly mu: number, readonly sigma: number) {}
+
+	boxMuller(halfn: number) {
+		// see <https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform>
+		let nums = [], min = Infinity, max = 0.0;
+		for (let i = 0; i < halfn; ++i) {
+			let x, y, r2;
+			do {
+				x = Math.random() * 2.0 - 1.0;
+				y = Math.random() * 2.0 - 1.0;
+				r2 = x * x + y * y;
+			} while (r2 == 0.0 || r2 >= 1.0);
+			const m = Math.sqrt(-2.0 * Math.log(r2) / r2) * this.sigma;
+			const a = Math.exp(x * m + this.mu);
+			const b = Math.exp(y * m + this.mu);
+			min = Math.min(min, a, b);
+			max = Math.max(max, a, b);
+			nums.push(a,b);
+		}
+		const range = max - min;
+		return nums.map(n => (n - min) / range);
+	}
+
+	sample(regions: RegionList, nsamples: number) {
+		if (regions.length == 0) {
+			return [];
+		}
+		const range = regions.reduce((acc,r) => acc + r.end - 10 - r.start, 0);
+		const randoms = this.boxMuller((nsamples >> 1) + (nsamples & 1));
+		const samples = [];
+		for (let i = 0; i < nsamples; ++i) {
+			const rs = regions.slice().sort((a,b) => a.start - b.start);
+			let pos = Math.floor(randoms[i] * range);
+			while (true) {
+				pos += rs[0].start;
+				if (pos > rs[0].end - 10) {
+					pos -= rs[0].end - 10;
+					rs.shift();
+				} else {
+					samples.push(pos);
+					break;
+				}
+			}
+		}
+		return samples.map(pos => new Region(pos, pos + 10));
+	}
+
+	reconcile(other: ActivationSamplePolicy) { return other.reconcileLogNormalRandom(this); }
+	reconcileAsap(_: ActivationSamplePolicy) { return this; }
+	reconcileLogNormalRandom(other: ActivationSamplePolicy) { return other; }
+	reconcileRandom(other: ActivationSamplePolicy) { return other; }
+	reconcileStraightRandom(other: ActivationSamplePolicy) { return other; }
+	reconcileAllCornerRandom(other: ActivationSamplePolicy) { return other; }
+}
 
 const StraightRandomPolicy = Object.freeze({
 	sample(regions: RegionList, nsamples: number) {
@@ -263,6 +322,7 @@ const StraightRandomPolicy = Object.freeze({
 	},
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileStraightRandom(this); },
 	reconcileAsap(_: ActivationSamplePolicy) { return this; },
+	reconcileLogNormalRandom(_: ActivationSamplePolicy) { return this; },
 	reconcileRandom(_: ActivationSamplePolicy) { return this; },
 	reconcileStraightRandom(other: ActivationSamplePolicy) { return other; },
 	reconcileAllCornerRandom(other: ActivationSamplePolicy) { throw new Error('cannot reconcile StraightRandomPolicy with AllCornerRandomPolicy'); }
@@ -299,6 +359,7 @@ const AllCornerRandomPolicy = Object.freeze({
 	},
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileAllCornerRandom(this); },
 	reconcileAsap(_: ActivationSamplePolicy) { return this; },
+	reconcileLogNormalRandom(_: ActivationSamplePolicy) { return this; },
 	reconcileRandom(_: ActivationSamplePolicy) { return this; },
 	reconcileStraightRandom(_: ActivationSamplePolicy) { throw new Error('cannot reconcile StraightRandomPolicy with AllCornerRandomPolicy'); },
 	reconcileAllCornerRandom(_: ActivationSamplePolicy) { return this; }
@@ -353,7 +414,7 @@ const defaultAsap = Object.freeze({
 	filterGte: notSupported
 });
 
-function asap(o) {
+function asap(o: Partial<Condition>) {
 	return Object.assign({}, defaultAsap, o);
 }
 
@@ -367,8 +428,35 @@ const defaultRandom = Object.freeze({
 	filterGte: notSupported
 });
 
-function random(o) {
+function random(o: Partial<Condition>) {
 	return Object.assign({}, defaultRandom, o);
+}
+
+const logNormalRandom = (function (cache) {
+	return function logNormalRandom(mu: number, sigma: number, o: Partial<Condition>) {
+		const key = mu + ',' + sigma;
+		const policy = key in cache ? cache[key] : (cache[key] = new LogNormalRandomPolicy(mu, sigma));
+		return Object.assign({
+			samplePolicy: policy,
+			filterEq: notSupported,
+			filterNeq: notSupported,
+			filterLt: notSupported,
+			filterLte: notSupported,
+			filterGt: notSupported,
+			filterGte: notSupported
+		}, o);
+	};
+})(Object.create(null));
+
+function noopLogNormalRandom(mu: number, sigma: number) {
+	return logNormalRandom(mu, sigma, {
+		filterEq: noop,
+		filterNeq: noop,
+		filterLt: noop,
+		filterLte: noop,
+		filterGt: noop,
+		filterGte: noop
+	});
 }
 
 /*
@@ -408,8 +496,9 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		filterGt: notSupported,
 		filterGte: notSupported
 	},
-	blocked_side_continuetime: noopRandom,
-	change_order_onetime: noopRandom,
+	behind_near_lane_time: noopLogNormalRandom(0, 0.25),
+	blocked_side_continuetime: noopLogNormalRandom(0, 0.25),
+	change_order_onetime: noopLogNormalRandom(0, 0.25),
 	corner: asap({
 		filterEq(regions: RegionList, cornerNum: number, course: CourseData, _: HorseParameters) {
 			assert(CourseHelpers.isSortedByStart(course.corners), 'course corners must be sorted by start');
@@ -473,11 +562,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	// umas, as well as random factors like downhill accel mode.
 	// The only skill likely severely affected by this is Akebono's unique.
 	hp_per: noopAsap,
-	// it might make more sense infront_near_lane_time this to be noopRandom, but Nonstop Girl uses this condition and afaict
-	// hoffe's numbers assume instant nsg activation, so for hoffe compatibility assume nsg always activates instantly
-	// since a condition's sample policy is only really a recommendation, callers are still free to use a different samplePolicy
-	// or eg allow the end user to choose
-	infront_near_lane_time: noopAsap,
+	infront_near_lane_time: noopLogNormalRandom(0, 0.25),
 	is_finalcorner: asap({
 		filterEq(regions: RegionList, flag: number, course: CourseData, _: HorseParameters) {
 			assert(flag == 0 || flag == 1, 'must be is_finalcorner==0 or is_finalcorner==1');
