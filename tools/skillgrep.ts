@@ -104,6 +104,7 @@ const mockSamplePolicy = Object.freeze({
 	sample(_0,_1) { assert(false); },
 	reconcile(_) { return this; },
 	reconcileAsap(_) { return this; },
+	reconcileLogNormalRandom(_) { return this; },
 	reconcileRandom(_) { return this; },
 	reconcileStraightRandom(_) { return this; },
 	reconcileAllCornerRandom(_) { return this; }
