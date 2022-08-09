@@ -298,6 +298,18 @@ abstract class DistributionRandomPolicy {
 	reconcileAllCornerRandom(other: ActivationSamplePolicy) { return other; }
 }
 
+class UniformRandomPolicy extends DistributionRandomPolicy {
+	constructor() { super(); }
+
+	distribution(n: number) {
+		const nums = [];
+		for (let i = 0; i < n; ++i) {
+			nums.push(Math.random());
+		}
+		return nums;
+	}
+}
+
 class LogNormalRandomPolicy extends DistributionRandomPolicy {
 	constructor(readonly mu: number, readonly sigma: number) { super(); }
 
@@ -463,6 +475,9 @@ function random(o: Partial<Condition>) {
 	return Object.assign({}, defaultRandom, o);
 }
 
+// ive tried various things to make this return a [xRandom,noopXRandom] pair but seem to run into some typescript bugs
+// or something
+// it doesnt really make sense to me
 function distributionRandomFactory<Ts extends unknown[]>(cls: new (...args: Ts) => DistributionRandomPolicy) {
 	const cache = Object.create(null);
 	return function (...args: [...clsArgs: Ts, o: Partial<Condition>]) {
@@ -484,6 +499,7 @@ function distributionRandomFactory<Ts extends unknown[]>(cls: new (...args: Ts) 
 
 const logNormalRandom = distributionRandomFactory(LogNormalRandomPolicy);
 const erlangRandom = distributionRandomFactory(ErlangRandomPolicy);
+const uniformRandom = distributionRandomFactory(UniformRandomPolicy);
 
 function noopLogNormalRandom(mu: number, sigma: number) {
 	return logNormalRandom(mu, sigma, noopAll);
@@ -492,6 +508,8 @@ function noopLogNormalRandom(mu: number, sigma: number) {
 function noopErlangRandom(k: number, lambda: number) {
 	return erlangRandom(k, lambda, noopAll);
 }
+
+const noopUniformRandom = uniformRandom(noopAll);
 
 /*
 	accumulatetime, activate_count_all, activate_count_end_after, activate_count_heal, activate_count_middle, activate_count_start,
@@ -533,6 +551,13 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	behind_near_lane_time: noopErlangRandom(3, 2.0),
 	blocked_side_continuetime: noopErlangRandom(3, 2.0),
 	change_order_onetime: noopErlangRandom(3, 2.0),
+	compete_fight_count: uniformRandom({
+		filterGt(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters) {
+			assert(CourseHelpers.isSortedByStart(course.straights), 'course straights must be sorted by start');
+			const lastStraight = course.straights[course.straights.length - 1];
+			return regions.rmap(r => r.intersect(lastStraight));
+		}
+	}),
 	corner: asap({
 		filterEq(regions: RegionList, cornerNum: number, course: CourseData, _: HorseParameters) {
 			assert(CourseHelpers.isSortedByStart(course.corners), 'course corners must be sorted by start');
