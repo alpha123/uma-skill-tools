@@ -277,12 +277,12 @@ abstract class DistributionRandomPolicy {
 					pos -= rs[0].end - 10;
 					rs.shift();
 				} else {
-					samples.push(pos);
+					samples.push(new Region(pos, rs[0].end));
 					break;
 				}
 			}
 		}
-		return samples.map(pos => new Region(pos, pos + 10));
+		return samples;
 	}
 
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileDistributionRandom(this); }
