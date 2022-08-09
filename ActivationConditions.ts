@@ -650,7 +650,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(trigger));
 		}
 	}),
-	near_count: noopLogNormalRandom(0, 0.25),
+	near_count: noopErlangRandom(3, 2.0),
 	order: noopAsap,
 	order_rate: noopAsap,
 	order_rate_in20_continue: noopAsap,
