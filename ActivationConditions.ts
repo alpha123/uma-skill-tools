@@ -209,9 +209,17 @@ export class OrOperator {
 
 export interface ActivationSamplePolicy {
 	sample(regions: RegionList, nsamples: number): Region[]
+
+	// essentially, when two conditions are combined with an AndOperator one should take precedence over the other
+	// asap transitions into anything and straight_random/all_corner_random dominate everything except each other
+	// NB. currently there are no skills that combine straight_random or all_corner_random with anything other than
+	// immediate conditions (running_style or distance_type), and obviously they are mutually exclusive with each other
+	// the actual x_random (phase_random, down_slope_random, etc) ones should dominate the ones that are not actually
+	// random but merely modeled with a probability distribution
+	// use smalltalk-style double dispatch to implement the transitions
 	reconcile(other: ActivationSamplePolicy): ActivationSamplePolicy
 	reconcileAsap(other: ActivationSamplePolicy): ActivationSamplePolicy
-	reconcileLogNormalRandom(other: ActivationSamplePolicy): ActivationSamplePolicy
+	reconcileDistributionRandom(other: ActivationSamplePolicy): ActivationSamplePolicy
 	reconcileRandom(other: ActivationSamplePolicy): ActivationSamplePolicy
 	reconcileStraightRandom(other: ActivationSamplePolicy): ActivationSamplePolicy
 	reconcileAllCornerRandom(other: ActivationSamplePolicy): ActivationSamplePolicy
@@ -221,7 +229,7 @@ const AsapPolicy = Object.freeze({
 	sample(regions: RegionList, _: number) { return regions.slice(0,1); },
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileAsap(this); },
 	reconcileAsap(other: ActivationSamplePolicy) { return other; },
-	reconcileLogNormalRandom(other: ActivationSamplePolicy) { return other; },
+	reconcileDistributionRandom(other: ActivationSamplePolicy) { return other; },
 	reconcileRandom(other: ActivationSamplePolicy) { return other; },
 	reconcileStraightRandom(other: ActivationSamplePolicy) { return other; },
 	reconcileAllCornerRandom(other: ActivationSamplePolicy) { return other; }
@@ -244,42 +252,21 @@ const RandomPolicy = Object.freeze({
 	},
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileRandom(this); },
 	reconcileAsap(_: ActivationSamplePolicy) { return this; },
-	reconcileLogNormalRandom(other: ActivationSamplePolicy) { return this; },
+	reconcileDistributionRandom(other: ActivationSamplePolicy) { return this; },
 	reconcileRandom(other: ActivationSamplePolicy) { return other; },
 	reconcileStraightRandom(other: ActivationSamplePolicy) { return other; },
 	reconcileAllCornerRandom(other: ActivationSamplePolicy) { return other; }
 });
 
-class LogNormalRandomPolicy {
-	constructor(readonly mu: number, readonly sigma: number) {}
-
-	boxMuller(halfn: number) {
-		// see <https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform>
-		let nums = [], min = Infinity, max = 0.0;
-		for (let i = 0; i < halfn; ++i) {
-			let x, y, r2;
-			do {
-				x = Math.random() * 2.0 - 1.0;
-				y = Math.random() * 2.0 - 1.0;
-				r2 = x * x + y * y;
-			} while (r2 == 0.0 || r2 >= 1.0);
-			const m = Math.sqrt(-2.0 * Math.log(r2) / r2) * this.sigma;
-			const a = Math.exp(x * m + this.mu);
-			const b = Math.exp(y * m + this.mu);
-			min = Math.min(min, a, b);
-			max = Math.max(max, a, b);
-			nums.push(a,b);
-		}
-		const range = max - min;
-		return nums.map(n => (n - min) / range);
-	}
+abstract class DistributionRandomPolicy {
+	abstract distribution(n: number): number[]
 
 	sample(regions: RegionList, nsamples: number) {
 		if (regions.length == 0) {
 			return [];
 		}
 		const range = regions.reduce((acc,r) => acc + r.end - 10 - r.start, 0);
-		const randoms = this.boxMuller((nsamples >> 1) + (nsamples & 1));
+		const randoms = this.distribution(nsamples);
 		const samples = [];
 		for (let i = 0; i < nsamples; ++i) {
 			const rs = regions.slice().sort((a,b) => a.start - b.start);
@@ -298,12 +285,64 @@ class LogNormalRandomPolicy {
 		return samples.map(pos => new Region(pos, pos + 10));
 	}
 
-	reconcile(other: ActivationSamplePolicy) { return other.reconcileLogNormalRandom(this); }
+	reconcile(other: ActivationSamplePolicy) { return other.reconcileDistributionRandom(this); }
 	reconcileAsap(_: ActivationSamplePolicy) { return this; }
-	reconcileLogNormalRandom(other: ActivationSamplePolicy) { return other; }
+	reconcileDistributionRandom(other: ActivationSamplePolicy) {
+		if (this === other) {  // compare by identity since DistributionRandomPolicy subclasses are cached by their parameters
+			return this;
+		}
+		throw new Error('cannot reconcile different distributions');
+	}
 	reconcileRandom(other: ActivationSamplePolicy) { return other; }
 	reconcileStraightRandom(other: ActivationSamplePolicy) { return other; }
 	reconcileAllCornerRandom(other: ActivationSamplePolicy) { return other; }
+}
+
+class LogNormalRandomPolicy extends DistributionRandomPolicy {
+	constructor(readonly mu: number, readonly sigma: number) { super(); }
+
+	distribution(n: number) {
+		// see <https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform>
+		let nums = [], min = Infinity, max = 0.0;
+		const halfn = (n >> 1) + (n & 1);
+		for (let i = 0; i < halfn; ++i) {
+			let x, y, r2;
+			do {
+				x = Math.random() * 2.0 - 1.0;
+				y = Math.random() * 2.0 - 1.0;
+				r2 = x * x + y * y;
+			} while (r2 == 0.0 || r2 >= 1.0);
+			const m = Math.sqrt(-2.0 * Math.log(r2) / r2) * this.sigma;
+			const a = Math.exp(x * m + this.mu);
+			const b = Math.exp(y * m + this.mu);
+			min = Math.min(min, a, b);
+			max = Math.max(max, a, b);
+			nums.push(a,b);
+		}
+		const range = max - min;
+		return nums.map(n => (n - min) / range);
+	}
+}
+
+class ErlangRandomPolicy extends DistributionRandomPolicy {
+	constructor(readonly k: number, readonly lambda: number) { super(); }
+
+	distribution(n: number) {
+		const nums = [];
+		let min = Infinity, max = 0.0;
+		for (let i = 0; i < n; ++i) {
+			let u = 1.0;
+			for (let j = 0; j < this.k; ++j) {
+				u *= Math.random();
+			}
+			const x = -Math.log(u) / this.lambda;
+			min = Math.min(min, x);
+			max = Math.max(max, x);
+			nums.push(x);
+		}
+		const range = max - min;
+		return nums.map(x => (x - min) / range);
+	}
 }
 
 const StraightRandomPolicy = Object.freeze({
@@ -322,7 +361,7 @@ const StraightRandomPolicy = Object.freeze({
 	},
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileStraightRandom(this); },
 	reconcileAsap(_: ActivationSamplePolicy) { return this; },
-	reconcileLogNormalRandom(_: ActivationSamplePolicy) { return this; },
+	reconcileDistributionRandom(_: ActivationSamplePolicy) { return this; },
 	reconcileRandom(_: ActivationSamplePolicy) { return this; },
 	reconcileStraightRandom(other: ActivationSamplePolicy) { return other; },
 	reconcileAllCornerRandom(other: ActivationSamplePolicy) { throw new Error('cannot reconcile StraightRandomPolicy with AllCornerRandomPolicy'); }
@@ -359,7 +398,7 @@ const AllCornerRandomPolicy = Object.freeze({
 	},
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileAllCornerRandom(this); },
 	reconcileAsap(_: ActivationSamplePolicy) { return this; },
-	reconcileLogNormalRandom(_: ActivationSamplePolicy) { return this; },
+	reconcileDistributionRandom(_: ActivationSamplePolicy) { return this; },
 	reconcileRandom(_: ActivationSamplePolicy) { return this; },
 	reconcileStraightRandom(_: ActivationSamplePolicy) { throw new Error('cannot reconcile StraightRandomPolicy with AllCornerRandomPolicy'); },
 	reconcileAllCornerRandom(_: ActivationSamplePolicy) { return this; }
@@ -384,8 +423,7 @@ function noop(regions: RegionList, _1: number, _2: CourseData, _3: HorseParamete
 	return regions;
 }
 
-const noopAsap = Object.freeze({
-	samplePolicy: AsapPolicy,
+const noopAll = Object.freeze({
 	filterEq: noop,
 	filterNeq: noop,
 	filterLt: noop,
@@ -394,15 +432,8 @@ const noopAsap = Object.freeze({
 	filterGte: noop
 });
 
-const noopRandom = Object.freeze({
-	samplePolicy: RandomPolicy,
-	filterEq: noop,
-	filterNeq: noop,
-	filterLt: noop,
-	filterLte: noop,
-	filterGt: noop,
-	filterGte: noop
-});
+const noopAsap = Object.freeze(Object.assign({samplePolicy: AsapPolicy}, noopAll));
+const noopRandom = Object.freeze(Object.assign({samplePolicy: RandomPolicy}, noopAll));
 
 const defaultAsap = Object.freeze({
 	samplePolicy: AsapPolicy,
@@ -432,10 +463,13 @@ function random(o: Partial<Condition>) {
 	return Object.assign({}, defaultRandom, o);
 }
 
-const logNormalRandom = (function (cache) {
-	return function logNormalRandom(mu: number, sigma: number, o: Partial<Condition>) {
-		const key = mu + ',' + sigma;
-		const policy = key in cache ? cache[key] : (cache[key] = new LogNormalRandomPolicy(mu, sigma));
+function distributionRandomFactory<Ts extends unknown[]>(cls: new (...args: Ts) => DistributionRandomPolicy) {
+	const cache = Object.create(null);
+	return function (...args: [...clsArgs: Ts, o: Partial<Condition>]) {
+		const o = args.pop();
+		const key = args.join(',');
+		// we know that after pop() args is just Ts but typescript doesn't, hence the cast
+		const policy = key in cache ? cache[key] : (cache[key] = Object.freeze(new cls(...args as unknown as Ts)));
 		return Object.assign({
 			samplePolicy: policy,
 			filterEq: notSupported,
@@ -446,17 +480,17 @@ const logNormalRandom = (function (cache) {
 			filterGte: notSupported
 		}, o);
 	};
-})(Object.create(null));
+}
+
+const logNormalRandom = distributionRandomFactory(LogNormalRandomPolicy);
+const erlangRandom = distributionRandomFactory(ErlangRandomPolicy);
 
 function noopLogNormalRandom(mu: number, sigma: number) {
-	return logNormalRandom(mu, sigma, {
-		filterEq: noop,
-		filterNeq: noop,
-		filterLt: noop,
-		filterLte: noop,
-		filterGt: noop,
-		filterGte: noop
-	});
+	return logNormalRandom(mu, sigma, noopAll);
+}
+
+function noopErlangRandom(k: number, lambda: number) {
+	return erlangRandom(k, lambda, noopAll);
 }
 
 /*
@@ -496,9 +530,9 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		filterGt: notSupported,
 		filterGte: notSupported
 	},
-	behind_near_lane_time: noopLogNormalRandom(0, 0.25),
-	blocked_side_continuetime: noopLogNormalRandom(0, 0.25),
-	change_order_onetime: noopLogNormalRandom(0, 0.25),
+	behind_near_lane_time: noopErlangRandom(3, 2.0),
+	blocked_side_continuetime: noopErlangRandom(3, 2.0),
+	change_order_onetime: noopErlangRandom(3, 2.0),
 	corner: asap({
 		filterEq(regions: RegionList, cornerNum: number, course: CourseData, _: HorseParameters) {
 			assert(CourseHelpers.isSortedByStart(course.corners), 'course corners must be sorted by start');
@@ -562,7 +596,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	// umas, as well as random factors like downhill accel mode.
 	// The only skill likely severely affected by this is Akebono's unique.
 	hp_per: noopAsap,
-	infront_near_lane_time: noopLogNormalRandom(0, 0.25),
+	infront_near_lane_time: noopErlangRandom(3, 2.0),
 	is_finalcorner: asap({
 		filterEq(regions: RegionList, flag: number, course: CourseData, _: HorseParameters) {
 			assert(flag == 0 || flag == 1, 'must be is_finalcorner==0 or is_finalcorner==1');
