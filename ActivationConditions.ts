@@ -243,8 +243,8 @@ const RandomPolicy = Object.freeze({
 		let acc = 0;
 		const weights = regions.map(r => acc += r.end - r.start);
 		const samples = [];
-		for (var i = 0; i < nsamples; ++i) {
-			const threshold = Math.random() * weights[weights.length - 1];
+		for (let i = 0; i < nsamples; ++i) {
+			const threshold = Math.random() * acc;
 			const region = regions.find((_,i) => weights[i] > threshold)!;
 			samples.push(region.start + Math.floor(Math.random() * (region.end - region.start - 10)));
 		}
@@ -763,7 +763,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			// Requires course.slopes is sorted by slope start— this is not always the case, since in course_data.json they are
 			// (sometimes?) sorted first by uphill/downhill and then by start. They should be sorted when the course is loaded.
 			assert(CourseHelpers.isSortedByStart(course.slopes), 'course slopes must be sorted by slope start');
-			var lastEnd = 0;
+			let lastEnd = 0;
 			const slopes = course.slopes.filter(s => (slopeType != 2 && s.slope > 0) || (slopeType != 1 && s.slope < 0));
 			const slopeR = slopeType == 0 ? slopes.map(s => {
 				const r = new Region(lastEnd, s.start);
