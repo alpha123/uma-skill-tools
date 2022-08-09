@@ -266,18 +266,17 @@ abstract class DistributionRandomPolicy {
 			return [];
 		}
 		const range = regions.reduce((acc,r) => acc + r.end - 10 - r.start, 0);
+		const rs = regions.slice().sort((a,b) => a.start - b.start);
 		const randoms = this.distribution(nsamples);
 		const samples = [];
 		for (let i = 0; i < nsamples; ++i) {
-			const rs = regions.slice().sort((a,b) => a.start - b.start);
 			let pos = Math.floor(randoms[i] * range);
-			while (true) {
-				pos += rs[0].start;
-				if (pos > rs[0].end - 10) {
-					pos -= rs[0].end - 10;
-					rs.shift();
+			for (let j = 0;; j++) {
+				pos += rs[j].start;
+				if (pos > rs[j].end - 10) {
+					pos -= rs[j].end - 10;
 				} else {
-					samples.push(new Region(pos, rs[0].end));
+					samples.push(new Region(pos, rs[j].end));
 					break;
 				}
 			}
