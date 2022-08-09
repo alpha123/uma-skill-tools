@@ -304,7 +304,7 @@ class LogNormalRandomPolicy extends DistributionRandomPolicy {
 	distribution(n: number) {
 		// see <https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform>
 		let nums = [], min = Infinity, max = 0.0;
-		const halfn = (n >> 1) + (n & 1);
+		const halfn = Math.ceil(n / 2);
 		for (let i = 0; i < halfn; ++i) {
 			let x, y, r2;
 			do {
