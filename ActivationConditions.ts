@@ -265,7 +265,7 @@ abstract class DistributionRandomPolicy {
 		if (regions.length == 0) {
 			return [];
 		}
-		const range = regions.reduce((acc,r) => acc + r.end - 10 - r.start, 0);
+		const range = regions.reduce((acc,r) => acc + r.end - r.start, 0);
 		const rs = regions.slice().sort((a,b) => a.start - b.start);
 		const randoms = this.distribution(nsamples);
 		const samples = [];
@@ -273,8 +273,8 @@ abstract class DistributionRandomPolicy {
 			let pos = Math.floor(randoms[i] * range);
 			for (let j = 0;; j++) {
 				pos += rs[j].start;
-				if (pos > rs[j].end - 10) {
-					pos -= rs[j].end - 10;
+				if (pos > rs[j].end) {
+					pos -= rs[j].end;
 				} else {
 					samples.push(new Region(pos, rs[j].end));
 					break;
