@@ -2,7 +2,7 @@ const assert = require('assert').strict;
 
 import { Strategy, Aptitude, HorseParameters } from './HorseTypes';
 import { CourseData, CourseHelpers, Phase } from './CourseData';
-import { Region } from './ActivationConditions';
+import { Region } from './Region';
 
 namespace Speed {
 	export const StrategyPhaseCoefficient = Object.freeze([

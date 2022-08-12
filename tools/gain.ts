@@ -1,7 +1,7 @@
 import { Option } from 'commander';
 import { HorseParameters } from '../HorseTypes';
 import { CourseData } from '../CourseData';
-import { Region } from '../ActivationConditions';
+import { Region } from '../Region';
 import { PendingSkill, RaceSolver } from '../RaceSolver';
 import { SkillData, ToolCLI, parseAptitude } from './ToolCLI';
 

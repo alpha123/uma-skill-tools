@@ -3,7 +3,9 @@ import { Command, Option, InvalidArgumentError } from 'commander';
 
 import { HorseParameters, Strategy, Aptitude } from '../HorseTypes';
 import { CourseData, CourseHelpers } from '../CourseData';
-import { Conditions, Region, RegionList, ActivationSamplePolicy } from '../ActivationConditions';
+import { Region, RegionList } from '../Region';
+import { ActivationSamplePolicy } from '../ActivationSamplePolicy';
+import { Conditions } from '../ActivationConditions';
 import { parse, tokenize } from '../ConditionParser';
 import { DynamicCondition, SkillType, SkillRarity, SkillEffect } from '../RaceSolver';
 
