@@ -4,24 +4,24 @@ export interface ActivationSamplePolicy {
 	sample(regions: RegionList, nsamples: number): Region[]
 
 	// essentially, when two conditions are combined with an AndOperator one should take precedence over the other
-	// asap transitions into anything and straight_random/all_corner_random dominate everything except each other
+	// immediate transitions into anything and straight_random/all_corner_random dominate everything except each other
 	// NB. currently there are no skills that combine straight_random or all_corner_random with anything other than
 	// immediate conditions (running_style or distance_type), and obviously they are mutually exclusive with each other
 	// the actual x_random (phase_random, down_slope_random, etc) ones should dominate the ones that are not actually
 	// random but merely modeled with a probability distribution
 	// use smalltalk-style double dispatch to implement the transitions
 	reconcile(other: ActivationSamplePolicy): ActivationSamplePolicy
-	reconcileAsap(other: ActivationSamplePolicy): ActivationSamplePolicy
+	reconcileImmediate(other: ActivationSamplePolicy): ActivationSamplePolicy
 	reconcileDistributionRandom(other: ActivationSamplePolicy): ActivationSamplePolicy
 	reconcileRandom(other: ActivationSamplePolicy): ActivationSamplePolicy
 	reconcileStraightRandom(other: ActivationSamplePolicy): ActivationSamplePolicy
 	reconcileAllCornerRandom(other: ActivationSamplePolicy): ActivationSamplePolicy
 }
 
-export const AsapPolicy = Object.freeze({
+export const ImmediatePolicy = Object.freeze({
 	sample(regions: RegionList, _: number) { return regions.slice(0,1); },
-	reconcile(other: ActivationSamplePolicy) { return other.reconcileAsap(this); },
-	reconcileAsap(other: ActivationSamplePolicy) { return other; },
+	reconcile(other: ActivationSamplePolicy) { return other.reconcileImmediate(this); },
+	reconcileImmediate(other: ActivationSamplePolicy) { return other; },
 	reconcileDistributionRandom(other: ActivationSamplePolicy) { return other; },
 	reconcileRandom(other: ActivationSamplePolicy) { return other; },
 	reconcileStraightRandom(other: ActivationSamplePolicy) { return other; },
@@ -44,7 +44,7 @@ export const RandomPolicy = Object.freeze({
 		return samples.map(pos => new Region(pos, pos + 10));
 	},
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileRandom(this); },
-	reconcileAsap(_: ActivationSamplePolicy) { return this; },
+	reconcileImmediate(_: ActivationSamplePolicy) { return this; },
 	reconcileDistributionRandom(other: ActivationSamplePolicy) { return this; },
 	reconcileRandom(other: ActivationSamplePolicy) { return other; },
 	reconcileStraightRandom(other: ActivationSamplePolicy) { return other; },
@@ -78,7 +78,7 @@ export abstract class DistributionRandomPolicy {
 	}
 
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileDistributionRandom(this); }
-	reconcileAsap(_: ActivationSamplePolicy) { return this; }
+	reconcileImmediate(_: ActivationSamplePolicy) { return this; }
 	reconcileDistributionRandom(other: ActivationSamplePolicy) {
 		if (this === other) {  // compare by identity since DistributionRandomPolicy subclasses are cached by their parameters
 			return this;
@@ -164,7 +164,7 @@ export const StraightRandomPolicy = Object.freeze({
 		return samples.map(pos => new Region(pos, pos + 10));
 	},
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileStraightRandom(this); },
-	reconcileAsap(_: ActivationSamplePolicy) { return this; },
+	reconcileImmediate(_: ActivationSamplePolicy) { return this; },
 	reconcileDistributionRandom(_: ActivationSamplePolicy) { return this; },
 	reconcileRandom(_: ActivationSamplePolicy) { return this; },
 	reconcileStraightRandom(other: ActivationSamplePolicy) { return other; },
@@ -201,7 +201,7 @@ export const AllCornerRandomPolicy = Object.freeze({
 		return samples;
 	},
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileAllCornerRandom(this); },
-	reconcileAsap(_: ActivationSamplePolicy) { return this; },
+	reconcileImmediate(_: ActivationSamplePolicy) { return this; },
 	reconcileDistributionRandom(_: ActivationSamplePolicy) { return this; },
 	reconcileRandom(_: ActivationSamplePolicy) { return this; },
 	reconcileStraightRandom(_: ActivationSamplePolicy) { throw new Error('cannot reconcile StraightRandomPolicy with AllCornerRandomPolicy'); },

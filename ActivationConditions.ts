@@ -6,7 +6,7 @@ import { Region, RegionList } from './Region';
 import { RaceState, DynamicCondition } from './RaceSolver';
 import {
 	ActivationSamplePolicy,
-	AsapPolicy, RandomPolicy,
+	ImmediatePolicy, RandomPolicy,
 	DistributionRandomPolicy, UniformRandomPolicy, LogNormalRandomPolicy, ErlangRandomPolicy,
 	StraightRandomPolicy, AllCornerRandomPolicy
 } from './ActivationSamplePolicy';
@@ -179,11 +179,11 @@ const noopAll = Object.freeze({
 	filterGte: noop
 });
 
-const noopAsap = Object.freeze(Object.assign({samplePolicy: AsapPolicy}, noopAll));
+const noopImmediate = Object.freeze(Object.assign({samplePolicy: ImmediatePolicy}, noopAll));
 const noopRandom = Object.freeze(Object.assign({samplePolicy: RandomPolicy}, noopAll));
 
-const defaultAsap = Object.freeze({
-	samplePolicy: AsapPolicy,
+const defaultImmediate = Object.freeze({
+	samplePolicy: ImmediatePolicy,
 	filterEq: notSupported,
 	filterNeq: notSupported,
 	filterLt: notSupported,
@@ -192,8 +192,8 @@ const defaultAsap = Object.freeze({
 	filterGte: notSupported
 });
 
-function asap(o: Partial<Condition>) {
-	return Object.assign({}, defaultAsap, o);
+function immediate(o: Partial<Condition>) {
+	return Object.assign({}, defaultImmediate, o);
 }
 
 const defaultRandom = Object.freeze({
@@ -265,7 +265,7 @@ const noopUniformRandom = uniformRandom(noopAll);
 */
 
 export const Conditions: {[cond: string]: Condition} = Object.freeze({
-	accumulatetime: asap({
+	accumulatetime: immediate({
 		filterGte(regions: RegionList, t: number, _0: CourseData, _1: HorseParameters) {
 			return [regions, (s: RaceState) => s.accumulatetime >= t] as [RegionList, DynamicCondition];
 		}
@@ -293,7 +293,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(lastStraight));
 		}
 	}),
-	corner: asap({
+	corner: immediate({
 		filterEq(regions: RegionList, cornerNum: number, course: CourseData, _: HorseParameters) {
 			assert(CourseHelpers.isSortedByStart(course.corners), 'course corners must be sorted by start');
 			if (cornerNum == 0) {
@@ -320,8 +320,8 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => corners.map(c => r.intersect(c)));
 		}
 	}),
-	distance_diff_top: noopAsap,
-	distance_rate: asap({
+	distance_diff_top: noopImmediate,
+	distance_rate: immediate({
 		filterGte(regions: RegionList, rate: number, course: CourseData, _: HorseParameters) {
 			const bounds = new Region(course.distance * rate / 100, course.distance);
 			return regions.rmap(r => r.intersect(bounds));
@@ -333,7 +333,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
-	distance_type: asap({
+	distance_type: immediate({
 		filterEq(regions: RegionList, distanceType: number, course: CourseData, _: HorseParameters) {
 			CourseHelpers.assertIsDistanceType(distanceType);
 			if (course.distanceType == distanceType) {
@@ -355,9 +355,9 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	// would be kind of a pain in general, and probably impossible to do accurately due to things like 位置取り争い that depend on other
 	// umas, as well as random factors like downhill accel mode.
 	// The only skill likely severely affected by this is Akebono's unique.
-	hp_per: noopAsap,
+	hp_per: noopImmediate,
 	infront_near_lane_time: noopErlangRandom(3, 2.0),
-	is_finalcorner: asap({
+	is_finalcorner: immediate({
 		filterEq(regions: RegionList, flag: number, course: CourseData, _: HorseParameters) {
 			assert(flag == 0 || flag == 1, 'must be is_finalcorner==0 or is_finalcorner==1');
 			assert(CourseHelpers.isSortedByStart(course.corners), 'course corners must be sorted by start');
@@ -369,7 +369,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
-	is_finalcorner_laterhalf: asap({
+	is_finalcorner_laterhalf: immediate({
 		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
 			assert(one == 1, 'must be is_finalcorner_laterhalf==1');
 			assert(CourseHelpers.isSortedByStart(course.corners), 'course corners must be sorted by start');
@@ -393,14 +393,14 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
-	is_lastspurt: asap({
+	is_lastspurt: immediate({
 		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
 			assert(one == 1, 'must be is_lastspurt==1');
 			const bounds = new Region(CourseHelpers.phaseStart(course.distance, 2), course.distance);
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
-	is_last_straight_onetime: asap({
+	is_last_straight_onetime: immediate({
 		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
 			assert(one == 1, 'must be is_last_straight_onetime==1');
 			assert(CourseHelpers.isSortedByStart(course.straights), 'course straights must be sorted by start');
@@ -412,15 +412,15 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	}),
 	is_surrounded: noopErlangRandom(3, 2.0),
 	near_count: noopErlangRandom(3, 2.0),
-	order: noopAsap,
-	order_rate: noopAsap,
-	order_rate_in20_continue: noopAsap,
-	order_rate_in40_continue: noopAsap,
-	order_rate_out40_continue: noopAsap,
-	order_rate_out50_continue: noopAsap,
-	order_rate_out70_continue: noopAsap,
+	order: noopImmediate,
+	order_rate: noopImmediate,
+	order_rate_in20_continue: noopImmediate,
+	order_rate_in40_continue: noopImmediate,
+	order_rate_out40_continue: noopImmediate,
+	order_rate_out50_continue: noopImmediate,
+	order_rate_out70_continue: noopImmediate,
 	phase: {
-		samplePolicy: AsapPolicy,
+		samplePolicy: ImmediatePolicy,
 		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
 			CourseHelpers.assertIsPhase(phase);
 			const bounds = new Region(CourseHelpers.phaseStart(course.distance, phase), CourseHelpers.phaseEnd(course.distance, phase));
@@ -466,7 +466,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
-	remain_distance: asap({
+	remain_distance: immediate({
 		filterLte(regions: RegionList, remain: number, course: CourseData, _: HorseParameters) {
 			const bounds = new Region(course.distance - remain, course.distance);
 			return regions.rmap(r => r.intersect(bounds));
@@ -476,13 +476,13 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
-	rotation: asap({
+	rotation: immediate({
 		filterEq(regions: RegionList, rotation: number, course: CourseData, _: HorseParameters) {
 			CourseHelpers.assertIsOrientation(rotation);
 			return course.turn == rotation ? regions : new RegionList();
 		}
 	}),
-	running_style: asap({
+	running_style: immediate({
 		filterEq(regions: RegionList, strategy: number, _: CourseData, horse: HorseParameters) {
 			StrategyHelpers.assertIsStrategy(strategy);
 			if (StrategyHelpers.strategyMatches(horse.strategy, strategy)) {
@@ -492,7 +492,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			}
 		}
 	}),
-	slope: asap({
+	slope: immediate({
 		filterEq(regions: RegionList, slopeType: number, course: CourseData, _: HorseParameters) {
 			assert(slopeType == 0 || slopeType == 1 || slopeType == 2, 'slopeType');
 			// Requires course.slopes is sorted by slope start— this is not always the case, since in course_data.json they are
@@ -523,7 +523,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		filterGt: notSupported,
 		filterGte: notSupported
 	},
-	temptation_count: noopAsap,
+	temptation_count: noopImmediate,
 	up_slope_random: random({
 		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
 			assert(one == 1, 'must be up_slope_random==1');
