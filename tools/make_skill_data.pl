@@ -18,7 +18,7 @@ my $db = DBI->connect("dbi:SQLite:$mastermdb", undef, undef, {
 $db->{RaiseError} = 1;
 
 my $select = $db->prepare(<<SQL
-SELECT id,
+SELECT id, rarity,
        precondition_1, condition_1,
        float_ability_time_1,
        ability_type_1_1, float_ability_value_1_1,
@@ -30,14 +30,15 @@ SELECT id,
        ability_type_2_1, float_ability_value_2_1,
        ability_type_2_2, float_ability_value_2_2,
        ability_type_2_3, float_ability_value_2_3
-FROM skill_data;
+  FROM skill_data
+ WHERE is_general_skill = 1;
 SQL
 );
 
 $select->execute;
 
 my (
-	$id,
+	$id, $rarity,
 	$precondition_1, $condition_1,
 	$float_ability_time_1,
 	$ability_type_1_1, $float_ability_value_1_1,
@@ -52,7 +53,7 @@ my (
 );
 
 $select->bind_columns(\(
-	$id,
+	$id, $rarity,
 	$precondition_1, $condition_1,
 	$float_ability_time_1,
 	$ability_type_1_1, $float_ability_value_1_1,
@@ -96,7 +97,7 @@ while ($select->fetch) {
 			effects => \@effects_2
 		};
 	}
-	$skills->{$id} = \@triggers;
+	$skills->{$id} = {rarity => $rarity, alternatives => \@triggers};
 }
 
 my $json = JSON::PP->new;

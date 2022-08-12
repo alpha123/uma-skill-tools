@@ -5,7 +5,7 @@ import { HorseParameters, Strategy, Aptitude } from '../HorseTypes';
 import { CourseData, CourseHelpers } from '../CourseData';
 import { Conditions, Region, RegionList, ActivationSamplePolicy } from '../ActivationConditions';
 import { parse, tokenize } from '../ConditionParser';
-import { DynamicCondition, SkillType, SkillEffect } from '../RaceSolver';
+import { DynamicCondition, SkillType, SkillRarity, SkillEffect } from '../RaceSolver';
 
 import skills from '../data/skill_data.json';
 
@@ -50,6 +50,8 @@ const GroundPowerModifier = Object.freeze([
 ].map(o => Object.freeze(o)));
 
 export interface SkillData {
+	skillId: string
+	rarity: SkillRarity
 	samplePolicy: ActivationSamplePolicy,
 	regions: RegionList,
 	extraCondition: DynamicCondition,
@@ -60,8 +62,8 @@ function buildSkillData(horse: HorseParameters, course: CourseData, wholeCourse:
 	if (!(skillId in skills)) {
 		throw new InvalidArgumentError('bad skill ID ' + skillId);
 	}
-	const alternatives = skills[skillId];
-	for (var i = 0; i < alternatives.length; ++i) {
+	const alternatives = skills[skillId].alternatives;
+	for (let i = 0; i < alternatives.length; ++i) {
 		const skill = alternatives[i];
 		if (skill.precondition) {
 			const pre = parse(tokenize(skill.precondition));
@@ -79,20 +81,23 @@ function buildSkillData(horse: HorseParameters, course: CourseData, wholeCourse:
 			var type: SkillType | -1 = -1;
 			switch (ef.type) {
 			case 21:  // debuffs
-				acc.push({skillId: skillId, type: SkillType.CurrentSpeed, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
-				acc.push({skillId: skillId, type: SkillType.TargetSpeed, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
+				acc.push({type: SkillType.CurrentSpeed, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
+				acc.push({type: SkillType.TargetSpeed, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
 				return acc;
 			case 22: type = SkillType.CurrentSpeed; break;
 			case 27: type = SkillType.TargetSpeed; break;
 			case 31: type = SkillType.Accel; break;
 			}
 			if (type != -1) {
-				acc.push({skillId: skillId, type: type, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
+				acc.push({type: type, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
 			}
 			return acc;
 		}, []);
 		if (effects.length > 0) {
 			return {
+				skillId: skillId,
+				// for some reason 1*/2* uniques, 1*/2* upgraded to 3*, and naturally 3* uniques all have different rarity (3, 4, 5 respectively)
+				rarity: Math.min(skills[skillId].rarity, 3),
 				samplePolicy: op.samplePolicy,
 				regions: regions,
 				extraCondition: extraCondition,

@@ -6,11 +6,17 @@ import { SkillData, ToolCLI } from './ToolCLI';
 const cli = new ToolCLI();
 cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cliSkills: SkillData[], cliOptions: any) => {
 	const s = new RaceSolver(horse, course);
+	const skillTypes = {};
 
-	function addSkill(sd) {
-		const trigger = sd.samplePolicy.sample(sd.regions, 1)[0];
-		s.pendingSkills.push.apply(s.pendingSkills,
-			sd.effects.map(ef => ({trigger: trigger, extraCondition: sd.extraCondition, effect: ef})));
+	function addSkill(sd: SkillData) {
+		skillTypes[sd.skillId] = sd.effects[0].type;
+		s.pendingSkills.push({
+			skillId: sd.skillId,
+			rarity: sd.rarity,
+			trigger: sd.samplePolicy.sample(sd.regions, 1)[0],
+			extraCondition: sd.extraCondition,
+			effects: sd.effects
+		});
 	}
 
 	defSkills.forEach(addSkill);
@@ -18,10 +24,10 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 
 	const plotData = {trackId: course.raceTrackId, courseId: cliOptions.course, t: [0], pos: [0], v: [0], targetv: [s.targetSpeed], a: [0], skills: {}};
 
-	s.onSkillActivate = (sk) => { plotData.skills[sk.skillId] = [sk.type,s.accumulatetime,0,s.pos,0]; }
-	s.onSkillDeactivate = (sk) => {
-		plotData.skills[sk.skillId][2] = s.accumulatetime;
-		plotData.skills[sk.skillId][4] = s.pos;
+	s.onSkillActivate = (skillId) => { plotData.skills[skillId] = [skillTypes[skillId],s.accumulatetime,0,s.pos,0]; }
+	s.onSkillDeactivate = (skillId) => {
+		plotData.skills[skillId][2] = s.accumulatetime;
+		plotData.skills[skillId][4] = s.pos;
 	}
 
 	while (s.pos < course.distance) {

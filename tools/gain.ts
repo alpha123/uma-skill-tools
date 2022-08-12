@@ -56,8 +56,12 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 	debuffs.forEach(addTriggers);
 
 	function addSkill(s: RaceSolver, sd: SkillData, triggers: Region[], i: number) {
-		sd.effects.forEach(ef => {
-			s.pendingSkills.push({trigger: triggers[i % triggers.length], extraCondition: sd.extraCondition, effect: ef});
+		s.pendingSkills.push({
+			skillId: sd.skillId,
+			rarity: sd.rarity,
+			trigger: triggers[i % triggers.length],
+			extraCondition: sd.extraCondition,
+			effects: sd.effects
 		});
 	}
 
