@@ -68,7 +68,7 @@ export interface RaceState {
 
 export type DynamicCondition = (state: RaceState) => boolean;
 
-export const enum SkillType { TargetSpeed, Accel, CurrentSpeed }
+export const enum SkillType { TargetSpeed, Accel, CurrentSpeed, ActivateRandomGold }
 
 export const enum SkillRarity { White = 1, Gold, Unique }
 
@@ -255,23 +255,57 @@ export class RaceSolver {
 				// skill failed to activate
 				this.pendingSkills.splice(i,1);
 			} else if (this.pos >= s.trigger.start && s.extraCondition(this)) {
-				s.effects.forEach(ef => {
-					const scaledDuration = ef.baseDuration * this.course.distance / 1000;
-					switch (ef.type) {
-					case SkillType.TargetSpeed:
-						this.activeSpeedSkills.push({skillId: s.skillId, remainingDuration: scaledDuration, modifier: ef.modifier});
-						break;
-					case SkillType.Accel:
-						this.activeAccelSkills.push({skillId: s.skillId, remainingDuration: scaledDuration, modifier: ef.modifier});
-						break;
-					case SkillType.CurrentSpeed:
-						this.currentSpeedModifier += ef.modifier;
-						break;
-					}
-				});
-				this.onSkillActivate(s.skillId);
+				this.activateSkill(s);
 				this.pendingSkills.splice(i,1);
 			}
+		}
+	}
+
+	activateSkill(s: PendingSkill) {
+		s.effects.forEach(ef => {
+			const scaledDuration = ef.baseDuration * this.course.distance / 1000;
+			switch (ef.type) {
+			case SkillType.TargetSpeed:
+				this.activeSpeedSkills.push({skillId: s.skillId, remainingDuration: scaledDuration, modifier: ef.modifier});
+				break;
+			case SkillType.Accel:
+				this.activeAccelSkills.push({skillId: s.skillId, remainingDuration: scaledDuration, modifier: ef.modifier});
+				break;
+			case SkillType.CurrentSpeed:
+				this.currentSpeedModifier += ef.modifier;
+				break;
+			case SkillType.ActivateRandomGold:
+				this.doActivateRandomGold(ef.modifier);
+				break;
+			}
+		});
+		this.onSkillActivate(s.skillId);
+	}
+
+	doActivateRandomGold(ngolds: number) {
+		const goldIndices = this.pendingSkills.reduce((acc, skill, i) => {
+			if (skill.rarity == SkillRarity.Gold) acc.push(i);
+			return acc;
+		}, []);
+		for (let i = goldIndices.length; --i >= 0;) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[goldIndices[i], goldIndices[j]] = [goldIndices[j], goldIndices[i]];
+		}
+		for (let i = 0; i < Math.min(ngolds, goldIndices.length); ++i) {
+			this.activateSkill(this.pendingSkills[goldIndices[i]]);
+			// important: we can't actually remove this from pendingSkills directly, since this function runs inside the loop in
+			// processSkillActivations. modifying the pendingSkills array here would mess up that loop. instead, by setting its
+			// trigger to 0, we ensure that the skill won't activate again and will be cleaned up either later in the loop or
+			// the next time processSkillActivations is called.
+			// this is a bit of a hack and i don't like it very much
+			// NB. this mutation could be visible outside of RaceSolver, since the caller constructs the initial PendingSkill
+			// objects and sets their triggers. currently, that doesn't matter since nothing uses them after the solver runs,
+			// but it should be assumed by callers that once added to pendingSkills RaceSolver owns the skill object and the
+			// caller shouldn't rely on it being the same.
+			// this means, for example, the same PendingSkill object can't be added to two different RaceSolvers
+			// frankly this seems exceptionally error-prone and i'm sure it's going to bite me with some hard-to-diagnose bug
+			// at some point. TODO find a better way to deal with this
+			this.pendingSkills[goldIndices[i]].trigger = new Region(0,0);
 		}
 	}
 }

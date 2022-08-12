@@ -4,7 +4,7 @@ import { Command, Option, InvalidArgumentError } from 'commander';
 import { HorseParameters, Strategy, Aptitude } from '../HorseTypes';
 import { CourseData, CourseHelpers } from '../CourseData';
 import { Region, RegionList } from '../Region';
-import { ActivationSamplePolicy } from '../ActivationSamplePolicy';
+import { ActivationSamplePolicy, ImmediatePolicy } from '../ActivationSamplePolicy';
 import { Conditions } from '../ActivationConditions';
 import { parse, tokenize } from '../ConditionParser';
 import { DynamicCondition, SkillType, SkillRarity, SkillEffect } from '../RaceSolver';
@@ -60,6 +60,27 @@ export interface SkillData {
 	effects: SkillEffect[]
 }
 
+function buildSkillEffects(skill) {
+	// im on a really old version of node and cant use flatMap
+	return skill.effects.reduce((acc,ef) => {
+			var type: SkillType | -1 = -1;
+			switch (ef.type) {
+			case 21:  // debuffs
+				acc.push({type: SkillType.CurrentSpeed, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
+				acc.push({type: SkillType.TargetSpeed, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
+				return acc;
+			case 22: type = SkillType.CurrentSpeed; break;
+			case 27: type = SkillType.TargetSpeed; break;
+			case 31: type = SkillType.Accel; break;
+			case 37: type = SkillType.ActivateRandomGold; break;
+			}
+			if (type != -1) {
+				acc.push({type: type, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
+			}
+			return acc;
+	}, []);
+}
+
 function buildSkillData(horse: HorseParameters, course: CourseData, wholeCourse: RegionList, skillId: string) {
 	if (!(skillId in skills)) {
 		throw new InvalidArgumentError('bad skill ID ' + skillId);
@@ -78,23 +99,7 @@ function buildSkillData(horse: HorseParameters, course: CourseData, wholeCourse:
 		if (regions.length == 0) {
 			continue;
 		}
-		// im on a really old version of node and cant use flatMap
-		const effects = skill.effects.reduce((acc,ef) => {
-			var type: SkillType | -1 = -1;
-			switch (ef.type) {
-			case 21:  // debuffs
-				acc.push({type: SkillType.CurrentSpeed, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
-				acc.push({type: SkillType.TargetSpeed, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
-				return acc;
-			case 22: type = SkillType.CurrentSpeed; break;
-			case 27: type = SkillType.TargetSpeed; break;
-			case 31: type = SkillType.Accel; break;
-			}
-			if (type != -1) {
-				acc.push({type: type, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
-			}
-			return acc;
-		}, []);
+		const effects = buildSkillEffects(skill);
 		if (effects.length > 0) {
 			return {
 				skillId: skillId,
@@ -109,7 +114,25 @@ function buildSkillData(horse: HorseParameters, course: CourseData, wholeCourse:
 			return null;
 		}
 	}
-	return null;
+	// if we get here, it means that no alternatives have their conditions satisfied for this course/horse.
+	// however, for purposes of summer goldship unique (Adventure of 564), we still have to add something, since
+	// that could still cause them to activate. so just add the first alternative at a location after the course
+	// is over with a constantly false dynamic condition so that it never activates normally.
+	const effects = buildSkillEffects(alternatives[0]);
+	if (effects.length == 0) {
+		return null;
+	} else {
+		const afterEnd = new RegionList();
+		afterEnd.push(new Region(9999,9999));
+		return {
+			skillId: skillId,
+			rarity: Math.min(skills[skillId].rarity, 3),
+			samplePolicy: ImmediatePolicy,
+			regions: afterEnd,
+			extraCondition: (_) => false,
+			effects: effects
+		};
+	}
 }
 
 type CliAction = (horse: HorseParameters, course: CourseData, defSkills: SkillData[], cliSkills: SkillData[], cliOptions: any) => void;
