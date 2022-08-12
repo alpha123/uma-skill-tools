@@ -94,6 +94,7 @@ export class RaceSolver {
 	course: CourseData
 	startDash: boolean
 	phase: Phase
+	nextPhaseTransition: number
 	activeSpeedSkills: {remainingDuration: number, effect: SkillEffect}[]
 	activeAccelSkills: {remainingDuration: number, effect: SkillEffect}[]
 	pendingSkills: PendingSkill[]
@@ -110,6 +111,7 @@ export class RaceSolver {
 		this.course = course;
 		this.accumulatetime = 0.0;
 		this.phase = 0;
+		this.nextPhaseTransition = CourseHelpers.phaseStart(course.distance, 1);
 		this.pos = 0.0;
 		this.accel = 0.0;
 		this.currentSpeed = 0.0;
@@ -170,12 +172,12 @@ export class RaceSolver {
 		if (!this.startDash && this.currentSpeed < this.minSpeed) {
 			this.currentSpeed = this.minSpeed;
 		}
-		if (this.pos >= this.course.distance * 2/3) {
+		if (this.pos >= this.nextPhaseTransition && this.phase < 2) {
 			// NB. there is actually a phase 3 which starts at 5/6 distance, but for purposes of
-			// strategy phase modifiers etc it is the same as phase 2 so don't bother with it here
-			this.phase = 2;
-		} else if (this.pos >= this.course.distance * 1/6) {
-			this.phase = 1;
+			// strategy phase modifiers, activate_count_end_after, etc it is the same as phase 2
+			// and it's easier to treat them together, so cap phase at 2.
+			++this.phase;
+			this.nextPhaseTransition = CourseHelpers.phaseStart(this.course.distance, this.phase + 1 as Phase);
 		}
 		this.currentSpeedModifier = 0.0;
 	}
