@@ -31,7 +31,7 @@ SELECT id, rarity,
        ability_type_2_2, float_ability_value_2_2,
        ability_type_2_3, float_ability_value_2_3
   FROM skill_data
- WHERE is_general_skill = 1;
+ WHERE is_general_skill = 1 OR rarity >= 3;
 SQL
 );
 
