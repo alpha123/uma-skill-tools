@@ -2,16 +2,18 @@ import { Option } from 'commander';
 import { HorseParameters } from '../HorseTypes';
 import { CourseData } from '../CourseData';
 import { Region } from '../Region';
+import { Rule30CARng } from '../Random';
 import { PendingSkill, RaceSolver } from '../RaceSolver';
 import { SkillData, ToolCLI, parseAptitude } from './ToolCLI';
 
 const cli = new ToolCLI();
-cli.options((program) => {
+cli.options(program => {
 	program
 		.addOption(new Option('-N, --nsamples <N>', 'number of random samples to use for skills with random conditions')
 			.default(500)
 			.argParser(x => parseInt(x,10))
 		)
+		.option('--seed <seed>', 'seed value for pseudorandom number generator', (value,_) => parseInt(value,10) >>> 0)
 		.addOption(new Option('-D, --distance-aptitude <letter>', 'compare with a different distance aptitude from the value in the horse definition')
 			.choices(['S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'])
 			.argParser(a => parseAptitude(a, 'distance'))
@@ -29,8 +31,10 @@ cli.options((program) => {
 cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cliSkills: SkillData[], cliOptions: any) => {
 	const nsamples = cliOptions.nsamples;
 	const triggers = [];
+	const seed = 'seed' in cliOptions ? cliOptions.seed : Math.floor(Math.random() * (-1 >>> 0));
+	const rng = new Rule30CARng(seed);
 	function addTriggers(sd: SkillData) {
-		triggers.push(sd.samplePolicy.sample(sd.regions, nsamples));
+		triggers.push(sd.samplePolicy.sample(sd.regions, nsamples, rng));
 	}
 
 	const debuffs = [];
@@ -110,4 +114,7 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 	cliOptions.thresholds.forEach(n => {
 	    console.log('≥' + n.toFixed(2) + ' | ' + (gain.reduce((a,b) => a + +(b >= n), 0) / gain.length * 100).toFixed(2) + '%');
 	});
+
+	console.log('');
+	console.log('seed: ' + (seed >>> 0));
 });

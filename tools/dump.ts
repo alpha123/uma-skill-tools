@@ -1,19 +1,25 @@
 import { HorseParameters } from '../HorseTypes';
 import { CourseData } from '../CourseData';
 import { RaceSolver } from '../RaceSolver';
+import { Rule30CARng } from '../Random';
 import { SkillData, ToolCLI } from './ToolCLI';
 
 const cli = new ToolCLI();
+cli.options(program => {
+	program.option('--seed <seed>', 'seed value for pseudorandom number generator', (value,_) => parseInt(value,10) >>> 0);
+});
 cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cliSkills: SkillData[], cliOptions: any) => {
 	const s = new RaceSolver(horse, course);
 	const skillTypes = {};
+
+	const rng = new Rule30CARng('seed' in cliOptions ? cliOptions.seed : Math.floor(Math.random() * (-1 >>> 0)));
 
 	function addSkill(sd: SkillData) {
 		skillTypes[sd.skillId] = sd.effects[0].type;
 		s.pendingSkills.push({
 			skillId: sd.skillId,
 			rarity: sd.rarity,
-			trigger: sd.samplePolicy.sample(sd.regions, 1)[0],
+			trigger: sd.samplePolicy.sample(sd.regions, 1, rng)[0],
 			extraCondition: sd.extraCondition,
 			effects: sd.effects
 		});

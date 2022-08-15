@@ -1,7 +1,8 @@
 import { Region, RegionList } from './Region';
+import { PRNG } from './Random';
 
 export interface ActivationSamplePolicy {
-	sample(regions: RegionList, nsamples: number): Region[]
+	sample(regions: RegionList, nsamples: number, rng: PRNG): Region[]
 
 	// essentially, when two conditions are combined with an AndOperator one should take precedence over the other
 	// immediate transitions into anything and straight_random/all_corner_random dominate everything except each other
@@ -19,7 +20,7 @@ export interface ActivationSamplePolicy {
 }
 
 export const ImmediatePolicy = Object.freeze({
-	sample(regions: RegionList, _: number) { return regions.slice(0,1); },
+	sample(regions: RegionList, _0: number, _1: PRNG) { return regions.slice(0,1); },
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileImmediate(this); },
 	reconcileImmediate(other: ActivationSamplePolicy) { return other; },
 	reconcileDistributionRandom(other: ActivationSamplePolicy) { return other; },
@@ -29,7 +30,7 @@ export const ImmediatePolicy = Object.freeze({
 });
 
 export const RandomPolicy = Object.freeze({
-	sample(regions: RegionList, nsamples: number) {
+	sample(regions: RegionList, nsamples: number, rng: PRNG) {
 		if (regions.length == 0) {
 			return [];
 		}
@@ -37,9 +38,9 @@ export const RandomPolicy = Object.freeze({
 		const weights = regions.map(r => acc += r.end - r.start);
 		const samples = [];
 		for (let i = 0; i < nsamples; ++i) {
-			const threshold = Math.random() * acc;
+			const threshold = rng.uniform(acc);
 			const region = regions.find((_,i) => weights[i] > threshold)!;
-			samples.push(region.start + Math.floor(Math.random() * (region.end - region.start - 10)));
+			samples.push(region.start + rng.uniform(region.end - region.start - 10));
 		}
 		return samples.map(pos => new Region(pos, pos + 10));
 	},
@@ -52,18 +53,18 @@ export const RandomPolicy = Object.freeze({
 });
 
 export abstract class DistributionRandomPolicy {
-	abstract distribution(n: number): number[]
+	abstract distribution(upper: number, nsamples: number, rng: PRNG): number[]
 
-	sample(regions: RegionList, nsamples: number) {
+	sample(regions: RegionList, nsamples: number, rng: PRNG) {
 		if (regions.length == 0) {
 			return [];
 		}
 		const range = regions.reduce((acc,r) => acc + r.end - r.start, 0);
 		const rs = regions.slice().sort((a,b) => a.start - b.start);
-		const randoms = this.distribution(nsamples);
+		const randoms = this.distribution(range, nsamples, rng);
 		const samples = [];
 		for (let i = 0; i < nsamples; ++i) {
-			let pos = Math.floor(randoms[i] * range);
+			let pos = randoms[i];
 			for (let j = 0;; j++) {
 				pos += rs[j].start;
 				if (pos > rs[j].end) {
@@ -93,10 +94,10 @@ export abstract class DistributionRandomPolicy {
 export class UniformRandomPolicy extends DistributionRandomPolicy {
 	constructor() { super(); }
 
-	distribution(n: number) {
+	distribution(upper: number, nsamples: number, rng: PRNG) {
 		const nums = [];
-		for (let i = 0; i < n; ++i) {
-			nums.push(Math.random());
+		for (let i = 0; i < nsamples; ++i) {
+			nums.push(rng.uniform(upper));
 		}
 		return nums;
 	}
@@ -105,15 +106,15 @@ export class UniformRandomPolicy extends DistributionRandomPolicy {
 export class LogNormalRandomPolicy extends DistributionRandomPolicy {
 	constructor(readonly mu: number, readonly sigma: number) { super(); }
 
-	distribution(n: number) {
+	distribution(upper: number, nsamples: number, rng: PRNG) {
 		// see <https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform>
 		let nums = [], min = Infinity, max = 0.0;
-		const halfn = Math.ceil(n / 2);
+		const halfn = Math.ceil(nsamples / 2);
 		for (let i = 0; i < halfn; ++i) {
 			let x, y, r2;
 			do {
-				x = Math.random() * 2.0 - 1.0;
-				y = Math.random() * 2.0 - 1.0;
+				x = rng.random() * 2.0 - 1.0;
+				y = rng.random() * 2.0 - 1.0;
 				r2 = x * x + y * y;
 			} while (r2 == 0.0 || r2 >= 1.0);
 			const m = Math.sqrt(-2.0 * Math.log(r2) / r2) * this.sigma;
@@ -124,33 +125,33 @@ export class LogNormalRandomPolicy extends DistributionRandomPolicy {
 			nums.push(a,b);
 		}
 		const range = max - min;
-		return nums.map(n => (n - min) / range);
+		return nums.map(n => Math.floor(upper * (n - min) / range));
 	}
 }
 
 export class ErlangRandomPolicy extends DistributionRandomPolicy {
 	constructor(readonly k: number, readonly lambda: number) { super(); }
 
-	distribution(n: number) {
+	distribution(upper: number, nsamples: number, rng: PRNG) {
 		const nums = [];
 		let min = Infinity, max = 0.0;
-		for (let i = 0; i < n; ++i) {
+		for (let i = 0; i < nsamples; ++i) {
 			let u = 1.0;
 			for (let j = 0; j < this.k; ++j) {
-				u *= Math.random();
+				u *= rng.random();
 			}
-			const x = -Math.log(u) / this.lambda;
-			min = Math.min(min, x);
-			max = Math.max(max, x);
-			nums.push(x);
+			const n = -Math.log(u) / this.lambda;
+			min = Math.min(min, n);
+			max = Math.max(max, n);
+			nums.push(n);
 		}
 		const range = max - min;
-		return nums.map(x => (x - min) / range);
+		return nums.map(n => Math.floor(upper * (n - min) / range));
 	}
 }
 
 export const StraightRandomPolicy = Object.freeze({
-	sample(regions: RegionList, nsamples: number) {
+	sample(regions: RegionList, nsamples: number, rng: PRNG) {
 		// regular RandomPolicy weights regions by their length, so any given point has an equal chance to be chosen across all regions
 		// StraightRandomPolicy first picks a region with equal chance regardless of length, and then picks a random point on that region
 		if (regions.length == 0) {
@@ -158,8 +159,8 @@ export const StraightRandomPolicy = Object.freeze({
 		}
 		const samples = [];
 		for (let i = 0; i < nsamples; ++i) {
-			const r = regions[Math.floor(Math.random() * regions.length)];
-			samples.push(r.start + Math.floor(Math.random() * (r.end - r.start - 10)));
+			const r = regions[rng.uniform(regions.length)];
+			samples.push(r.start + rng.uniform(r.end - r.start - 10));
 		}
 		return samples.map(pos => new Region(pos, pos + 10));
 	},
@@ -172,14 +173,14 @@ export const StraightRandomPolicy = Object.freeze({
 });
 
 export const AllCornerRandomPolicy = Object.freeze({
-	placeTriggers(regions: RegionList) {
+	placeTriggers(regions: RegionList, rng: PRNG) {
 		const triggers = [];
 		const candidates = regions.slice();
 		candidates.sort((a,b) => a.start - b.start);
 		while (triggers.length < 4 && candidates.length > 0) {
-			const ci = Math.floor(Math.random() * candidates.length);
+			const ci = rng.uniform(candidates.length);
 			const c = candidates[ci];
-			const start = c.start + Math.floor(Math.random() * (c.end - c.start - 10));
+			const start = c.start + rng.uniform(c.end - c.start - 10);
 			// note that as each corner's end cannot come after the start of the next corner, this maintains that the candidates
 			// are sorted by start
 			if (start + 20 <= c.end) {
@@ -193,10 +194,10 @@ export const AllCornerRandomPolicy = Object.freeze({
 		// TODO support multiple triggers for skills with cooldown
 		return new Region(triggers[0], triggers[0] + 10);  // guaranteed to be the earliest trigger since each trigger is placed after the last one
 	},
-	sample(regions: RegionList, nsamples: number) {
+	sample(regions: RegionList, nsamples: number, rng: PRNG) {
 		const samples = [];
 		for (let i = 0; i < nsamples; ++i) {
-			samples.push(this.placeTriggers(regions));
+			samples.push(this.placeTriggers(regions, rng));
 		}
 		return samples;
 	},
