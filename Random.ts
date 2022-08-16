@@ -103,7 +103,7 @@ export class Rule30CARng {
 	}
 
 	uniform(upper: number) {
-		const mask = -1 >>> Math.clz32(upper - 1);
+		const mask = -1 >>> Math.clz32((upper - 1) | 1);
 		let n = 0;
 		do {
 			n = this.int32() & mask;
