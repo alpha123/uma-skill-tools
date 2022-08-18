@@ -39,6 +39,8 @@ export function parseAptitude(a: string, type: string) {
 
 const StrategyProficiencyModifier = Object.freeze([1.1, 1.0, 0.85, 0.75, 0.6, 0.4, 0.2, 0.1]);
 
+type GroundCondition = 'good' | 'yielding' | 'soft' | 'heavy';
+
 const GroundSpeedModifier = Object.freeze([
 	null, // ground types started at 1
 	{good: 0, yielding: 0, soft: 0, heavy: -50},
@@ -81,7 +83,7 @@ function buildSkillEffects(skill) {
 	}, []);
 }
 
-function buildSkillData(horse: HorseParameters, course: CourseData, wholeCourse: RegionList, skillId: string) {
+export function buildSkillData(horse: HorseParameters, course: CourseData, wholeCourse: RegionList, skillId: string) {
 	if (!(skillId in skills)) {
 		throw new InvalidArgumentError('bad skill ID ' + skillId);
 	}
@@ -135,6 +137,34 @@ function buildSkillData(horse: HorseParameters, course: CourseData, wholeCourse:
 	}
 }
 
+type Mood = -2 | -1 | 0 | 1 | 2;
+
+export function buildHorseParameters(horseDesc, course: CourseData, mood: Mood, ground: GroundCondition) {
+	const motivCoef = 1 + 0.02 * mood;
+
+	const baseStats = {
+		speed: horseDesc.speed * motivCoef,
+		stamina: horseDesc.stamina * motivCoef,
+		power: horseDesc.power * motivCoef,
+		guts: horseDesc.guts * motivCoef,
+		int: horseDesc.int * motivCoef
+	};
+
+	const raceCourseModifier = CourseHelpers.courseSpeedModifier(course, baseStats);
+
+	return Object.freeze({
+		speed: baseStats.speed * raceCourseModifier + GroundSpeedModifier[course.surface][ground],
+		stamina: baseStats.stamina,
+		power: baseStats.power + GroundPowerModifier[course.surface][ground],
+		guts: baseStats.guts,
+		int: baseStats.int * StrategyProficiencyModifier[parseAptitude(horseDesc.strategyAptitude, 'strategy')],
+		strategy: parseStrategy(horseDesc.strategy),
+		distanceAptitude: parseAptitude(horseDesc.distanceAptitude, 'distance'),
+		surfaceAptitude: parseAptitude(horseDesc.surfaceAptitude, 'surface'),
+		strategyAptitude: parseAptitude(horseDesc.strategyAptitude, 'strategy')
+	});
+}
+
 type CliAction = (horse: HorseParameters, course: CourseData, defSkills: SkillData[], cliSkills: SkillData[], cliOptions: any) => void;
 
 export class ToolCLI {
@@ -172,29 +202,7 @@ export class ToolCLI {
 		const course = CourseHelpers.getCourse(opts.course);
 		const horseDesc = JSON.parse(fs.readFileSync(horsefile, 'utf8'));
 
-		const motivCoef = 1 + 0.02 * opts.mood;
-
-		const baseStats = {
-			speed: horseDesc.speed * motivCoef,
-			stamina: horseDesc.stamina * motivCoef,
-			power: horseDesc.power * motivCoef,
-			guts: horseDesc.guts * motivCoef,
-			int: horseDesc.int * motivCoef
-		};
-
-		const raceCourseModifier = CourseHelpers.courseSpeedModifier(course, baseStats);
-
-		const horse: HorseParameters = Object.freeze({
-			speed: baseStats.speed * raceCourseModifier + GroundSpeedModifier[course.surface][opts.ground],
-			stamina: baseStats.stamina,
-			power: baseStats.power + GroundPowerModifier[course.surface][opts.ground],
-			guts: baseStats.guts,
-			int: baseStats.int * StrategyProficiencyModifier[parseAptitude(horseDesc.strategyAptitude, 'strategy')],
-			strategy: parseStrategy(horseDesc.strategy),
-			distanceAptitude: parseAptitude(horseDesc.distanceAptitude, 'distance'),
-			surfaceAptitude: parseAptitude(horseDesc.surfaceAptitude, 'surface'),
-			strategyAptitude: parseAptitude(horseDesc.strategyAptitude, 'strategy')
-		});
+		const horse = buildHorseParameters(horseDesc, course, opts.mood, opts.ground);
 
 		const wholeCourse = new RegionList();
 		wholeCourse.push(new Region(0, course.distance));
