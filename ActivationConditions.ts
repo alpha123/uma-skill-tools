@@ -270,6 +270,34 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return [regions, (s: RaceState) => s.accumulatetime >= t] as [RegionList, DynamicCondition];
 		}
 	}),
+	activate_count_all: immediate({
+		filterLte(regions: RegionList, n: number, _0: CourseData, _1: HorseParameters) {
+			return [regions, (s: RaceState) => s.activateCount.reduce((a,b) => a + b) <= n] as [RegionList, DynamicCondition];
+		},
+		filterGte(regions: RegionList, n: number, _0: CourseData, _1: HorseParameters) {
+			return [regions, (s: RaceState) => s.activateCount.reduce((a,b) => a + b) >= n] as [RegionList, DynamicCondition];
+		}
+	}),
+	activate_count_end_after: immediate({
+		filterGte(regions: RegionList, n: number, _0: CourseData, _1: HorseParameters) {
+			return [regions, (s: RaceState) => s.activateCount[2] >= n] as [RegionList, DynamicCondition];
+		}
+	}),
+	activate_count_heal: immediate({
+		filterGte(regions: RegionList, n: number, _0: CourseData, _1: HorseParameters) {
+			return [regions, (s: RaceState) => s.activateCountHeal >= n] as [RegionList, DynamicCondition];
+		}
+	}),
+	activate_count_middle: immediate({
+		filterGte(regions: RegionList, n: number, _0: CourseData, _1: HorseParameters) {
+			return [regions, (s: RaceState) => s.activateCount[1] >= n] as [RegionList, DynamicCondition];
+		}
+	}),
+	activate_count_start: immediate({
+		filterGte(regions: RegionList, n: number, _0: CourseData, _1: HorseParameters) {
+			return [regions, (s: RaceState) => s.activateCount[0] >= n] as [RegionList, DynamicCondition];
+		}
+	}),
 	all_corner_random: {
 		samplePolicy: AllCornerRandomPolicy,
 		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {

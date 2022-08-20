@@ -64,6 +64,8 @@ function decel(pos: number, distance: number) {
 
 export interface RaceState {
 	readonly accumulatetime: number
+	readonly activateCount: readonly number[]
+	readonly activateCountHeal: number
 }
 
 export type DynamicCondition = (state: RaceState) => boolean;
@@ -112,6 +114,8 @@ export class RaceSolver {
 	hillIdx: number
 	hillStart: number[]
 	hillEnd: number[]
+	activateCount: number[]
+	activateCountHeal: number
 	onSkillActivate: (s: string) => void
 	onSkillDeactivate: (s: string) => void
 
@@ -131,6 +135,8 @@ export class RaceSolver {
 		this.activeAccelSkills = [];
 		this.pendingSkills = [];
 		this.currentSpeedModifier = 0.0;
+		this.activateCount = [0,0,0];
+		this.activateCountHeal = 0;
 		this.onSkillActivate = () => {}
 		this.onSkillDeactivate = () => {}
 		this.initHills();
@@ -275,12 +281,14 @@ export class RaceSolver {
 				this.currentSpeedModifier += ef.modifier;
 				break;
 			case SkillType.Recovery:
+				++this.activateCountHeal;
 				break;
 			case SkillType.ActivateRandomGold:
 				this.doActivateRandomGold(ef.modifier);
 				break;
 			}
 		});
+		++this.activateCount[this.phase];
 		this.onSkillActivate(s.skillId);
 	}
 
