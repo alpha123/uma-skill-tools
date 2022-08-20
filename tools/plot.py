@@ -95,7 +95,7 @@ if args.skills:
 	ends = sorted(list(map(lambda i: i[2], data['skills'].values())))
 	n_at = defaultdict(lambda: 0)
 	for skill,info in data['skills'].items():
-		color = ['red','orangered','firebrick'][info[0]]
+		color = ['red','orangered','firebrick','dodgerblue'][info[0]]
 		nactive = bisect_left(starts, info[1]) - bisect_left(ends, info[1]) + n_at[info[1]]
 		n_at[info[1]] += 1
 		h = 0.04

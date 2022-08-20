@@ -67,6 +67,7 @@ function buildSkillEffects(skill) {
 	return skill.effects.reduce((acc,ef) => {
 		var type: SkillType | -1 = -1;
 		switch (ef.type) {
+		case 9: type = SkillType.Recovery; break;
 		case 21:  // debuffs
 			acc.push({type: SkillType.CurrentSpeed, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
 			acc.push({type: SkillType.TargetSpeed, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});

@@ -68,7 +68,7 @@ export interface RaceState {
 
 export type DynamicCondition = (state: RaceState) => boolean;
 
-export const enum SkillType { TargetSpeed, Accel, CurrentSpeed, ActivateRandomGold }
+export const enum SkillType { TargetSpeed, Accel, CurrentSpeed, Recovery, ActivateRandomGold }
 
 export const enum SkillRarity { White = 1, Gold, Unique }
 
@@ -273,6 +273,8 @@ export class RaceSolver {
 				break;
 			case SkillType.CurrentSpeed:
 				this.currentSpeedModifier += ef.modifier;
+				break;
+			case SkillType.Recovery:
 				break;
 			case SkillType.ActivateRandomGold:
 				this.doActivateRandomGold(ef.modifier);
