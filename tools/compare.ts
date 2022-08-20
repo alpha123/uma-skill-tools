@@ -53,6 +53,7 @@ const skills2 = desc2.skills.map(s => buildSkillData(horse2, course, wholeCourse
 const seed = 'seed' in opts ? opts.seed : Math.floor(Math.random() * (-1 >>> 0));
 // use two rng instances so that if the skills are the same (or different versions of each other, e.g. comparing inherited vs full
 // uniques) they'll activate at the same points
+// TODO to be sure of this, we need to sort skills1 and skills2 such that skills common between them are ordered first
 const rng1 = new Rule30CARng(seed);
 const rng2 = new Rule30CARng(seed);
 
