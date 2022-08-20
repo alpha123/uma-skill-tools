@@ -179,6 +179,7 @@ export class RaceSolver {
 		this.pos += halfv * dt;
 		this.accumulatetime += dt;
 		this.updateHills();
+		this.updatePhase();
 		this.processSkillActivations(dt);
 		this.updateTargetSpeed();
 		this.applyForces();
@@ -186,13 +187,6 @@ export class RaceSolver {
 		this.currentSpeed = Math.min(halfv + 0.5 * dt * this.accel + this.currentSpeedModifier, targetSpeed);
 		if (!this.startDash && this.currentSpeed < this.minSpeed) {
 			this.currentSpeed = this.minSpeed;
-		}
-		if (this.pos >= this.nextPhaseTransition && this.phase < 2) {
-			// NB. there is actually a phase 3 which starts at 5/6 distance, but for purposes of
-			// strategy phase modifiers, activate_count_end_after, etc it is the same as phase 2
-			// and it's easier to treat them together, so cap phase at 2.
-			++this.phase;
-			this.nextPhaseTransition = CourseHelpers.phaseStart(this.course.distance, this.phase + 1 as Phase);
 		}
 		this.currentSpeedModifier = 0.0;
 	}
@@ -237,6 +231,16 @@ export class RaceSolver {
 		} else if (this.hillIdx != -1 && this.hillEnd.length > 0 && this.pos > this.hillEnd[this.hillEnd.length - 1]) {
 			this.hillIdx = -1;
 			this.hillEnd.pop();
+		}
+	}
+
+	updatePhase() {
+		// NB. there is actually a phase 3 which starts at 5/6 distance, but for purposes of
+		// strategy phase modifiers, activate_count_end_after, etc it is the same as phase 2
+		// and it's easier to treat them together, so cap phase at 2.
+		if (this.pos >= this.nextPhaseTransition && this.phase < 2) {
+			++this.phase;
+			this.nextPhaseTransition = CourseHelpers.phaseStart(this.course.distance, this.phase + 1 as Phase);
 		}
 	}
 
