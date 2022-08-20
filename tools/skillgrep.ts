@@ -121,7 +121,7 @@ const mockConditions = new Proxy({}, {
 const match = opts.name ? opts.condition.toUpperCase() : parseAny(tokenize(opts.condition), {conditions: mockConditions});
 
 for (const id in skills) {
-	skills[id].forEach(ef => {
+	skills[id].alternatives.forEach(ef => {
 		if (
 		   opts.name ? skillnames[id].find(s => s.toUpperCase().indexOf(match) > -1)
 		 : (!opts.excludePre && ef.precondition.length > 0 && treeMatch(match, parse(tokenize(ef.precondition), {conditions: mockConditions})))
