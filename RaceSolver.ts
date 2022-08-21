@@ -3,6 +3,7 @@ const assert = require('assert').strict;
 import { Strategy, Aptitude, HorseParameters, StrategyHelpers } from './HorseTypes';
 import { CourseData, CourseHelpers, Phase } from './CourseData';
 import { Region } from './Region';
+import { PRNG } from './Random';
 
 namespace Speed {
 	export const StrategyPhaseCoefficient = Object.freeze([
@@ -122,6 +123,7 @@ export class RaceSolver {
 	accel: number
 	horse: HorseParameters
 	course: CourseData
+	rng: PRNG
 	startDash: boolean
 	phase: Phase
 	nextPhaseTransition: number
@@ -152,11 +154,13 @@ export class RaceSolver {
 	constructor(params: {
 		horse: HorseParameters,
 		course: CourseData,
-		pacer?: RaceSolver
+		pacer?: RaceSolver,
+		rng: PRNG
 	}) {
 		this.horse = params.horse;
 		this.course = params.course;
 		this.pacer = params.pacer || null;
+		this.rng = params.rng;
 		this.accumulatetime = 0.0;
 		this.phase = 0;
 		this.nextPhaseTransition = CourseHelpers.phaseStart(this.course.distance, 1);
@@ -266,7 +270,7 @@ export class RaceSolver {
 			this.posKeepEffectStart = this.pos;
 			const min = this.posKeepMinThreshold;
 			const max = this.phase == 1 ? min + 0.5 * (this.posKeepMaxThreshold - min) : this.posKeepMaxThreshold;
-			this.posKeepEffectExitDistance = min + Math.random() * (max - min);
+			this.posKeepEffectExitDistance = min + this.rng.random() * (max - min);
 			this.posKeepSpeedCoef = this.phase == 1 ? 0.945 : 0.915;
 		}
 	}
@@ -382,7 +386,7 @@ export class RaceSolver {
 			return acc;
 		}, []);
 		for (let i = goldIndices.length; --i >= 0;) {
-			const j = Math.floor(Math.random() * (i + 1));
+			const j = Math.floor(this.rng.random() * (i + 1));
 			[goldIndices[i], goldIndices[j]] = [goldIndices[j], goldIndices[i]];
 		}
 		for (let i = 0; i < Math.min(ngolds, goldIndices.length); ++i) {

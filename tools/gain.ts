@@ -33,6 +33,14 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 	const triggers = [];
 	const seed = 'seed' in cliOptions ? cliOptions.seed : Math.floor(Math.random() * (-1 >>> 0));
 	const rng = new Rule30CARng(seed);
+	// need two copies of an identical rng so that random factors will be deterministic between both solver instances
+	const solverRngSeed = rng.int32();
+	const solverRng1 = new Rule30CARng(solverRngSeed);
+	const solverRng2 = new Rule30CARng(solverRngSeed);
+	const pacerRngSeed = rng.int32();
+	const pacerRng1 = new Rule30CARng(pacerRngSeed);
+	const pacerRng2 = new Rule30CARng(pacerRngSeed);
+
 	function addTriggers(sd: SkillData) {
 		triggers.push(sd.samplePolicy.sample(sd.regions, nsamples, rng));
 	}
@@ -83,7 +91,7 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 
 	const gain = [];
 	for (let i = 0; i < nsamples; ++i) {
-		const s = new RaceSolver({horse: testHorse, course, pacer: getPacer()});
+		const s = new RaceSolver({horse: testHorse, course, pacer: getPacer(pacerRng1), rng: solverRng1});
 		defSkills.forEach((sd,sdi) => addSkill(s, sd, triggers[sdi], i));
 		cliSkills.forEach((sd,sdi) => addSkill(s, sd, triggers[sdi + defSkills.length], i));
 
@@ -91,7 +99,7 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 			s.step(1/60);
 		}
 
-		const s2 = new RaceSolver({horse, course, pacer: getPacer()});
+		const s2 = new RaceSolver({horse, course, pacer: getPacer(pacerRng2), rng: solverRng2});
 		defSkills.forEach((sd,sdi) => addSkill(s2, sd, triggers[sdi], i));
 		debuffs.forEach((sd,sdi) => addSkill(s2, sd, triggers[sdi + defSkills.length + cliSkills.length], i));
 		while (s2.accumulatetime < s.accumulatetime) {

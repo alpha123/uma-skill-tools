@@ -4,6 +4,7 @@ import { Command, Option, InvalidArgumentError } from 'commander';
 import { HorseParameters, Strategy, Aptitude } from '../HorseTypes';
 import { CourseData, CourseHelpers } from '../CourseData';
 import { Region, RegionList } from '../Region';
+import { PRNG } from '../Random';
 import { ActivationSamplePolicy, ImmediatePolicy } from '../ActivationSamplePolicy';
 import { Conditions } from '../ActivationConditions';
 import { parse, tokenize } from '../ConditionParser';
@@ -166,7 +167,7 @@ export function buildHorseParameters(horseDesc, course: CourseData, mood: Mood, 
 	});
 }
 
-export type PacerProvider = () => RaceSolver | null;
+export type PacerProvider = (rng: PRNG) => RaceSolver | null;
 export type CliAction = (
 	horse: HorseParameters, course: CourseData,
 	defSkills: SkillData[], cliSkills: SkillData[],
@@ -220,10 +221,10 @@ export class ToolCLI {
 		} else {
 			pacerHorseParams = Object.assign({}, horse, {strategy: Strategy.Nige});
 		}
-		function getPacer() {
+		function getPacer(rng: PRNG) {
 			let pacer: RaceSolver | null = null;
 			if (horse.strategy != Strategy.Nige && horse.strategy != Strategy.Oonige && opts.positionKeep !== false) {
-				pacer = new RaceSolver({horse: pacerHorseParams, course});
+				pacer = new RaceSolver({horse: pacerHorseParams, course, rng});
 				// top is jiga and bottom is white sente
 				// arguably it's more realistic to include these, but also a lot of the time they prevent the exact pace down effects
 				// that we're trying to investigate

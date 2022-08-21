@@ -9,10 +9,12 @@ cli.options(program => {
 	program.option('--seed <seed>', 'seed value for pseudorandom number generator', (value,_) => parseInt(value,10) >>> 0);
 });
 cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cliSkills: SkillData[], getPacer: PacerProvider, cliOptions: any) => {
-	const s = new RaceSolver({horse, course, pacer: getPacer()});
-	const skillTypes = {};
-
 	const rng = new Rule30CARng('seed' in cliOptions ? cliOptions.seed : Math.floor(Math.random() * (-1 >>> 0)));
+	const solverRng = new Rule30CARng(rng.int32());
+	const pacerRng = new Rule30CARng(rng.int32());
+
+	const s = new RaceSolver({horse, course, pacer: getPacer(pacerRng), rng: solverRng});
+	const skillTypes = {};
 
 	function addSkill(sd: SkillData) {
 		skillTypes[sd.skillId] = sd.effects[0].type;
