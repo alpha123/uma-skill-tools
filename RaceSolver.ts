@@ -72,7 +72,8 @@ namespace PositionKeep {
 	}
 
 	export function minThreshold(strategy: Strategy, distance: number) {
-		return BaseMinimumThreshold[strategy] * courseFactor(distance);
+		// senkou minimum threshold is a constant 3.0 independent of the course factor for some reason
+		return BaseMinimumThreshold[strategy] * (strategy == Strategy.Senkou ? 1.0 : courseFactor(distance));
 	}
 
 	export function maxThreshold(strategy: Strategy, distance: number) {
