@@ -72,14 +72,14 @@ function addSkill(s: RaceSolver, sd: SkillData, triggers: Region[], i: number) {
 
 const gain = [];
 for (let i = 0; i < opts.nsamples; ++i) {
-	const s = new RaceSolver(horse1, course);
+	const s = new RaceSolver({horse: horse1, course});
 	skills1.forEach((sd,sdi) => addSkill(s, sd, triggers1[sdi], i));
 
 	while (s.pos < course.distance) {
 		s.step(1/60);
 	}
 
-	const s2 = new RaceSolver(horse2, course);
+	const s2 = new RaceSolver({horse: horse2, course});
 	skills2.forEach((sd,sdi) => addSkill(s2, sd, triggers2[sdi], i));
 	// NB. if horse2 is faster then this ends up going past the course distance
 	// this is not in itself a problem, but it would overestimate the difference if for example a skill continues past the end of the

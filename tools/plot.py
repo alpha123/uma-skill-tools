@@ -85,22 +85,29 @@ if args.phase:
 	plt.axvline(pos_to_t(course['distance'] * 2/3), color='dimgray', alpha=0.2, ls='--', label=f"Last leg start ({round(course['distance']*2/3)}m)")
 	plt.axvline(pos_to_t(course['distance'] * 5/6), color='dimgray', alpha=0.2, ls=':')
 
-if args.skills:
-	with open('skillnames.json', 'r', encoding='utf-8') as f:
-		skillnames = json.load(f)
+with open('skillnames.json', 'r', encoding='utf-8') as f:
+	skillnames = json.load(f)
 
+def get_skillname(id):
+	if id.startswith('pd'):
+		return 'pace down'
+	if id in skillnames:
+		return skillnames[id][args.lang == 'en']
+	return id
+
+if args.skills:
 	xtr = plt.gca().get_xaxis_transform()
 
 	starts = sorted(list(map(lambda i: i[1], data['skills'].values())))
 	ends = sorted(list(map(lambda i: i[2], data['skills'].values())))
 	n_at = defaultdict(lambda: 0)
 	for skill,info in data['skills'].items():
-		color = ['red','orangered','firebrick','dodgerblue'][info[0]]
+		color = ['red','orangered','firebrick','dodgerblue','slateblue'][info[0]]  # NB. last element (i.e., -1) is for pace down
 		nactive = bisect_left(starts, info[1]) - bisect_left(ends, info[1]) + n_at[info[1]]
 		n_at[info[1]] += 1
 		h = 0.04
-		plt.axvspan(info[1], info[2], ymin=nactive*h, ymax=nactive*h+h, color=color, alpha=0.5, label=f"{skillnames[skill][args.lang == 'en']} {round(info[3])}m~{round(info[4])}m")
-		plt.text(info[1], nactive*h+0.01, skillnames[skill][args.lang == 'en'], transform=xtr, fontproperties=font, fontsize='small')
+		plt.axvspan(info[1], info[2], ymin=nactive*h, ymax=nactive*h+h, color=color, alpha=0.5, label=f"{get_skillname(skill)} {round(info[3])}m~{round(info[4])}m")
+		plt.text(info[1], nactive*h+0.01, get_skillname(skill), transform=xtr, fontproperties=font, fontsize='small')
 
 seconds = range(0, round(data['t'][-1])+1)
 plt.xticks(seconds, list(map(lambda t: '{:d}:{:02d}'.format(*divmod(t,60)), seconds)), rotation=45, rotation_mode='anchor', fontsize='xx-small', ha='right')

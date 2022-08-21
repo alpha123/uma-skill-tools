@@ -4,7 +4,7 @@ import { CourseData } from '../CourseData';
 import { Region } from '../Region';
 import { Rule30CARng } from '../Random';
 import { PendingSkill, RaceSolver } from '../RaceSolver';
-import { SkillData, ToolCLI, parseAptitude } from './ToolCLI';
+import { SkillData, ToolCLI, PacerProvider, parseAptitude } from './ToolCLI';
 
 const cli = new ToolCLI();
 cli.options(program => {
@@ -28,7 +28,7 @@ cli.options(program => {
 		)
 		.option('--dump', 'instead of printing a summary, dump data. intended to be piped into histogram.py.');
 });
-cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cliSkills: SkillData[], cliOptions: any) => {
+cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cliSkills: SkillData[], getPacer: PacerProvider, cliOptions: any) => {
 	const nsamples = cliOptions.nsamples;
 	const triggers = [];
 	const seed = 'seed' in cliOptions ? cliOptions.seed : Math.floor(Math.random() * (-1 >>> 0));
@@ -77,9 +77,13 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		testHorse = Object.freeze(Object.assign({}, testHorse, {surfaceAptitude: cliOptions.surfaceAptitude}));
 	}
 
+	// NB. if --distance-aptitude or --surface-aptitude are specified the pacer will still have the default aptitudes even when pacing the
+	// modified aptitude version.
+	// i'm not really sure if that's the expected thing to do or not, but it makes sense (imo)
+
 	const gain = [];
 	for (let i = 0; i < nsamples; ++i) {
-		const s = new RaceSolver(testHorse, course);
+		const s = new RaceSolver({horse: testHorse, course, pacer: getPacer()});
 		defSkills.forEach((sd,sdi) => addSkill(s, sd, triggers[sdi], i));
 		cliSkills.forEach((sd,sdi) => addSkill(s, sd, triggers[sdi + defSkills.length], i));
 
@@ -87,7 +91,7 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 			s.step(1/60);
 		}
 
-		const s2 = new RaceSolver(horse, course);
+		const s2 = new RaceSolver({horse, course, pacer: getPacer()});
 		defSkills.forEach((sd,sdi) => addSkill(s2, sd, triggers[sdi], i));
 		debuffs.forEach((sd,sdi) => addSkill(s2, sd, triggers[sdi + defSkills.length + cliSkills.length], i));
 		while (s2.accumulatetime < s.accumulatetime) {

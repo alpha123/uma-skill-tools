@@ -1,6 +1,6 @@
 const assert = require('assert').strict;
 
-import { Strategy, Aptitude, HorseParameters } from './HorseTypes';
+import { Strategy, Aptitude, HorseParameters, StrategyHelpers } from './HorseTypes';
 import { CourseData, CourseHelpers, Phase } from './CourseData';
 import { Region } from './Region';
 
@@ -62,6 +62,23 @@ function decel(pos: number, distance: number) {
 	else return -1.2;
 }
 
+namespace PositionKeep {
+	export const BaseMinimumThreshold = Object.freeze([0, 0, 3.0, 6.5, 7.5]);
+	export const BaseMaximumThreshold = Object.freeze([0, 0, 5.0, 7.0, 8.0]);
+
+	export function courseFactor(distance: number) {
+		return 0.0008 * (distance - 1000) + 1.0;
+	}
+
+	export function minThreshold(strategy: Strategy, distance: number) {
+		return BaseMinimumThreshold[strategy] * courseFactor(distance);
+	}
+
+	export function maxThreshold(strategy: Strategy, distance: number) {
+		return BaseMaximumThreshold[strategy] * courseFactor(distance);
+	}
+}
+
 export interface RaceState {
 	readonly accumulatetime: number
 	readonly activateCount: readonly number[]
@@ -94,6 +111,8 @@ interface ActiveSkill {
 	modifier: number
 }
 
+function doNothing(x: unknown) {}
+
 export class RaceSolver {
 	accumulatetime: number
 	pos: number
@@ -118,18 +137,34 @@ export class RaceSolver {
 	activateCountHeal: number
 	onSkillActivate: (s: string) => void
 	onSkillDeactivate: (s: string) => void
+	sectionLength: number
+	pacer: RaceSolver | null
+	isPaceDown: boolean
+	posKeepMinThreshold: number
+	posKeepMaxThreshold: number
+	posKeepCooldown: number
+	posKeepEnd: number
+	posKeepSpeedCoef: number
+	posKeepEffectStart: number
+	posKeepEffectExitDistance: number
+	updatePositionKeep: (dt: number) => void
 
-	constructor(horse: HorseParameters, course: CourseData) {
-		this.horse = horse;
-		this.course = course;
+	constructor(params: {
+		horse: HorseParameters,
+		course: CourseData,
+		pacer?: RaceSolver
+	}) {
+		this.horse = params.horse;
+		this.course = params.course;
+		this.pacer = params.pacer || null;
 		this.accumulatetime = 0.0;
 		this.phase = 0;
-		this.nextPhaseTransition = CourseHelpers.phaseStart(course.distance, 1);
+		this.nextPhaseTransition = CourseHelpers.phaseStart(this.course.distance, 1);
 		this.pos = 0.0;
 		this.accel = 0.0;
 		this.currentSpeed = 0.0;
-		this.targetSpeed = 0.85 * baseSpeed(course);
-		this.minSpeed = this.targetSpeed + Math.sqrt(200.0 * horse.guts) * 0.001;
+		this.targetSpeed = 0.85 * baseSpeed(this.course);
+		this.minSpeed = this.targetSpeed + Math.sqrt(200.0 * this.horse.guts) * 0.001;
 		this.startDash = true;
 		this.activeSpeedSkills = [];
 		this.activeAccelSkills = [];
@@ -139,6 +174,20 @@ export class RaceSolver {
 		this.activateCountHeal = 0;
 		this.onSkillActivate = () => {}
 		this.onSkillDeactivate = () => {}
+		this.sectionLength = this.course.distance / 24.0;
+		this.isPaceDown = false;
+		this.posKeepMinThreshold = PositionKeep.minThreshold(this.horse.strategy, this.course.distance);
+		this.posKeepMaxThreshold = PositionKeep.maxThreshold(this.horse.strategy, this.course.distance);
+		this.posKeepCooldown = 0.0;
+		// NB. in the actual game, position keep continues for 10 sections. however we're really only interested in pace down at
+		// the beginning, which is somewhat predictable. arbitrarily cap at 5.
+		this.posKeepEnd = this.sectionLength * 5.0;
+		this.posKeepSpeedCoef = 1.0;
+		if (StrategyHelpers.strategyMatches(this.horse.strategy, Strategy.Nige) || this.pacer == null) {
+			this.updatePositionKeep = doNothing;
+		} else {
+			this.updatePositionKeep = this.updatePositionKeepNonNige;
+		}
 		this.initHills();
 	}
 
@@ -174,6 +223,10 @@ export class RaceSolver {
 		//
 		// i dont actually know anything about numerical analysis but i saw this on the internet
 
+		if (this.pos < this.posKeepEnd && this.pacer != null) {
+			this.pacer.step(dt);
+		}
+
 		let targetSpeed = this.currentSpeed > this.targetSpeed ? 9999 : this.targetSpeed;  // allow decelerating if targetSpeed drops
 		const halfv = Math.min(this.currentSpeed + 0.5 * dt * this.accel, targetSpeed);
 		this.pos += halfv * dt;
@@ -181,6 +234,7 @@ export class RaceSolver {
 		this.updateHills();
 		this.updatePhase();
 		this.processSkillActivations(dt);
+		this.updatePositionKeep(dt);
 		this.updateTargetSpeed();
 		this.applyForces();
 		targetSpeed = this.currentSpeed > this.targetSpeed ? 9999 : this.targetSpeed;
@@ -191,11 +245,37 @@ export class RaceSolver {
 		this.currentSpeedModifier = 0.0;
 	}
 
+	updatePositionKeepNonNige(dt: number) {
+		this.posKeepCooldown -= dt;
+		if (this.pos >= this.posKeepEnd) {
+			this.isPaceDown = false;
+			this.posKeepSpeedCoef = 1.0;
+			this.updatePositionKeep = doNothing;
+		} else if (this.isPaceDown) {
+			if (
+			   this.pacer.pos - this.pos > this.posKeepEffectExitDistance
+			|| this.pos - this.posKeepEffectStart > this.sectionLength
+			|| this.activeSpeedSkills.length > 0
+			) {
+				this.isPaceDown = false;
+				this.posKeepCooldown = 3.0;
+				this.posKeepSpeedCoef = 1.0;
+			}
+		} else if (this.pacer.pos - this.pos < this.posKeepMinThreshold && this.activeSpeedSkills.length == 0 && this.posKeepCooldown <= 0) {
+			this.isPaceDown = true;
+			this.posKeepEffectStart = this.pos;
+			const min = this.posKeepMinThreshold;
+			const max = this.phase == 1 ? min + 0.5 * (this.posKeepMaxThreshold - min) : this.posKeepMaxThreshold;
+			this.posKeepEffectExitDistance = min + Math.random() * (max - min);
+			this.posKeepSpeedCoef = this.phase == 1 ? 0.945 : 0.915;
+		}
+	}
+
 	updateTargetSpeed() {
 		if (this.phase == 2) {
 			this.targetSpeed = lastSpurtSpeed(this.horse, this.course);
 		} else if (!this.startDash) {
-			this.targetSpeed = baseTargetSpeed(this.horse, this.course, this.phase);
+			this.targetSpeed = baseTargetSpeed(this.horse, this.course, this.phase) * this.posKeepSpeedCoef;
 		}
 		if (!this.startDash) {
 			this.targetSpeed += this.activeSpeedSkills.reduce((a,b) => a + b.modifier, 0);
@@ -207,7 +287,7 @@ export class RaceSolver {
 
 	applyForces() {
 		if (this.currentSpeed > this.targetSpeed) {
-			this.accel = decel(this.pos, this.course.distance);
+			this.accel = this.isPaceDown ? -0.5 : decel(this.pos, this.course.distance);
 			return;
 		}
 		this.accel = baseAccel(this.hillIdx != -1 ? UphillBaseAccel : BaseAccel, this.horse, this.phase);

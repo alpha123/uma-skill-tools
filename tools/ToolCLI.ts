@@ -7,7 +7,7 @@ import { Region, RegionList } from '../Region';
 import { ActivationSamplePolicy, ImmediatePolicy } from '../ActivationSamplePolicy';
 import { Conditions } from '../ActivationConditions';
 import { parse, tokenize } from '../ConditionParser';
-import { DynamicCondition, SkillType, SkillRarity, SkillEffect } from '../RaceSolver';
+import { RaceSolver, DynamicCondition, SkillType, SkillRarity, SkillEffect } from '../RaceSolver';
 
 import skills from '../data/skill_data.json';
 
@@ -166,7 +166,13 @@ export function buildHorseParameters(horseDesc, course: CourseData, mood: Mood, 
 	});
 }
 
-type CliAction = (horse: HorseParameters, course: CourseData, defSkills: SkillData[], cliSkills: SkillData[], cliOptions: any) => void;
+export type PacerProvider = () => RaceSolver | null;
+export type CliAction = (
+	horse: HorseParameters, course: CourseData,
+	defSkills: SkillData[], cliSkills: SkillData[],
+	getPacer: PacerProvider,
+	cliOptions: any
+) => void;
 
 export class ToolCLI {
 	program: Command
@@ -185,6 +191,8 @@ export class ToolCLI {
 			.addOption(new Option('-g, --ground <condition>', 'track condition').choices(['good', 'yielding', 'soft', 'heavy']).default('good'))
 			.option('-s, --skill <id>', 'skill to test', (value,list) => list.concat([parseInt(value,10)]), [])
 			.option('--skills <ids>', 'comma-separated list of skill IDs', (value,_) => value.split(',').map(id => parseInt(id,10)), [])
+			.option('--position-keep <pacer>', 'load a horse from the <pacer> JSON file to simulate position keep (by default, uses a nige version of the horse in <horsefile> with no skills) (position keep is not simulated for nige/oonige)')
+			.option('--no-position-keep', 'disable position keep simulation')
 			.action((horsefile, options) => {
 				this.handleRun(horsefile, options);
 			});
@@ -205,6 +213,38 @@ export class ToolCLI {
 
 		const horse = buildHorseParameters(horseDesc, course, opts.mood, opts.ground);
 
+		let pacerHorseParams;
+		if (typeof opts.positionKeep == 'string') {
+			const pacerDesc = JSON.parse(fs.readFileSync(opts.positionKeep, 'utf8'));
+			pacerHorseParams = buildHorseParameters(pacerDesc, course, opts.mood, opts.ground);
+		} else {
+			pacerHorseParams = Object.assign({}, horse, {strategy: Strategy.Nige});
+		}
+		function getPacer() {
+			let pacer: RaceSolver | null = null;
+			if (horse.strategy != Strategy.Nige && horse.strategy != Strategy.Oonige && opts.positionKeep !== false) {
+				pacer = new RaceSolver({horse: pacerHorseParams, course});
+				// top is jiga and bottom is white sente
+				// arguably it's more realistic to include these, but also a lot of the time they prevent the exact pace down effects
+				// that we're trying to investigate
+				/*pacer.pendingSkills.push({
+					skillId: '201601',
+					rarity: SkillRarity.White,
+					trigger: new Region(0, 100),
+					extraCondition: (_) => true,
+					effects: [{type: SkillType.Accel, baseDuration: 3.0, modifier: 0.2}]
+				});
+				pacer.pendingSkills.push({
+					skillId: '200532',
+					rarity: SkillRarity.White,
+					trigger: new Region(0, 100),
+					extraCondition: (_) => true,
+					effects: [{type: SkillType.Accel, baseDuration: 1.2, modifier: 0.2}]
+				});*/
+			}
+			return pacer;
+		}
+
 		const wholeCourse = new RegionList();
 		wholeCourse.push(new Region(0, course.distance));
 		Object.freeze(wholeCourse);
@@ -213,6 +253,6 @@ export class ToolCLI {
 		const defSkills = horseDesc.skills.map(makeSkill).filter(s => s != null);
 		const cliSkills = opts.skills.concat(opts.skill).map(makeSkill).filter(s => s != null);
 
-		this.action(horse, course, defSkills, cliSkills, opts);
+		this.action(horse, course, defSkills, cliSkills, getPacer, opts);
 	}
 }
