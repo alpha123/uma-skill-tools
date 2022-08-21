@@ -162,7 +162,7 @@ export class RaceSolver {
 		this.nextPhaseTransition = CourseHelpers.phaseStart(this.course.distance, 1);
 		this.pos = 0.0;
 		this.accel = 0.0;
-		this.currentSpeed = 0.0;
+		this.currentSpeed = 3.0;
 		this.targetSpeed = 0.85 * baseSpeed(this.course);
 		this.minSpeed = this.targetSpeed + Math.sqrt(200.0 * this.horse.guts) * 0.001;
 		this.startDash = true;
