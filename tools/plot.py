@@ -27,9 +27,8 @@ with open('../data/course_data.json', 'r', encoding='utf-8') as f:
 	tracks = json.load(f)
 	course = tracks[str(data['trackId'])]['courses'][str(data['courseId'])]
 
-if args.lang == 'jp':
-	font = font_manager.FontProperties()
-	font.set_family('MS Gothic')
+font = font_manager.FontProperties()
+font.set_family('MS Gothic')
 
 plt.figure(figsize=(15,5))
 
@@ -85,7 +84,7 @@ if args.phase:
 	plt.axvline(pos_to_t(course['distance'] * 2/3), color='dimgray', alpha=0.2, ls='--', label=f"Last leg start ({round(course['distance']*2/3)}m)")
 	plt.axvline(pos_to_t(course['distance'] * 5/6), color='dimgray', alpha=0.2, ls=':')
 
-with open('skillnames.json', 'r', encoding='utf-8') as f:
+with open('../data/skillnames.json', 'r', encoding='utf-8') as f:
 	skillnames = json.load(f)
 
 def get_skillname(id):
@@ -119,9 +118,6 @@ elif args.velocity:
 	plt.ylim([args.velocity_offset, max(data['v'])+1])
 	# NB. if they are both specified, max(targetv) >= max(v)
 
-if args.lang == 'jp':
-	plt.legend(prop=font)
-else:
-	plt.legend()
+plt.legend(prop=font)
 plt.tight_layout()
 plt.show()
