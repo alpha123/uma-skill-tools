@@ -145,7 +145,18 @@ export class ErlangRandomPolicy extends DistributionRandomPolicy {
 			max = Math.max(max, n);
 			nums.push(n);
 		}
-		const range = max - min;
+		// somewhat terrible hack
+		// the problem is that if nsamples == 1 then max == min and range is 0, and we divide by range
+		// the other problem is that an erlang distribution has support [0,∞), so there's no sensible upper bound
+		// (i think this makes the entire normalization procedure somewhat suspect, but it seems to work ok)
+		// in practice the generated range depends on choices for k and lambda, and not in a way that i really understand well enough to try to
+		// guess an upper bound here.
+		// so after trying it with a few choices of parameters that are used for modeling skill conditions, somewhat arbitrarily decide on 18.
+		// this isn't so bad as one might first expect, since really the only time 1 sample is requested is for plotting, and it doesn't really
+		// matter if that actually obeys the distribution or not.
+		// note that this isn't really a problem for LogNormalRandomPolicy since it always generates at least two numbers. granted, that will
+		// probably result in some fairly odd results, but that's not really a big deal.
+		const range = nsamples == 1 ? 18 : max - min;
 		return nums.map(n => Math.floor(upper * (n - min) / range));
 	}
 }
