@@ -98,6 +98,14 @@ export function parse(tokens: Iterator<Token,Token>, options={}) {
 	return node.op;
 }
 
+// top-down operator precedence parser (Pratt parser)
+// the grammar of the condition "language" is quite simple:
+//     Or ::= And '@' Or | And
+//     And ::= Cmp '&' And | Cmp
+//     Cmp ::= condition Op integer
+//     Op ::= '==' | '!=' | '>' | '>=' | '<' | '<='
+// there are no parenthesis nor any other way to control precedence
+
 function expression(state: ParserState, rbp: number) {
 	state.current = state.next;
 	state.next = state.tokens.next().value;
