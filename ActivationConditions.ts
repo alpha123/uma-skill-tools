@@ -378,6 +378,12 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => slopes.map(s => r.intersect(s)));
 		}
 	}),
+	ground_type: immediate({
+		filterEq(regions: RegionList, surface: number, course: CourseData, _: HorseParameters) {
+			CourseHelpers.assertIsSurface(surface);
+			return course.surface == surface ? regions : new RegionList();
+		}
+	}),
 	// TODO in order to properly simulate skills that depend on hp_per this condition should pass a dynamic condition on to the
 	// race solver. This is a bit more long-term since that would require simulating stamina, and therefore recoveries, and honestly
 	// would be kind of a pain in general, and probably impossible to do accurately due to things like 位置取り争い that depend on other

@@ -31,6 +31,10 @@ export namespace CourseHelpers {
 		assert(phase == 0 || phase == 1 || phase == 2 || phase == 3);
 	}
 
+	export function assertIsSurface(surface: number): asserts surface is Surface {
+		assert(surface == Surface.Turf || surface == Surface.Dirt);
+	}
+
 	export function assertIsDistanceType(distanceType: number): asserts distanceType is DistanceType {
 		assert(
 		   distanceType == DistanceType.Short
