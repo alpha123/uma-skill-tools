@@ -3,7 +3,7 @@ const assert = require('assert').strict;
 import { Strategy, Aptitude, HorseParameters, StrategyHelpers } from './HorseTypes';
 import { CourseData, CourseHelpers, Phase } from './CourseData';
 import { Region } from './Region';
-import { PRNG } from './Random';
+import { PRNG, Rule30CARng } from './Random';
 
 namespace Speed {
 	export const StrategyPhaseCoefficient = Object.freeze([
@@ -125,6 +125,7 @@ export class RaceSolver {
 	horse: HorseParameters
 	course: CourseData
 	rng: PRNG
+	gorosiRng: PRNG
 	startDash: boolean
 	phase: Phase
 	nextPhaseTransition: number
@@ -162,6 +163,7 @@ export class RaceSolver {
 		this.course = params.course;
 		this.pacer = params.pacer || null;
 		this.rng = params.rng;
+		this.gorosiRng = new Rule30CARng(this.rng.int32());
 		this.accumulatetime = 0.0;
 		this.phase = 0;
 		this.nextPhaseTransition = CourseHelpers.phaseStart(this.course.distance, 1);
@@ -387,7 +389,7 @@ export class RaceSolver {
 			return acc;
 		}, []);
 		for (let i = goldIndices.length; --i >= 0;) {
-			const j = Math.floor(this.rng.random() * (i + 1));
+			const j = this.gorosiRng.uniform(i + 1);
 			[goldIndices[i], goldIndices[j]] = [goldIndices[j], goldIndices[i]];
 		}
 		for (let i = 0; i < Math.min(ngolds, goldIndices.length); ++i) {
