@@ -19,6 +19,12 @@ export interface CourseData {
 }
 
 import tracks from './data/course_data.json';
+const courses = {};
+for (const trackId in tracks) {
+	for (const courseId in tracks[trackId].courses) {
+		courses[courseId] = tracks[trackId].courses[courseId];
+	}
+}
 
 export namespace CourseHelpers {
 	export function assertIsPhase(phase: number): asserts phase is Phase {
@@ -77,11 +83,7 @@ export namespace CourseHelpers {
 	}
 
 	export function getCourse(courseId: number): CourseData {
-		// course id to location id is mostly but not completely regular
-		// generally it's something like 10602 → 10006, but for Ooi racetracks it's different (eg., 11101 → 10101)
-		// TODO should probably fix this or just search all course ids for the one provided
-		const locationId = 11100 < courseId && courseId < 11200 ? 10101 : Math.floor(courseId / 100) - 100 + 10000;
-		const course = tracks[locationId].courses[courseId];
+		const course = courses[courseId];
 		course.slopes.sort((a,b) => a.start - b.start);
 		Object.keys(course).forEach(k => Object.freeze(course[k]));
 		return Object.freeze(course);
