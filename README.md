@@ -86,17 +86,17 @@ Fixing this requires figuring out and tracking skill target information (probabl
 
 All of these things should be doable with the current architecture and are planned for the near future.
 
-## Does not simulate int effects (int rolls or downhill speedup mode)
+### Does not simulate int effects (int rolls or downhill speedup mode)
 
 The architecture now allows it to be doable in a way to usefully allow comparisons even though the effects are random.
 
-## Does not simulate kakari
+### Does not simulate kakari
 
 Easily doable but no real point without tracking hp consumption since both simulations would always kakari at the same point during a comparison.
 
 If it is implemented would probably have the effect of increasing int decreasing average バ身 gain due to less kakari, since position keep effects aren't simulated which would otherwise counteract it.
 
-## Some skill conditions are not implemented yet
+### Some skill conditions are not implemented yet
 
 This probably includes some common ones.
 
@@ -106,7 +106,7 @@ Green skills with these always activate no matter what the actual weather/season
 
 This is easy to fix but somewhat tedious since I didn't think of those when writing the skill conditions and probably the easiest way to implement it would involve passing a new parameter to every condition, which would be slightly annoying.
 
-## Scaling effects are not implemented yet
+### Scaling effects are not implemented yet
 
 Some of these are going to be a real pain.
 
