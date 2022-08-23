@@ -13,12 +13,11 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 	const solverRng = new Rule30CARng(rng.int32());
 	const pacerRng = new Rule30CARng(rng.int32());
 
-	const s = new RaceSolver({horse, course, pacer: getPacer(pacerRng), rng: solverRng});
 	const skillTypes = {};
-
+	const skills = [];
 	function addSkill(sd: SkillData) {
 		skillTypes[sd.skillId] = sd.effects[0].type;
-		s.pendingSkills.push({
+		skills.push({
 			skillId: sd.skillId,
 			rarity: sd.rarity,
 			trigger: sd.samplePolicy.sample(sd.regions, 1, rng)[0],
@@ -30,13 +29,23 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 	defSkills.forEach(addSkill);
 	cliSkills.forEach(addSkill);
 
-	const plotData = {trackId: course.raceTrackId, courseId: cliOptions.course, t: [0], pos: [0], v: [0], targetv: [s.targetSpeed], a: [0], skills: {}};
+	const plotData = {trackId: course.raceTrackId, courseId: cliOptions.course, t: [0], pos: [0], v: [], targetv: [], a: [], skills: {}};
 
-	s.onSkillActivate = (skillId) => { plotData.skills[skillId] = [skillTypes[skillId],s.accumulatetime,0,s.pos,0]; }
-	s.onSkillDeactivate = (skillId) => {
-		plotData.skills[skillId][2] = s.accumulatetime;
-		plotData.skills[skillId][4] = s.pos;
-	}
+	const s = new RaceSolver({
+		horse, course, skills,
+		pacer: getPacer(pacerRng),
+		rng: solverRng,
+		onSkillActivate: (s,skillId) => {
+			plotData.skills[skillId] = [skillTypes[skillId],s.accumulatetime,0,s.pos,0];
+		},
+		onSkillDeactivate: (s,skillId) => {
+			plotData.skills[skillId][2] = s.accumulatetime;
+			plotData.skills[skillId][4] = s.pos;
+		}
+	});
+	plotData.v.push(s.currentSpeed);
+	plotData.targetv.push(s.targetSpeed);
+	plotData.a.push(s.accel);
 
 	let paceDownN = 0;
 	let paceDownToggle = false;

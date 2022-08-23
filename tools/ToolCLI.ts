@@ -215,24 +215,23 @@ export class ToolCLI {
 		function getPacer(rng: PRNG) {
 			let pacer: RaceSolver | null = null;
 			if (horse.strategy != Strategy.Nige && horse.strategy != Strategy.Oonige && opts.positionKeep !== false) {
-				pacer = new RaceSolver({horse: pacerHorseParams, course, rng});
+				pacer = new RaceSolver({horse: pacerHorseParams, course, rng, skills: []});
 				// top is jiga and bottom is white sente
 				// arguably it's more realistic to include these, but also a lot of the time they prevent the exact pace down effects
 				// that we're trying to investigate
-				/*pacer.pendingSkills.push({
+				/*const skills = [{
 					skillId: '201601',
 					rarity: SkillRarity.White,
 					trigger: new Region(0, 100),
 					extraCondition: (_) => true,
 					effects: [{type: SkillType.Accel, baseDuration: 3.0, modifier: 0.2}]
-				});
-				pacer.pendingSkills.push({
+				}, {
 					skillId: '200532',
 					rarity: SkillRarity.White,
 					trigger: new Region(0, 100),
 					extraCondition: (_) => true,
 					effects: [{type: SkillType.Accel, baseDuration: 1.2, modifier: 0.2}]
-				});*/
+				}];*/
 			}
 			return pacer;
 		}

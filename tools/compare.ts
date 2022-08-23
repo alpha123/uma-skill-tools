@@ -4,7 +4,7 @@ import { SkillData, buildSkillData, buildHorseParameters } from './ToolCLI';
 import { CourseHelpers } from '../CourseData';
 import { Region, RegionList } from '../Region';
 import { Rule30CARng } from '../Random';
-import { RaceSolver } from '../RaceSolver';
+import { RaceSolver, PendingSkill } from '../RaceSolver';
 
 // this shares considerable overlap with gain.ts but it's not too clear what a nice way to share code between them would be
 // either way it's (currently) only two like this, i'm not sure it's worth abstracting anything into a framework sufficiently
@@ -47,8 +47,8 @@ const wholeCourse = new RegionList();
 wholeCourse.push(new Region(0, course.distance));
 Object.freeze(wholeCourse);
 
-const skills1 = desc1.skills.map(s => buildSkillData(horse1, course, wholeCourse, s)).filter(s => s != null);
-const skills2 = desc2.skills.map(s => buildSkillData(horse2, course, wholeCourse, s)).filter(s => s != null);
+const skillDefs1 = desc1.skills.map(s => buildSkillData(horse1, course, wholeCourse, s)).filter(s => s != null);
+const skillDefs2 = desc2.skills.map(s => buildSkillData(horse2, course, wholeCourse, s)).filter(s => s != null);
 
 const seed = 'seed' in opts ? opts.seed : Math.floor(Math.random() * (-1 >>> 0));
 // use two rng instances so that if the skills are the same (or different versions of each other, e.g. comparing inherited vs full
@@ -57,11 +57,11 @@ const seed = 'seed' in opts ? opts.seed : Math.floor(Math.random() * (-1 >>> 0))
 const rng1 = new Rule30CARng(seed);
 const rng2 = new Rule30CARng(seed);
 
-const triggers1 = skills1.map(sd => sd.samplePolicy.sample(sd.regions, opts.nsamples, rng1));
-const triggers2 = skills2.map(sd => sd.samplePolicy.sample(sd.regions, opts.nsamples, rng2));
+const triggers1 = skillDefs1.map(sd => sd.samplePolicy.sample(sd.regions, opts.nsamples, rng1));
+const triggers2 = skillDefs2.map(sd => sd.samplePolicy.sample(sd.regions, opts.nsamples, rng2));
 
-function addSkill(s: RaceSolver, sd: SkillData, triggers: Region[], i: number) {
-	s.pendingSkills.push({
+function addSkill(skills: PendingSkill[], sd: SkillData, triggers: Region[], i: number) {
+	skills.push({
 		skillId: sd.skillId,
 		rarity: sd.rarity,
 		trigger: triggers[i % triggers.length],
@@ -77,15 +77,17 @@ const solverRng2 = new Rule30CARng(solverRngSeed);
 
 const gain = [];
 for (let i = 0; i < opts.nsamples; ++i) {
-	const s = new RaceSolver({horse: horse1, course, rng: solverRng1});
-	skills1.forEach((sd,sdi) => addSkill(s, sd, triggers1[sdi], i));
+	const skills1 = [];
+	skillDefs1.forEach((sd,sdi) => addSkill(skills1, sd, triggers1[sdi], i));
+	const s = new RaceSolver({horse: horse1, course, skills: skills1, rng: solverRng1});
 
 	while (s.pos < course.distance) {
 		s.step(1/60);
 	}
 
-	const s2 = new RaceSolver({horse: horse2, course, rng: solverRng2});
-	skills2.forEach((sd,sdi) => addSkill(s2, sd, triggers2[sdi], i));
+	const skills2 = [];
+	skillDefs2.forEach((sd,sdi) => addSkill(skills2, sd, triggers2[sdi], i));
+	const s2 = new RaceSolver({horse: horse2, course, skills: skills2, rng: solverRng2});
 	// NB. if horse2 is faster then this ends up going past the course distance
 	// this is not in itself a problem, but it would overestimate the difference if for example a skill continues past the end of the
 	// course. i feel like there are probably some other situations where it would be inaccurate also. the right thing to do is also

@@ -96,6 +96,11 @@ def get_skillname(id):
 
 skillcolors = {
 	-1: 'slateblue',  # Pace down
+	1: 'lime',        # SpeedUp
+	2: 'lime',        # StaminaUp
+	3: 'lime',        # PowerUp
+	4: 'lime',        # GutsUp
+	5: 'lime',        # WisdomUp
 	9: 'dodgerblue',  # Recovery
 	22: 'firebrick',  # CurrentSpeed
 	27: 'red',        # TargetSpeed

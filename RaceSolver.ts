@@ -89,7 +89,18 @@ export interface RaceState {
 
 export type DynamicCondition = (state: RaceState) => boolean;
 
-export const enum SkillType { Recovery = 9, CurrentSpeed = 22, TargetSpeed = 27, Accel = 31, ActivateRandomGold = 37 }
+export const enum SkillType {
+	SpeedUp = 1,
+	StaminaUp = 2,
+	PowerUp = 3,
+	GutsUp = 4,
+	WisdomUp = 5,
+	Recovery = 9,
+	CurrentSpeed = 22,
+	TargetSpeed = 27,
+	Accel = 31,
+	ActivateRandomGold = 37
+}
 
 export const enum SkillRarity { White = 1, Gold, Unique }
 
@@ -113,7 +124,7 @@ interface ActiveSkill {
 	modifier: number
 }
 
-function doNothing(x: unknown) {}
+function noop(x: unknown) {}
 
 export class RaceSolver {
 	accumulatetime: number
@@ -122,7 +133,7 @@ export class RaceSolver {
 	currentSpeed: number
 	targetSpeed: number
 	accel: number
-	horse: HorseParameters
+	horse: { -readonly[P in keyof HorseParameters]: HorseParameters[P] }
 	course: CourseData
 	rng: PRNG
 	gorosiRng: PRNG
@@ -139,8 +150,8 @@ export class RaceSolver {
 	hillEnd: number[]
 	activateCount: number[]
 	activateCountHeal: number
-	onSkillActivate: (s: string) => void
-	onSkillDeactivate: (s: string) => void
+	onSkillActivate: (s: RaceSolver, skillId: string) => void
+	onSkillDeactivate: (s: RaceSolver, skillId: string) => void
 	sectionLength: number
 	pacer: RaceSolver | null
 	isPaceDown: boolean
@@ -156,31 +167,29 @@ export class RaceSolver {
 	constructor(params: {
 		horse: HorseParameters,
 		course: CourseData,
+		rng: PRNG,
+		skills: PendingSkill[],
 		pacer?: RaceSolver,
-		rng: PRNG
+		onSkillActivate?: (s: RaceSolver, skillId: string) => void,
+		onSkillDeactivate?: (s: RaceSolver, skillId: string) => void
 	}) {
-		this.horse = params.horse;
+		// clone since green skills may modify the stat values
+		this.horse = Object.assign({}, params.horse);
 		this.course = params.course;
 		this.pacer = params.pacer || null;
 		this.rng = params.rng;
+		this.pendingSkills = params.skills.slice();  // copy since we remove from it
 		this.gorosiRng = new Rule30CARng(this.rng.int32());
 		this.accumulatetime = 0.0;
 		this.phase = 0;
 		this.nextPhaseTransition = CourseHelpers.phaseStart(this.course.distance, 1);
-		this.pos = 0.0;
-		this.accel = 0.0;
-		this.currentSpeed = 3.0;
-		this.targetSpeed = 0.85 * baseSpeed(this.course);
-		this.minSpeed = this.targetSpeed + Math.sqrt(200.0 * this.horse.guts) * 0.001;
-		this.startDash = true;
 		this.activeSpeedSkills = [];
 		this.activeAccelSkills = [];
-		this.pendingSkills = [];
 		this.currentSpeedModifier = 0.0;
 		this.activateCount = [0,0,0];
 		this.activateCountHeal = 0;
-		this.onSkillActivate = () => {}
-		this.onSkillDeactivate = () => {}
+		this.onSkillActivate = params.onSkillActivate || noop;
+		this.onSkillDeactivate = params.onSkillDeactivate || noop;
 		this.sectionLength = this.course.distance / 24.0;
 		this.isPaceDown = false;
 		this.posKeepMinThreshold = PositionKeep.minThreshold(this.horse.strategy, this.course.distance);
@@ -191,11 +200,20 @@ export class RaceSolver {
 		this.posKeepEnd = this.sectionLength * 5.0;
 		this.posKeepSpeedCoef = 1.0;
 		if (StrategyHelpers.strategyMatches(this.horse.strategy, Strategy.Nige) || this.pacer == null) {
-			this.updatePositionKeep = doNothing;
+			this.updatePositionKeep = noop;
 		} else {
 			this.updatePositionKeep = this.updatePositionKeepNonNige;
 		}
+
 		this.initHills();
+
+		this.pos = 0.0;
+		this.accel = 0.0;
+		this.currentSpeed = 3.0;
+		this.targetSpeed = 0.85 * baseSpeed(this.course);
+		this.processSkillActivations(0);  // activate gate skills (must come before setting minimum speed because green skills can modify guts)
+		this.minSpeed = this.targetSpeed + Math.sqrt(200.0 * this.horse.guts) * 0.001;
+		this.startDash = true;
 	}
 
 	initHills() {
@@ -257,7 +275,7 @@ export class RaceSolver {
 		if (this.pos >= this.posKeepEnd) {
 			this.isPaceDown = false;
 			this.posKeepSpeedCoef = 1.0;
-			this.updatePositionKeep = doNothing;
+			this.updatePositionKeep = noop;
 		} else if (this.isPaceDown) {
 			if (
 			   this.pacer.pos - this.pos > this.posKeepEffectExitDistance
@@ -336,14 +354,14 @@ export class RaceSolver {
 			const s = this.activeSpeedSkills[i];
 			if ((s.remainingDuration -= dt) <= 0) {
 				this.activeSpeedSkills.splice(i,1);
-				this.onSkillDeactivate(s.skillId);
+				this.onSkillDeactivate(this, s.skillId);
 			}
 		}
 		for (let i = this.activeAccelSkills.length; --i >= 0;) {
 			const s = this.activeAccelSkills[i];
 			if ((s.remainingDuration -= dt) <= 0) {
 				this.activeAccelSkills.splice(i,1);
-				this.onSkillDeactivate(s.skillId);
+				this.onSkillDeactivate(this, s.skillId);
 			}
 		}
 		for (let i = this.pendingSkills.length; --i >= 0;) {
@@ -362,6 +380,21 @@ export class RaceSolver {
 		s.effects.forEach(ef => {
 			const scaledDuration = ef.baseDuration * this.course.distance / 1000;
 			switch (ef.type) {
+			case SkillType.SpeedUp:
+				this.horse.speed += ef.modifier;
+				break;
+			case SkillType.StaminaUp:
+				this.horse.stamina += ef.modifier;
+				break;
+			case SkillType.PowerUp:
+				this.horse.power += ef.modifier;
+				break;
+			case SkillType.GutsUp:
+				this.horse.guts += ef.modifier;
+				break;
+			case SkillType.WisdomUp:
+				this.horse.wisdom += ef.modifier;
+				break;
 			case SkillType.TargetSpeed:
 				this.activeSpeedSkills.push({skillId: s.skillId, remainingDuration: scaledDuration, modifier: ef.modifier});
 				break;
@@ -380,7 +413,7 @@ export class RaceSolver {
 			}
 		});
 		++this.activateCount[this.phase];
-		this.onSkillActivate(s.skillId);
+		this.onSkillActivate(this, s.skillId);
 	}
 
 	doActivateRandomGold(ngolds: number) {

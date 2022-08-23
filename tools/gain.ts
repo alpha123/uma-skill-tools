@@ -67,8 +67,8 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 	cliSkills.forEach(addTriggers);
 	debuffs.forEach(addTriggers);
 
-	function addSkill(s: RaceSolver, sd: SkillData, triggers: Region[], i: number) {
-		s.pendingSkills.push({
+	function addSkill(skills: PendingSkill[], sd: SkillData, triggers: Region[], i: number) {
+		skills.push({
 			skillId: sd.skillId,
 			rarity: sd.rarity,
 			trigger: triggers[i % triggers.length],
@@ -91,17 +91,19 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 
 	const gain = [];
 	for (let i = 0; i < nsamples; ++i) {
-		const s = new RaceSolver({horse: testHorse, course, pacer: getPacer(pacerRng1), rng: solverRng1});
-		defSkills.forEach((sd,sdi) => addSkill(s, sd, triggers[sdi], i));
-		cliSkills.forEach((sd,sdi) => addSkill(s, sd, triggers[sdi + defSkills.length], i));
+		const skills1 = [];
+		defSkills.forEach((sd,sdi) => addSkill(skills1, sd, triggers[sdi], i));
+		cliSkills.forEach((sd,sdi) => addSkill(skills1, sd, triggers[sdi + defSkills.length], i));
+		const s = new RaceSolver({horse: testHorse, course, skills: skills1, pacer: getPacer(pacerRng1), rng: solverRng1});
 
 		while (s.pos < course.distance) {
 			s.step(1/60);
 		}
 
-		const s2 = new RaceSolver({horse, course, pacer: getPacer(pacerRng2), rng: solverRng2});
-		defSkills.forEach((sd,sdi) => addSkill(s2, sd, triggers[sdi], i));
-		debuffs.forEach((sd,sdi) => addSkill(s2, sd, triggers[sdi + defSkills.length + cliSkills.length], i));
+		const skills2 = [];
+		defSkills.forEach((sd,sdi) => addSkill(skills2, sd, triggers[sdi], i));
+		debuffs.forEach((sd,sdi) => addSkill(skills2, sd, triggers[sdi + defSkills.length + cliSkills.length], i));
+		const s2 = new RaceSolver({horse, course, skills: skills2, pacer: getPacer(pacerRng2), rng: solverRng2});
 		while (s2.accumulatetime < s.accumulatetime) {
 			s2.step(1/60);
 		}
