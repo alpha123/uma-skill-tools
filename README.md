@@ -96,10 +96,6 @@ Easily doable but no real point without tracking hp consumption since both simul
 
 If it is implemented would probably have the effect of increasing int decreasing average バ身 gain due to less kakari, since position keep effects aren't simulated which would otherwise counteract it.
 
-## Green skills are not implemented yet
-
-In the mean time you can use the compare tool and just add the stats manually yourself.
-
 ## Some skill conditions are not implemented yet
 
 This probably includes some common ones.
