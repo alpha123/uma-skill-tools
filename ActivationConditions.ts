@@ -393,6 +393,12 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	// The only skill likely severely affected by this is Akebono's unique.
 	hp_per: noopImmediate,
 	infront_near_lane_time: noopErlangRandom(3, 2.0),
+	is_basis_distance: immediate({
+		filterEq(regions: RegionList, flag: number, course: CourseData, _: HorseParameters) {
+			assert(flag == 0 || flag == 1, 'must be is_basis_distance==0 or is_basis_distance==1');
+			return Math.max(course.distance % 400, 1) == flag ? regions : new RegionList();
+		}
+	}),
 	is_finalcorner: immediate({
 		filterEq(regions: RegionList, flag: number, course: CourseData, _: HorseParameters) {
 			assert(flag == 0 || flag == 1, 'must be is_finalcorner==0 or is_finalcorner==1');
