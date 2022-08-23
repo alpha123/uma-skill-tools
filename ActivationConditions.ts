@@ -562,6 +562,11 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		filterGte: notSupported
 	},
 	temptation_count: noopImmediate,
+	track_id: immediate({
+		filterEq(regions: RegionList, trackId: number, course: CourseData, _: HorseParameters) {
+			return trackId == course.raceTrackId ? regions : new RegionList();
+		}
+	}),
 	up_slope_random: random({
 		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
 			assert(one == 1, 'must be up_slope_random==1');
