@@ -311,6 +311,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		filterGt: notSupported,
 		filterGte: notSupported
 	},
+	always: noopImmediate,
 	behind_near_lane_time: noopErlangRandom(3, 2.0),
 	blocked_side_continuetime: noopErlangRandom(3, 2.0),
 	change_order_onetime: noopErlangRandom(3, 2.0),
