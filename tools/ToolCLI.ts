@@ -140,7 +140,7 @@ export function buildHorseParameters(horseDesc, course: CourseData, mood: Mood, 
 		stamina: horseDesc.stamina * motivCoef,
 		power: horseDesc.power * motivCoef,
 		guts: horseDesc.guts * motivCoef,
-		int: horseDesc.int * motivCoef
+		wisdom: horseDesc.wisdom * motivCoef
 	};
 
 	const raceCourseModifier = CourseHelpers.courseSpeedModifier(course, baseStats);
@@ -150,7 +150,7 @@ export function buildHorseParameters(horseDesc, course: CourseData, mood: Mood, 
 		stamina: baseStats.stamina,
 		power: baseStats.power + GroundPowerModifier[course.surface][ground],
 		guts: baseStats.guts,
-		int: baseStats.int * StrategyProficiencyModifier[parseAptitude(horseDesc.strategyAptitude, 'strategy')],
+		wisdom: baseStats.wisdom * StrategyProficiencyModifier[parseAptitude(horseDesc.strategyAptitude, 'strategy')],
 		strategy: parseStrategy(horseDesc.strategy),
 		distanceAptitude: parseAptitude(horseDesc.distanceAptitude, 'distance'),
 		surfaceAptitude: parseAptitude(horseDesc.surfaceAptitude, 'surface'),

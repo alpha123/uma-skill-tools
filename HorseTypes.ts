@@ -8,7 +8,7 @@ export interface HorseParameters {
 	readonly stamina: number
 	readonly power: number
 	readonly guts: number
-	readonly int: number
+	readonly wisdom: number
 	readonly strategy: Strategy
 	readonly distanceAptitude: Aptitude
 	readonly surfaceAptitude: Aptitude
