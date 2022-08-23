@@ -89,7 +89,7 @@ with open('../data/skillnames.json', 'r', encoding='utf-8') as f:
 
 def get_skillname(id):
 	if id.startswith('pd'):
-		return 'pace down'
+		return 'Pace down'
 	if id in skillnames:
 		return skillnames[id][args.lang == 'en']
 	return id
