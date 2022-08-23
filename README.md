@@ -74,6 +74,14 @@ List of skills affected:
 - 砂浴び○ / 優雅な砂浴び
 - possibly others
 
+## Debuffs that should target yourself act as if they target other umas
+
+The way debuffs are implemented is that the effects are just applied on the simulation that the skills-under-test are being compared to. However, this is not fully implemented and instead of tracking skill target information any skill with a negative modifier is simply applied to the base simulation, including ones that should target the uma being tested instead.
+
+Only affects purple skills and a handful of other skills like マイペース / 泰然自若.
+
+Fixing this requires figuring out and tracking skill target information (probably not hard).
+
 ## Not yet implemented
 
 All of these things should be doable with the current architecture and are planned for the near future.
@@ -95,6 +103,12 @@ In the mean time you can use the compare tool and just add the stats manually yo
 ## Some skill conditions are not implemented yet
 
 This probably includes some common ones.
+
+### Weather/season/ground condition is ignored
+
+Green skills with these always activate no matter what the actual weather/season/ground condition is (actually, there's no way to specify weather or season currently).
+
+This is easy to fix but somewhat tedious since I didn't think of those when writing the skill conditions and probably the easiest way to implement it would involve passing a new parameter to every condition, which would be slightly annoying.
 
 ## Scaling effects are not implemented yet
 
