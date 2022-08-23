@@ -379,6 +379,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => slopes.map(s => r.intersect(s)));
 		}
 	}),
+	ground_condition: noopImmediate,  // TODO pass race conditions to filters
 	ground_type: immediate({
 		filterEq(regions: RegionList, surface: number, course: CourseData, _: HorseParameters) {
 			CourseHelpers.assertIsSurface(surface);
@@ -528,6 +529,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			}
 		}
 	}),
+	season: noopImmediate,  // TODO pass race conditions to filters
 	slope: immediate({
 		filterEq(regions: RegionList, slopeType: number, course: CourseData, _: HorseParameters) {
 			assert(slopeType == 0 || slopeType == 1 || slopeType == 2, 'slopeType');
@@ -566,5 +568,6 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			const slopes = course.slopes.filter(s => s.slope > 0).map(s => new Region(s.start, s.start + s.length));
 			return regions.rmap(r => slopes.map(s => r.intersect(s)));
 		}
-	})
+	}),
+	weather: noopImmediate  // TODO pass race conditions to filters
 });
