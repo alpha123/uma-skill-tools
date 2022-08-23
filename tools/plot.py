@@ -94,6 +94,14 @@ def get_skillname(id):
 		return skillnames[id][args.lang == 'en']
 	return id
 
+skillcolors = {
+	-1: 'slateblue',  # Pace down
+	9: 'dodgerblue',  # Recovery
+	22: 'firebrick',  # CurrentSpeed
+	27: 'red',        # TargetSpeed
+	31: 'orangered'   # Accel
+}
+
 if args.skills:
 	xtr = plt.gca().get_xaxis_transform()
 
@@ -101,11 +109,10 @@ if args.skills:
 	ends = sorted(list(map(lambda i: i[2], data['skills'].values())))
 	n_at = defaultdict(lambda: 0)
 	for skill,info in data['skills'].items():
-		color = ['red','orangered','firebrick','dodgerblue','slateblue'][info[0]]  # NB. last element (i.e., -1) is for pace down
 		nactive = bisect_left(starts, info[1]) - bisect_left(ends, info[1]) + n_at[info[1]]
 		n_at[info[1]] += 1
 		h = 0.04
-		plt.axvspan(info[1], info[2], ymin=nactive*h, ymax=nactive*h+h, color=color, alpha=0.5, label=f"{get_skillname(skill)} {round(info[3])}m~{round(info[4])}m")
+		plt.axvspan(info[1], info[2], ymin=nactive*h, ymax=nactive*h+h, color=skillcolors[info[0]], alpha=0.5, label=f"{get_skillname(skill)} {round(info[3])}m~{round(info[4])}m")
 		plt.text(info[1], nactive*h+0.01, get_skillname(skill), transform=xtr, fontproperties=font, fontsize='small')
 
 seconds = range(0, round(data['t'][-1])+1)
