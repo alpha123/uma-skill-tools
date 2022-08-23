@@ -32,19 +32,15 @@ export namespace CourseHelpers {
 	}
 
 	export function assertIsSurface(surface: number): asserts surface is Surface {
-		assert(surface == Surface.Turf || surface == Surface.Dirt);
+		assert(Surface.hasOwnProperty(surface));
 	}
 
 	export function assertIsDistanceType(distanceType: number): asserts distanceType is DistanceType {
-		assert(
-		   distanceType == DistanceType.Short
-		|| distanceType == DistanceType.Mile
-		|| distanceType == DistanceType.Mid
-		|| distanceType == DistanceType.Long);
+		assert(DistanceType.hasOwnProperty(distanceType));
 	}
 
 	export function assertIsOrientation(orientation: number): asserts orientation is Orientation {
-		assert(orientation == Orientation.Clockwise || orientation == Orientation.Counterclockwise);
+		assert(Orientation.hasOwnProperty(orientation));
 	}
 
 	export function isSortedByStart(arr: readonly {readonly start: number}[]) {

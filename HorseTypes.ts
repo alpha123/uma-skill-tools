@@ -1,3 +1,5 @@
+const assert = require('assert').strict;
+
 export const enum Strategy { Nige = 1, Senkou, Sasi, Oikomi, Oonige }
 export const enum Aptitude { S, A, B, C, D, E, F, G }
 
@@ -15,14 +17,7 @@ export interface HorseParameters {
 
 export namespace StrategyHelpers {
 	export function assertIsStrategy(strategy: number): asserts strategy is Strategy {
-		if (!(
-		   strategy == Strategy.Nige
-		|| strategy == Strategy.Senkou
-		|| strategy == Strategy.Sasi
-		|| strategy == Strategy.Oikomi
-		|| strategy == Strategy.Oonige)) {
-			throw new Error('bad strategy');
-		}
+		assert(Strategy.hasOwnProperty(strategy));
 	}
 
 	export function strategyMatches(s1: Strategy, s2: Strategy) {
