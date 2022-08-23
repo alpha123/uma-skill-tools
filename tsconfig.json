@@ -5,6 +5,7 @@
 		"target": "es2018",
 		"resolveJsonModule": true,
 		"esModuleInterop": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"preserveConstEnums": true
 	}
 }

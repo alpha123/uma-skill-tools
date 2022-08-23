@@ -89,7 +89,7 @@ export interface RaceState {
 
 export type DynamicCondition = (state: RaceState) => boolean;
 
-export const enum SkillType { TargetSpeed, Accel, CurrentSpeed, Recovery, ActivateRandomGold }
+export const enum SkillType { Recovery = 9, CurrentSpeed = 22, TargetSpeed = 27, Accel = 31, ActivateRandomGold = 37 }
 
 export const enum SkillRarity { White = 1, Gold, Unique }
 

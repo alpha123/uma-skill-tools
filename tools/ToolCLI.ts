@@ -66,20 +66,11 @@ export interface SkillData {
 function buildSkillEffects(skill) {
 	// im on a really old version of node and cant use flatMap
 	return skill.effects.reduce((acc,ef) => {
-		var type: SkillType | -1 = -1;
-		switch (ef.type) {
-		case 9: type = SkillType.Recovery; break;
-		case 21:  // debuffs
+		if (ef.type == 21) {  // debuffs
 			acc.push({type: SkillType.CurrentSpeed, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
 			acc.push({type: SkillType.TargetSpeed, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
-			return acc;
-		case 22: type = SkillType.CurrentSpeed; break;
-		case 27: type = SkillType.TargetSpeed; break;
-		case 31: type = SkillType.Accel; break;
-		case 37: type = SkillType.ActivateRandomGold; break;
-		}
-		if (type != -1) {
-			acc.push({type: type, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
+		} else if (SkillType.hasOwnProperty(ef.type)) {
+			acc.push({type: ef.type, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
 		}
 		return acc;
 	}, []);
