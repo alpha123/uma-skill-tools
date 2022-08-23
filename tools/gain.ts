@@ -31,7 +31,7 @@ cli.options(program => {
 cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cliSkills: SkillData[], getPacer: PacerProvider, cliOptions: any) => {
 	const nsamples = cliOptions.nsamples;
 	const triggers = [];
-	const seed = 'seed' in cliOptions ? cliOptions.seed : Math.floor(Math.random() * (-1 >>> 0));
+	const seed = ('seed' in cliOptions ? cliOptions.seed : Math.floor(Math.random() * (-1 >>> 0))) >>> 0;
 	const rng = new Rule30CARng(seed);
 	// need two copies of an identical rng so that random factors will be deterministic between both solver instances
 	const solverRngSeed = rng.int32();
@@ -90,6 +90,7 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 	// i'm not really sure if that's the expected thing to do or not, but it makes sense (imo)
 
 	const gain = [];
+	let min = Infinity, max = 0, mini = 0, maxi = 0;
 	for (let i = 0; i < nsamples; ++i) {
 		const skills1 = [];
 		defSkills.forEach((sd,sdi) => addSkill(skills1, sd, triggers[sdi], i));
@@ -107,7 +108,16 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		while (s2.accumulatetime < s.accumulatetime) {
 			s2.step(1/60);
 		}
-		gain.push((s.pos - s2.pos) / 2.5);
+		const diff = (s.pos - s2.pos) / 2.5;
+		gain.push(diff);
+		if (diff < min) {
+			min = diff;
+			mini = i;
+		}
+		if (diff > max) {
+			max = diff;
+			maxi = i;
+		}
 	}
 	gain.sort((a,b) => a - b);
 
@@ -116,8 +126,8 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		return;
 	}
 
-	console.log('min:\t' + gain[0].toFixed(2));
-	console.log('max:\t' + gain[gain.length-1].toFixed(2));
+	console.log('min:\t' + min.toFixed(2));
+	console.log('max:\t' + max.toFixed(2));
 	const mid = Math.floor(gain.length / 2);
 	console.log('median:\t' + (gain.length % 2 == 0 ? (gain[mid-1] + gain[mid]) / 2 : gain[mid]).toFixed(2));
 	console.log('mean:\t' + (gain.reduce((a,b) => a + b) / gain.length).toFixed(2));
@@ -130,5 +140,16 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 	});
 
 	console.log('');
-	console.log('seed: ' + (seed >>> 0));
+	console.log('seed: ' + seed);
+
+	console.log('');
+
+	const conf = Buffer.alloc(12);
+	const conf32 = new Int32Array(conf.buffer);
+	conf32[0] = seed;
+	conf32[1] = nsamples;
+	conf32[2] = mini;
+	console.log('min configuration: ' + conf.toString('base64'))
+	conf32[2] = maxi;
+	console.log('max configuration: ' + conf.toString('base64'));
 });

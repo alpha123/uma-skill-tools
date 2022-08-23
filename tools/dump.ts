@@ -1,15 +1,39 @@
+import { Option } from 'commander';
 import { HorseParameters } from '../HorseTypes';
 import { CourseData } from '../CourseData';
 import { RaceSolver } from '../RaceSolver';
 import { Rule30CARng } from '../Random';
 import { SkillData, ToolCLI, PacerProvider } from './ToolCLI';
 
+// for some reason (NodeJS bug?) new Int32Array(buf.buffer)[offset] doesn't actually work and the Int32Array is garbage
+// more weirdly, it only happens when loading cliOptions.configuration down there, and running the exact same thing in the NodeJS REPL works fine
+// so yeah, i dunno
+function readInt32LE(buf: Buffer, offset: number) {
+	return buf[offset] | (buf[offset + 1] << 8) | (buf[offset + 2] << 16) | (buf[offset + 3] << 24);
+}
+
 const cli = new ToolCLI();
 cli.options(program => {
-	program.option('--seed <seed>', 'seed value for pseudorandom number generator', (value,_) => parseInt(value,10) >>> 0);
+	program
+		.option('--seed <seed>', 'seed value for pseudorandom number generator', (value,_) => parseInt(value,10) >>> 0)
+		.addOption(new Option('-C, --configuration <confstring>')
+			.conflicts('seed')
+			.argParser(s => Buffer.from(s, 'base64'))
+		);
 });
 cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cliSkills: SkillData[], getPacer: PacerProvider, cliOptions: any) => {
-	const rng = new Rule30CARng('seed' in cliOptions ? cliOptions.seed : Math.floor(Math.random() * (-1 >>> 0)));
+	let seed, nsamples = 1, sampleIdx = 0;
+	if ('seed' in cliOptions) {
+		seed = cliOptions.seed;
+	} else if ('configuration' in cliOptions) {
+		const conf = cliOptions.configuration;
+		seed = readInt32LE(conf, 0) >>> 0;
+		nsamples = readInt32LE(conf, 4);
+		sampleIdx = readInt32LE(conf, 8);
+	} else {
+		seed = Math.floor(Math.random() * (-1 >>> 0)) >>> 0;
+	}
+	const rng = new Rule30CARng(seed);
 	const solverRng = new Rule30CARng(rng.int32());
 	const pacerRng = new Rule30CARng(rng.int32());
 
@@ -17,10 +41,11 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 	const skills = [];
 	function addSkill(sd: SkillData) {
 		skillTypes[sd.skillId] = sd.effects[0].type;
+		const triggers = sd.samplePolicy.sample(sd.regions, nsamples, rng);
 		skills.push({
 			skillId: sd.skillId,
 			rarity: sd.rarity,
-			trigger: sd.samplePolicy.sample(sd.regions, 1, rng)[0],
+			trigger: triggers[sampleIdx % triggers.length],
 			extraCondition: sd.extraCondition,
 			effects: sd.effects
 		});

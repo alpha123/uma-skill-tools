@@ -36,6 +36,8 @@ Simulates a race and collects position/velocity/acceleration data at every times
 
 Shares most of its options with gain.ts, including the same format for specifying umas. Unlike gain.ts, there is no difference between skills specified in the definition file and skills passed on the command line.
 
+gain.ts output includes the lines `min configuration: ` and `max configuration: ` followed by a base64-encoded string. The `-C, --configuration` option of dump.ts can be used to load these to visualize the minimum and maximum samples from gain.ts. When doing this make sure to pass the exact same course, uma definition, and set of skills to gain.ts and dump.ts or the output will be meaningless.
+
 # compare.ts
 
 Takes two uma definition files and runs simulations with each of them to compare the results.
