@@ -6,6 +6,8 @@ import { Rule30CARng } from '../Random';
 import { PendingSkill, RaceSolver } from '../RaceSolver';
 import { SkillData, ToolCLI, PacerProvider, parseAptitude } from './ToolCLI';
 
+const defaultThresholds = [0.5,1.0,1.5,2.0,2.5];
+
 const cli = new ToolCLI();
 cli.options(program => {
 	program
@@ -23,7 +25,7 @@ cli.options(program => {
 			.argParser(a => parseAptitude(a, 'surface'))
 		)
 		.addOption(new Option('--thresholds <cutoffs>', 'comma-separated list of values; print the percentage of the time they are exceeded')
-			.default([0.5,1.0,1.5,2.0,2.5])
+			.default(defaultThresholds, defaultThresholds.join(','))
 			.argParser(t => t.split(',').map(parseFloat))
 		)
 		.option('--dump', 'instead of printing a summary, dump data. intended to be piped into histogram.py.');

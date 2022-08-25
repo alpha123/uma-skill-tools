@@ -177,10 +177,10 @@ export class ToolCLI {
 			.requiredOption('-c, --course <id>', 'course ID')
 			.addOption(new Option('-m, --mood <mood>', 'the uma\'s mood')
 				.choices(['-2', '-1', '0', '+1', '+2'])
-				.default(+2)
+				.default(2, '+2')
 				.argParser(x => parseInt(x,10))  // can't just use .argParser(parseInt) because it also gets passed the default value
 			)
-			.addOption(new Option('-g, --ground <condition>', 'track condition').choices(['good', 'yielding', 'soft', 'heavy']).default('good'))
+			.addOption(new Option('-g, --ground <condition>', 'track condition').choices(['good', 'yielding', 'soft', 'heavy']).default('good', 'good'))
 			.option('-s, --skill <id>', 'skill to test', (value,list) => list.concat([parseInt(value,10)]), [])
 			.option('--skills <ids>', 'comma-separated list of skill IDs', (value,_) => value.split(',').map(id => parseInt(id,10)), [])
 			.option('--position-keep <pacer>', 'load a horse from the <pacer> JSON file to simulate position keep (by default, uses a nige version of the horse in <horsefile> with no skills) (position keep is not simulated for nige/oonige)')
