@@ -185,6 +185,9 @@ export class ToolCLI {
 			.option('--skills <ids>', 'comma-separated list of skill IDs', (value,_) => value.split(',').map(id => parseInt(id,10)), [])
 			.option('--position-keep <pacer>', 'load a horse from the <pacer> JSON file to simulate position keep (by default, uses a nige version of the horse in <horsefile> with no skills) (position keep is not simulated for nige/oonige)')
 			.option('--no-position-keep', 'disable position keep simulation')
+			.addOption(new Option('--timestep <dt>', 'integration timestep in seconds (can be an integer, decimal, or fraction)')
+				.default(1/60, '1/60')
+				.argParser(ts => ts.split('/').reduceRight((a,b) => +b / +a, 1.0)))  // reduceRight with initial acc = 1.0 to make the types work
 			.action((horsefile, options) => {
 				this.handleRun(horsefile, options);
 			});

@@ -74,8 +74,9 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 
 	let paceDownN = 0;
 	let paceDownToggle = false;
+	const dt = cliOptions.timestep;
 	while (s.pos < course.distance) {
-		s.step(1/60);
+		s.step(dt);
 		plotData.t.push(s.accumulatetime);
 		plotData.pos.push(s.pos);
 		plotData.v.push(s.currentSpeed);
