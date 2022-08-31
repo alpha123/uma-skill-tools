@@ -30,7 +30,7 @@ with open('../data/course_data.json', 'r', encoding='utf-8') as f:
 font = font_manager.FontProperties()
 font.set_family('MS Gothic')
 
-plt.figure(figsize=(15,5))
+plt.figure(figsize=(18,6))
 
 if args.accel:
 	plt.plot(data['t'], data['a'], color='limegreen', label='Acceleration')
@@ -130,6 +130,6 @@ elif args.velocity:
 	plt.ylim([args.velocity_offset, max(data['v'])+1])
 	# NB. if they are both specified, max(targetv) >= max(v)
 
-plt.legend(prop=font)
+plt.legend(prop=font, loc='center left', bbox_to_anchor=(1,0.5))
 plt.tight_layout()
 plt.show()
