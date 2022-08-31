@@ -212,7 +212,7 @@ export class RaceSolver {
 		this.currentSpeed = 3.0;
 		this.targetSpeed = 0.85 * baseSpeed(this.course);
 		this.processSkillActivations(0);  // activate gate skills (must come before setting minimum speed because green skills can modify guts)
-		this.minSpeed = this.targetSpeed + Math.sqrt(200.0 * this.horse.guts) * 0.001;
+		this.minSpeed = 0.85 * baseSpeed(this.course) + Math.sqrt(200.0 * this.horse.guts) * 0.001;
 		this.startDash = true;
 	}
 
@@ -236,6 +236,19 @@ export class RaceSolver {
 		}
 	}
 
+	getMaxSpeed() {
+		if (this.startDash) {
+			// target speed can be below 0.85 * BaseSpeed for non-runners if there is a hill at the start of the course
+			// in this case you actually don't exit start dash until your target speed is high enough to be over 0.85 * BaseSpeed
+			return Math.min(this.targetSpeed, 0.85 * baseSpeed(this.course));
+		} else  if (this.currentSpeed > this.targetSpeed) {
+			return 9999.0;  // allow decelerating if targetSpeed drops
+		} else {
+			return this.targetSpeed;
+		}
+		// technically, there's a hard cap of 30m/s, but there's no way to actually hit that without implementing the Pace Up Ex position keep mode
+	}
+
 	step(dt: number) {
 		// velocity verlet integration
 		// do this half-step update of velocity (halfv) because during the start dash acceleration depends on velocity
@@ -252,8 +265,8 @@ export class RaceSolver {
 			this.pacer.step(dt);
 		}
 
-		let targetSpeed = this.currentSpeed > this.targetSpeed ? 9999 : this.targetSpeed;  // allow decelerating if targetSpeed drops
-		const halfv = Math.min(this.currentSpeed + 0.5 * dt * this.accel, targetSpeed);
+		let cap = this.getMaxSpeed();
+		const halfv = Math.min(this.currentSpeed + 0.5 * dt * this.accel, cap);
 		this.pos += halfv * dt;
 		this.accumulatetime += dt;
 		this.updateHills();
@@ -262,10 +275,12 @@ export class RaceSolver {
 		this.updatePositionKeep(dt);
 		this.updateTargetSpeed();
 		this.applyForces();
-		targetSpeed = this.currentSpeed > this.targetSpeed ? 9999 : this.targetSpeed;
-		this.currentSpeed = Math.min(halfv + 0.5 * dt * this.accel + this.currentSpeedModifier, targetSpeed);
+		cap = this.getMaxSpeed();
+		this.currentSpeed = Math.min(halfv + 0.5 * dt * this.accel + this.currentSpeedModifier, cap);
 		if (!this.startDash && this.currentSpeed < this.minSpeed) {
 			this.currentSpeed = this.minSpeed;
+		} else if (this.startDash && this.currentSpeed >= 0.85 * baseSpeed(this.course)) {
+			this.startDash = false;
 		}
 		this.currentSpeedModifier = 0.0;
 	}
@@ -299,12 +314,11 @@ export class RaceSolver {
 	updateTargetSpeed() {
 		if (this.phase == 2) {
 			this.targetSpeed = lastSpurtSpeed(this.horse, this.course);
-		} else if (!this.startDash) {
+		} else {
 			this.targetSpeed = baseTargetSpeed(this.horse, this.course, this.phase) * this.posKeepSpeedCoef;
 		}
-		if (!this.startDash) {
-			this.targetSpeed += this.activeSpeedSkills.reduce((a,b) => a + b.modifier, 0);
-		}
+		this.targetSpeed += this.activeSpeedSkills.reduce((a,b) => a + b.modifier, 0);
+
 		if (this.hillIdx != -1) {
 			this.targetSpeed -= this.course.slopes[this.hillIdx].slope / 10000 * 200 / this.horse.power;
 		}
@@ -316,9 +330,6 @@ export class RaceSolver {
 			return;
 		}
 		this.accel = baseAccel(this.hillIdx != -1 ? UphillBaseAccel : BaseAccel, this.horse, this.phase);
-		if (this.startDash && this.currentSpeed >= this.targetSpeed) {
-			this.startDash = false;
-		}
 		if (this.startDash) {
 			this.accel += 24.0;
 		}
