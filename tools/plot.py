@@ -55,15 +55,15 @@ if args.hills:
 		if hill['slope'] < 0:
 			color = '#7dffbe'
 			dir = '↓'
-			orient = '↘' if right else '↙'
+			slopedir = '↘'
 			hatch = '\\'
 		else:
 			color = '#f0eb69'
 			dir = '↑'
 			hatch = '/'
-			orient = '↗' if right else '↖'
+			slopedir = '↗'
 
-		label = f"{orient} {hill['start']}m~{hill['start']+hill['length']}m ({dir}{abs(hill['slope']) / 10000})"
+		label = f"{slopedir} {hill['start']}m~{hill['start']+hill['length']}m ({dir}{abs(hill['slope']) / 10000})"
 		start_t = pos_to_t(hill['start'])
 		end_t = pos_to_t(hill['start'] + hill['length'])
 		plt.axvspan(start_t, end_t, color=color, alpha=0.3, hatch=hatch, label=label)
@@ -79,8 +79,7 @@ if args.straights:
 	for straight in course['straights']:
 		start_t = pos_to_t(straight['start'])
 		end_t = pos_to_t(straight['end'])
-		orient = '→' if right else '←'
-		plt.axvspan(start_t, end_t, color='#d1ebff', alpha=0.3, hatch='-', label=f"{orient} {straight['start']}m~{straight['end']}m")
+		plt.axvspan(start_t, end_t, color='#d1ebff', alpha=0.3, hatch='-', label=f"→ {straight['start']}m~{straight['end']}m")
 
 if args.phase:
 	plt.axvline(pos_to_t(course['distance'] * 1/6), color='dimgray', alpha=0.2, ls='--', label=f"Mid leg start ({round(course['distance']*1/6)}m)")
