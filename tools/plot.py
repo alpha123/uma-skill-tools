@@ -1,3 +1,4 @@
+import os
 import sys
 import argparse
 import json
@@ -5,6 +6,8 @@ from bisect import bisect_left
 from collections import defaultdict
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
+
+DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
 
 opts = argparse.ArgumentParser(add_help=False)
 opts.add_argument('--help', action='help', help='show this help message and exit')
@@ -23,7 +26,7 @@ args = opts.parse_args()
 
 data = json.load(sys.stdin)
 
-with open('../data/course_data.json', 'r', encoding='utf-8') as f:
+with open(os.path.join(DATA_DIR, 'course_data.json'), 'r', encoding='utf-8') as f:
 	tracks = json.load(f)
 	course = tracks[str(data['trackId'])]['courses'][str(data['courseId'])]
 
@@ -84,7 +87,7 @@ if args.phase:
 	plt.axvline(pos_to_t(course['distance'] * 2/3), color='dimgray', alpha=0.2, ls='--', label=f"Last leg start ({round(course['distance']*2/3)}m)")
 	plt.axvline(pos_to_t(course['distance'] * 5/6), color='dimgray', alpha=0.2, ls=':')
 
-with open('../data/skillnames.json', 'r', encoding='utf-8') as f:
+with open(os.path.join(DATA_DIR, 'skillnames.json'), 'r', encoding='utf-8') as f:
 	skillnames = json.load(f)
 
 def get_skillname(id):
