@@ -54,6 +54,16 @@ Has a lot of options. Run `python plot.py --help` to see them. In most cases you
 
 Pipe a JSON array into it to see a histogram. Intended for use with the `--dump` option of gain.ts. Run `python histogram.py --help` for options. You probably want `-C` in most cases. Also requires matplotlib.
 
+# speedguts.ts / speedguts_colormesh.py
+
+Used for calculating the difference between various combinations of speed and guts stats. Besides the usual course/mood/ground options, it takes:
+
+- `--speed-range <lower,upper>` and `--guts-range`: the ranges of speed and guts to test as a pair of integers `lower,upper` (inclusive of both)
+- `--step <integer>` increments within the ranges to test
+- `--standard <speed,guts>` pair of speed and guts to compare the other combinations with to report バ身 gain
+
+The output of speedguts.ts is intended to be piped into speedguts_colormesh.py for visualization.
+
 # make_skill_data.pl and make_skillnames.pl
 
 Used to generate the data/skill_data.json and data/skillnames.json files. make_skill_data.pl takes a path to master.mdb and make_skillnames.pl takes a file obtained from a GameTora quasi-API thing.
