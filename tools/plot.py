@@ -24,6 +24,7 @@ args.add_argument('--straights', '-s', action='store_true')
 args.add_argument('--phase', '-p', action='store_true')
 args.add_argument('--skills', '-k', action='store_true')
 args.add_argument('--lang', choices=('jp','en'), default='jp', help='language for skill names')
+args.add_argument('--save', help='save plot to file instead of showing an interactive display')
 opts = args.parse_args()
 
 data = json.load(sys.stdin)
@@ -133,4 +134,8 @@ elif opts.velocity:
 
 plt.legend(loc='center left', bbox_to_anchor=(1,0.5))
 plt.tight_layout()
-plt.show()
+
+if opts.save:
+	plt.savefig(opts.save)
+else:
+	plt.show()
