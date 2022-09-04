@@ -1,8 +1,10 @@
 import sys
 import argparse
 import json
+import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib import font_manager
+
+matplotlib.rcParams['font.family'] = 'MS Gothic'
 
 opts = argparse.ArgumentParser()
 opts.add_argument('--bin-width', '-w', type=float, default=0.05)
@@ -19,13 +21,10 @@ elif args.density:
 else:
 	ylabel = 'Frequency'
 
-font = font_manager.FontProperties()
-font.set_family('MS Gothic')
-
 data = json.load(sys.stdin)
 
 plt.hist(x=data, bins=round((data[-1] - data[0]) / args.bin_width), cumulative=-1 * args.cumulative, density=args.density)
-plt.xlabel('Distance gain (バ身)', font=font)
-plt.ylabel(ylabel, font=font)
+plt.xlabel('Distance gain (バ身)')
+plt.ylabel(ylabel)
 plt.tight_layout()
 plt.show()

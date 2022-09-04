@@ -4,8 +4,10 @@ import argparse
 import json
 from bisect import bisect_left
 from collections import defaultdict
+import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib import font_manager
+
+matplotlib.rcParams['font.family'] = 'MS Gothic'
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
 
@@ -29,9 +31,6 @@ data = json.load(sys.stdin)
 with open(os.path.join(DATA_DIR, 'course_data.json'), 'r', encoding='utf-8') as f:
 	tracks = json.load(f)
 	course = tracks[str(data['trackId'])]['courses'][str(data['courseId'])]
-
-font = font_manager.FontProperties()
-font.set_family('MS Gothic')
 
 plt.figure(figsize=(18,6))
 
@@ -120,7 +119,7 @@ if args.skills:
 		n_at[info[1]] += 1
 		h = 0.04
 		plt.axvspan(info[1], info[2], ymin=nactive*h, ymax=nactive*h+h, color=skillcolors[info[0]], alpha=0.5, label=f"{get_skillname(skill)} {round(info[3])}m~{round(info[4])}m")
-		plt.text(info[1], nactive*h+0.01, get_skillname(skill), transform=xtr, fontproperties=font, fontsize='small')
+		plt.text(info[1], nactive*h+0.01, get_skillname(skill), transform=xtr, fontsize='small')
 
 seconds = range(0, round(data['t'][-1])+1)
 plt.xticks(seconds, list(map(lambda t: '{:d}:{:02d}'.format(*divmod(t,60)), seconds)), rotation=45, rotation_mode='anchor', fontsize='xx-small', ha='right')
@@ -132,6 +131,6 @@ elif args.velocity:
 	plt.ylim([args.velocity_offset, max(data['v'])+1])
 	# NB. if they are both specified, max(targetv) >= max(v)
 
-plt.legend(prop=font, loc='center left', bbox_to_anchor=(1,0.5))
+plt.legend(loc='center left', bbox_to_anchor=(1,0.5))
 plt.tight_layout()
 plt.show()
