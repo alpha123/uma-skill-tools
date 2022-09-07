@@ -22,7 +22,7 @@ cli.options(program => {
 		);
 });
 cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cliSkills: SkillData[], getPacer: PacerProvider, cliOptions: any) => {
-	let seed, nsamples = 1, sampleIdx = 0;
+	let seed, nsamples = 1, sampleIdx = 0, solverSeedHi, solverSeedLo, pacerSeedHi, pacerSeedLo;
 	if ('seed' in cliOptions) {
 		seed = cliOptions.seed;
 	} else if ('configuration' in cliOptions) {
@@ -30,12 +30,22 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		seed = readInt32LE(conf, 0) >>> 0;
 		nsamples = readInt32LE(conf, 4);
 		sampleIdx = readInt32LE(conf, 8);
+		solverSeedHi = readInt32LE(conf, 12) >>> 0;
+		solverSeedLo = readInt32LE(conf, 16) >>> 0;
+		pacerSeedHi = readInt32LE(conf, 20) >>> 0;
+		pacerSeedLo = readInt32LE(conf, 24) >>> 0;
 	} else {
 		seed = Math.floor(Math.random() * (-1 >>> 0)) >>> 0;
 	}
 	const rng = new Rule30CARng(seed);
-	const solverRng = new Rule30CARng(rng.int32());
-	const pacerRng = new Rule30CARng(rng.int32());
+	if (solverSeedHi == undefined) {
+		solverSeedHi = 0;
+		solverSeedLi = rng.int32();
+		pacerSeedHi = 0;
+		pacerSeedLo = rng.int32();
+	}
+	const solverRng = new Rule30CARng(solverSeedLo, solverSeedHi);
+	const pacerRng = new Rule30CARng(pacerSeedLo, pacerSeedHi);
 
 	const skillTypes = {};
 	const skills = [];

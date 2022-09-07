@@ -92,9 +92,12 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 	// i'm not really sure if that's the expected thing to do or not, but it makes sense (imo)
 
 	const gain = [];
-	let min = Infinity, max = 0, mini = 0, maxi = 0;
+	let min = Infinity, max = 0,
+	    minconf = {i: 0, seedhi: 0, seedlo: 0, pacerseedhi: 0, pacerseedlo: 0},
+	    maxconf = {i: 0, seedhi: 0, seedlo: 0, pacerseedhi: 0, pacerseedlo: 0};
 	const dt = cliOptions.timestep;
 	for (let i = 0; i < nsamples; ++i) {
+		const seedhi = solverRng1.hi, seedlo = solverRng1.lo, pacerseedhi = pacerRng1.hi, pacerseedlo = pacerRng1.lo;
 		const skills1 = [];
 		defSkills.forEach((sd,sdi) => addSkill(skills1, sd, triggers[sdi], i));
 		cliSkills.forEach((sd,sdi) => addSkill(skills1, sd, triggers[sdi + defSkills.length], i));
@@ -115,11 +118,19 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		gain.push(diff);
 		if (diff < min) {
 			min = diff;
-			mini = i;
+			minconf.i = i;
+			minconf.seedhi = seedhi;
+			minconf.seedlo = seedlo;
+			minconf.pacerseedhi = pacerseedhi;
+			minconf.pacerseedlo = pacerseedlo;
 		}
 		if (diff > max) {
 			max = diff;
-			maxi = i;
+			maxconf.i = i;
+			maxconf.seedhi = seedhi;
+			maxconf.seedlo = seedlo;
+			maxconf.pacerseedhi = pacerseedhi;
+			maxconf.pacerseedlo = pacerseedlo;
 		}
 	}
 	gain.sort((a,b) => a - b);
@@ -147,12 +158,20 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 
 	console.log('');
 
-	const conf = Buffer.alloc(12);
+	const conf = Buffer.alloc(7 * 4);
 	const conf32 = new Int32Array(conf.buffer);
 	conf32[0] = seed;
 	conf32[1] = nsamples;
-	conf32[2] = mini;
+	conf32[2] = minconf.i;
+	conf32[3] = minconf.seedhi >>> 0;
+	conf32[4] = minconf.seedlo >>> 0;
+	conf32[5] = minconf.pacerseedhi >>> 0;
+	conf32[6] = minconf.pacerseedlo >>> 0;
 	console.log('min configuration: ' + conf.toString('base64'))
-	conf32[2] = maxi;
+	conf32[2] = maxconf.i;
+	conf32[3] = maxconf.seedhi >>> 0;
+	conf32[4] = maxconf.seedlo >>> 0;
+	conf32[5] = maxconf.pacerseedhi >>> 0;
+	conf32[6] = maxconf.pacerseedlo >>> 0;
 	console.log('max configuration: ' + conf.toString('base64'));
 });
