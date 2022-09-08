@@ -267,7 +267,7 @@ const noopUniformRandom = uniformRandom(noopAll);
 export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	accumulatetime: immediate({
 		filterGte(regions: RegionList, t: number, _0: CourseData, _1: HorseParameters) {
-			return [regions, (s: RaceState) => s.accumulatetime >= t] as [RegionList, DynamicCondition];
+			return [regions, (s: RaceState) => s.accumulatetime.t >= t] as [RegionList, DynamicCondition];
 		}
 	}),
 	activate_count_all: immediate({

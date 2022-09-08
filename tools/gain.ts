@@ -111,7 +111,7 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		defSkills.forEach((sd,sdi) => addSkill(skills2, sd, triggers[sdi], i));
 		debuffs.forEach((sd,sdi) => addSkill(skills2, sd, triggers[sdi + defSkills.length + cliSkills.length], i));
 		const s2 = new RaceSolver({horse, course, skills: skills2, pacer: getPacer(pacerRng2), rng: solverRng2});
-		while (s2.accumulatetime < s.accumulatetime) {
+		while (s2.accumulatetime.t < s.accumulatetime.t) {
 			s2.step(dt);
 		}
 		const diff = (s.pos - s2.pos) / 2.5;

@@ -72,8 +72,8 @@ const base = buildSolver(opts.standard[0], opts.standard[1]);
 // this is generally actually fine unless the horse has skills that would extend their duration past the end of the course, in which
 // case it overestimates
 // but those probably won't be used for just raw speed/guts comparisons
-while (base.accumulatetime <= min.accumulatetime) {
-	standard[base.accumulatetime] = base.pos;
+while (base.accumulatetime.t <= min.accumulatetime.t) {
+	standard[base.accumulatetime.t] = base.pos;
 	base.step(dt);
 }
 
@@ -86,7 +86,7 @@ for (let guts = opts.gutsRange[0]; guts <= opts.gutsRange[1]; guts += opts.step)
 		while (s.pos < course.distance) {
 			s.step(dt);
 		}
-		row.push((s.pos - standard[s.accumulatetime]) / 2.5);
+		row.push((s.pos - standard[s.accumulatetime.t]) / 2.5);
 	}
 }
 

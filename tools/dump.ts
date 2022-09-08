@@ -71,10 +71,10 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		pacer: getPacer(pacerRng),
 		rng: solverRng,
 		onSkillActivate: (s,skillId) => {
-			plotData.skills[skillId] = [skillTypes[skillId],s.accumulatetime,0,s.pos,0];
+			plotData.skills[skillId] = [skillTypes[skillId],s.accumulatetime.t,0,s.pos,0];
 		},
 		onSkillDeactivate: (s,skillId) => {
-			plotData.skills[skillId][2] = s.accumulatetime;
+			plotData.skills[skillId][2] = s.accumulatetime.t;
 			plotData.skills[skillId][4] = s.pos;
 		}
 	});
@@ -87,7 +87,7 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 	const dt = cliOptions.timestep;
 	while (s.pos < course.distance) {
 		s.step(dt);
-		plotData.t.push(s.accumulatetime);
+		plotData.t.push(s.accumulatetime.t);
 		plotData.pos.push(s.pos);
 		plotData.v.push(s.currentSpeed);
 		plotData.targetv.push(s.targetSpeed);
@@ -95,11 +95,11 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		if (s.isPaceDown != paceDownToggle) {
 			const k = 'pd' + paceDownN;
 			if (plotData.skills[k] && plotData.skills[k][2] == 0) {
-				plotData.skills[k][2] = s.accumulatetime;
+				plotData.skills[k][2] = s.accumulatetime.t;
 				plotData.skills[k][4] = s.pos;
 				++paceDownN;
 			} else {
-				plotData.skills[k] = [-1,s.accumulatetime,0,s.pos,0];
+				plotData.skills[k] = [-1,s.accumulatetime.t,0,s.pos,0];
 			}
 			paceDownToggle = s.isPaceDown;
 		}
@@ -108,7 +108,7 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 	// clean up skills that haven't deactivated by the end of the race
 	Object.keys(plotData.skills).forEach(sk => {
 		if (plotData.skills[sk][2] == 0) {
-			plotData.skills[sk][2] = s.accumulatetime;
+			plotData.skills[sk][2] = s.accumulatetime.t;
 			plotData.skills[sk][4] = s.pos;
 		}
 	});
