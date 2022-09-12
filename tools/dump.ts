@@ -40,7 +40,7 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 	const rng = new Rule30CARng(seed);
 	if (solverSeedHi == undefined) {
 		solverSeedHi = 0;
-		solverSeedLi = rng.int32();
+		solverSeedLo = rng.int32();
 		pacerSeedHi = 0;
 		pacerSeedLo = rng.int32();
 	}
