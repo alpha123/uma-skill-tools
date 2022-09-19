@@ -453,6 +453,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	is_move_lane: noopErlangRandom(5, 1.0),
+	is_overtake: noopErlangRandom(3, 2.0),
 	is_surrounded: noopErlangRandom(3, 2.0),
 	near_count: noopErlangRandom(3, 2.0),
 	order: noopImmediate,
