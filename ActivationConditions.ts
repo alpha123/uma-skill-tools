@@ -465,6 +465,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	order_rate_out40_continue: noopImmediate,
 	order_rate_out50_continue: noopImmediate,
 	order_rate_out70_continue: noopImmediate,
+	overtake_target_time: noopErlangRandom(3, 2.0),
 	phase: {
 		samplePolicy: ImmediatePolicy,
 		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
