@@ -43,11 +43,8 @@ wholeCourse.push(new Region(0, course.distance));
 Object.freeze(wholeCourse);
 
 function buildSolver(speed: number, guts: number) {
-	const adjustedSpeed = speed > 1200 ? 1200 + (speed - 1200) / 2 : speed;
-	const adjustedGuts = guts > 1200 ? 1200 + (guts - 1200) / 2 : guts;
-
 	const rng = new Rule30CARng(seed);
-	const horse = buildHorseParameters(Object.assign(desc, {speed: adjustedSpeed, guts: adjustedGuts}), course, opts.mood, opts.ground);
+	const horse = buildHorseParameters(Object.assign(desc, {speed: speed, guts: guts}), course, opts.mood, opts.ground);
 	const skills = desc.skills.map(s => buildSkillData(horse, course, wholeCourse, s)).filter(s => s != null).map(sd => {
 		return {
 			skillId: sd.skillId,
