@@ -317,6 +317,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	behind_near_lane_time: noopErlangRandom(3, 2.0),
 	blocked_side_continuetime: noopErlangRandom(3, 2.0),
 	change_order_onetime: noopErlangRandom(3, 2.0),
+	change_order_up_end_after: noopImmediate,
 	compete_fight_count: uniformRandom({
 		filterGt(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters) {
 			assert(CourseHelpers.isSortedByStart(course.straights), 'course straights must be sorted by start');
