@@ -18,13 +18,7 @@ export interface CourseData {
 	readonly slopes: readonly {readonly start: number, readonly length: number, readonly slope: number}[]
 }
 
-import tracks from './data/course_data.json';
-const courses = {};
-for (const trackId in tracks) {
-	for (const courseId in tracks[trackId].courses) {
-		courses[courseId] = tracks[trackId].courses[courseId];
-	}
-}
+import courses from './data/course_data.json';
 
 export namespace CourseHelpers {
 	export function assertIsPhase(phase: number): asserts phase is Phase {

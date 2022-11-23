@@ -30,8 +30,8 @@ opts = args.parse_args()
 data = json.load(sys.stdin)
 
 with open(os.path.join(DATA_DIR, 'course_data.json'), 'r', encoding='utf-8') as f:
-	tracks = json.load(f)
-	course = tracks[str(data['trackId'])]['courses'][str(data['courseId'])]
+	courses = json.load(f)
+	course = courses[str(data['courseId'])]
 
 plt.figure(figsize=(18,6))
 

@@ -114,8 +114,6 @@ Some of these are going to be a real pain.
 
 English skill names are from [GameTora](https://gametora.com/umamusume).
 
-data/course_data.json is from [uma-clock-emu](https://github.com/urakagi/uma-clock-emu).
-
 KuromiAK#4505 on Discord let me hassle him about various minutiae of game mechanics.
 
 # License
