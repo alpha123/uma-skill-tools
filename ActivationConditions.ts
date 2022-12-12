@@ -560,6 +560,13 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => slopeR.map(s => r.intersect(s)));
 		}
 	}),
+	straight_front_type: immediate({
+		filterEq(regions: RegionList, frontType: number, course: CourseData, _: HorseParameters) {
+			assert(frontType == 1 || frontType == 2, 'frontType');
+			const straights = course.straights.filter(s => s.frontType == frontType);
+			return regions.rmap(r => straights.map(s => r.intersect(s)));
+		}
+	}),
 	straight_random: {
 		samplePolicy: StraightRandomPolicy,
 		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {

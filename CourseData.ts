@@ -14,7 +14,7 @@ export interface CourseData {
 	readonly turn: Orientation
 	readonly courseSetStatus: readonly ThresholdStat[]
 	readonly corners: readonly {readonly start: number, readonly length: number}[]
-	readonly straights: readonly {readonly start: number, readonly end: number}[]
+	readonly straights: readonly {readonly start: number, readonly end: number, readonly frontType: number}[]
 	readonly slopes: readonly {readonly start: number, readonly length: number, readonly slope: number}[]
 }
 
