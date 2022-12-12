@@ -382,6 +382,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => slopes.map(s => r.intersect(s)));
 		}
 	}),
+	grade: noopImmediate,  // TODO pass race conditions to filters
 	ground_condition: noopImmediate,  // TODO pass race conditions to filters
 	ground_type: immediate({
 		filterEq(regions: RegionList, surface: number, course: CourseData, _: HorseParameters) {
@@ -514,6 +515,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
+	popularity: noopImmediate,
 	remain_distance: immediate({
 		filterLte(regions: RegionList, remain: number, course: CourseData, _: HorseParameters) {
 			const bounds = new Region(course.distance - remain, course.distance);
