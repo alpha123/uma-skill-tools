@@ -352,6 +352,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => corners.map(c => r.intersect(c)));
 		}
 	}),
+	distance_diff_rate: noopImmediate,
 	distance_diff_top: noopImmediate,
 	distance_rate: immediate({
 		filterGte(regions: RegionList, rate: number, course: CourseData, _: HorseParameters) {
@@ -464,6 +465,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	order_rate: noopImmediate,
 	order_rate_in20_continue: noopImmediate,
 	order_rate_in40_continue: noopImmediate,
+	order_rate_out20_continue: noopImmediate,
 	order_rate_out40_continue: noopImmediate,
 	order_rate_out50_continue: noopImmediate,
 	order_rate_out70_continue: noopImmediate,
