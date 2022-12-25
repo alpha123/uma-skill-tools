@@ -1,8 +1,8 @@
 {
-	"speed": 1200,
+	"speed": 1600,
 	"stamina": 800,
-	"power": 1100,
-	"guts": 1100,
+	"power": 1200,
+	"guts": 700,
 	"wisdom": 1100,
 	"strategy": "Oikomi",
 	"distanceAptitude": "S",

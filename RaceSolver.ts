@@ -81,8 +81,16 @@ namespace PositionKeep {
 	}
 }
 
+// these are commonly initialized with a negative number and then checked >= 0 to see if a duration is up
+// (the reason for doing that instead of initializing with 0 and then checking against the duration is if
+// the code that checks for the duration expiring is separate from the code that initializes the timer and
+// has to deal with different durations)
+export class Timer {
+	constructor(public t: number) {}
+}
+
 export interface RaceState {
-	readonly accumulatetime: number
+	readonly accumulatetime: Readonly<Timer>
 	readonly activateCount: readonly number[]
 	readonly activateCountHeal: number
 }
@@ -120,14 +128,14 @@ export interface PendingSkill {
 
 interface ActiveSkill {
 	skillId: string
-	remainingDuration: number
+	durationTimer: Timer
 	modifier: number
 }
 
 function noop(x: unknown) {}
 
 export class RaceSolver {
-	accumulatetime: number
+	accumulatetime: Timer
 	pos: number
 	minSpeed: number
 	currentSpeed: number
@@ -137,6 +145,7 @@ export class RaceSolver {
 	course: CourseData
 	rng: PRNG
 	gorosiRng: PRNG
+	timers: Timer[]
 	startDash: boolean
 	phase: Phase
 	nextPhaseTransition: number
@@ -157,12 +166,12 @@ export class RaceSolver {
 	isPaceDown: boolean
 	posKeepMinThreshold: number
 	posKeepMaxThreshold: number
-	posKeepCooldown: number
+	posKeepCooldown: Timer
 	posKeepEnd: number
 	posKeepSpeedCoef: number
 	posKeepEffectStart: number
 	posKeepEffectExitDistance: number
-	updatePositionKeep: (dt: number) => void
+	updatePositionKeep: () => void
 
 	constructor(params: {
 		horse: HorseParameters,
@@ -180,7 +189,8 @@ export class RaceSolver {
 		this.rng = params.rng;
 		this.pendingSkills = params.skills.slice();  // copy since we remove from it
 		this.gorosiRng = new Rule30CARng(this.rng.int32());
-		this.accumulatetime = 0.0;
+		this.timers = [];
+		this.accumulatetime = this.getNewTimer();
 		this.phase = 0;
 		this.nextPhaseTransition = CourseHelpers.phaseStart(this.course.distance, 1);
 		this.activeSpeedSkills = [];
@@ -194,13 +204,13 @@ export class RaceSolver {
 		this.isPaceDown = false;
 		this.posKeepMinThreshold = PositionKeep.minThreshold(this.horse.strategy, this.course.distance);
 		this.posKeepMaxThreshold = PositionKeep.maxThreshold(this.horse.strategy, this.course.distance);
-		this.posKeepCooldown = 0.0;
+		this.posKeepCooldown = this.getNewTimer();
 		// NB. in the actual game, position keep continues for 10 sections. however we're really only interested in pace down at
 		// the beginning, which is somewhat predictable. arbitrarily cap at 5.
 		this.posKeepEnd = this.sectionLength * 5.0;
 		this.posKeepSpeedCoef = 1.0;
 		if (StrategyHelpers.strategyMatches(this.horse.strategy, Strategy.Nige) || this.pacer == null) {
-			this.updatePositionKeep = noop;
+			this.updatePositionKeep = noop as any;
 		} else {
 			this.updatePositionKeep = this.updatePositionKeepNonNige;
 		}
@@ -211,7 +221,7 @@ export class RaceSolver {
 		this.accel = 0.0;
 		this.currentSpeed = 3.0;
 		this.targetSpeed = 0.85 * baseSpeed(this.course);
-		this.processSkillActivations(0);  // activate gate skills (must come before setting minimum speed because green skills can modify guts)
+		this.processSkillActivations();  // activate gate skills (must come before setting minimum speed because green skills can modify guts)
 		this.minSpeed = 0.85 * baseSpeed(this.course) + Math.sqrt(200.0 * this.horse.guts) * 0.001;
 		this.startDash = true;
 	}
@@ -234,6 +244,12 @@ export class RaceSolver {
 			}
 			this.hillStart.pop();
 		}
+	}
+
+	getNewTimer(t: number = 0) {
+		const tm = new Timer(t);
+		this.timers.push(tm);
+		return tm;
 	}
 
 	getMaxSpeed() {
@@ -268,11 +284,11 @@ export class RaceSolver {
 		let cap = this.getMaxSpeed();
 		const halfv = Math.min(this.currentSpeed + 0.5 * dt * this.accel, cap);
 		this.pos += halfv * dt;
-		this.accumulatetime += dt;
+		this.timers.forEach(tm => tm.t += dt);
 		this.updateHills();
 		this.updatePhase();
-		this.processSkillActivations(dt);
-		this.updatePositionKeep(dt);
+		this.processSkillActivations();
+		this.updatePositionKeep();
 		this.updateTargetSpeed();
 		this.applyForces();
 		cap = this.getMaxSpeed();
@@ -285,12 +301,11 @@ export class RaceSolver {
 		this.currentSpeedModifier = 0.0;
 	}
 
-	updatePositionKeepNonNige(dt: number) {
-		this.posKeepCooldown -= dt;
+	updatePositionKeepNonNige() {
 		if (this.pos >= this.posKeepEnd) {
 			this.isPaceDown = false;
 			this.posKeepSpeedCoef = 1.0;
-			this.updatePositionKeep = noop;
+			this.updatePositionKeep = noop as any;
 		} else if (this.isPaceDown) {
 			if (
 			   this.pacer.pos - this.pos > this.posKeepEffectExitDistance
@@ -298,10 +313,10 @@ export class RaceSolver {
 			|| this.activeSpeedSkills.length > 0
 			) {
 				this.isPaceDown = false;
-				this.posKeepCooldown = 3.0;
+				this.posKeepCooldown.t = -3.0;
 				this.posKeepSpeedCoef = 1.0;
 			}
-		} else if (this.pacer.pos - this.pos < this.posKeepMinThreshold && this.activeSpeedSkills.length == 0 && this.posKeepCooldown <= 0) {
+		} else if (this.pacer.pos - this.pos < this.posKeepMinThreshold && this.activeSpeedSkills.length == 0 && this.posKeepCooldown.t >= 0) {
 			this.isPaceDown = true;
 			this.posKeepEffectStart = this.pos;
 			const min = this.posKeepMinThreshold;
@@ -360,17 +375,17 @@ export class RaceSolver {
 		}
 	}
 
-	processSkillActivations(dt: number) {
+	processSkillActivations() {
 		for (let i = this.activeSpeedSkills.length; --i >= 0;) {
 			const s = this.activeSpeedSkills[i];
-			if ((s.remainingDuration -= dt) <= 0) {
+			if (s.durationTimer.t >= 0) {
 				this.activeSpeedSkills.splice(i,1);
 				this.onSkillDeactivate(this, s.skillId);
 			}
 		}
 		for (let i = this.activeAccelSkills.length; --i >= 0;) {
 			const s = this.activeAccelSkills[i];
-			if ((s.remainingDuration -= dt) <= 0) {
+			if (s.durationTimer.t >= 0) {
 				this.activeAccelSkills.splice(i,1);
 				this.onSkillDeactivate(this, s.skillId);
 			}
@@ -407,10 +422,10 @@ export class RaceSolver {
 				this.horse.wisdom += ef.modifier;
 				break;
 			case SkillType.TargetSpeed:
-				this.activeSpeedSkills.push({skillId: s.skillId, remainingDuration: scaledDuration, modifier: ef.modifier});
+				this.activeSpeedSkills.push({skillId: s.skillId, durationTimer: this.getNewTimer(-scaledDuration), modifier: ef.modifier});
 				break;
 			case SkillType.Accel:
-				this.activeAccelSkills.push({skillId: s.skillId, remainingDuration: scaledDuration, modifier: ef.modifier});
+				this.activeAccelSkills.push({skillId: s.skillId, durationTimer: this.getNewTimer(-scaledDuration), modifier: ef.modifier});
 				break;
 			case SkillType.CurrentSpeed:
 				this.currentSpeedModifier += ef.modifier;

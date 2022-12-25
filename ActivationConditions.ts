@@ -267,7 +267,7 @@ const noopUniformRandom = uniformRandom(noopAll);
 export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	accumulatetime: immediate({
 		filterGte(regions: RegionList, t: number, _0: CourseData, _1: HorseParameters) {
-			return [regions, (s: RaceState) => s.accumulatetime >= t] as [RegionList, DynamicCondition];
+			return [regions, (s: RaceState) => s.accumulatetime.t >= t] as [RegionList, DynamicCondition];
 		}
 	}),
 	activate_count_all: immediate({
@@ -312,9 +312,12 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		filterGte: notSupported
 	},
 	always: noopImmediate,
+	bashin_diff_behind: noopErlangRandom(3, 2.0),
+	bashin_diff_infront: noopErlangRandom(3, 2.0),
 	behind_near_lane_time: noopErlangRandom(3, 2.0),
 	blocked_side_continuetime: noopErlangRandom(3, 2.0),
 	change_order_onetime: noopErlangRandom(3, 2.0),
+	change_order_up_end_after: noopImmediate,
 	compete_fight_count: uniformRandom({
 		filterGt(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters) {
 			assert(CourseHelpers.isSortedByStart(course.straights), 'course straights must be sorted by start');
@@ -453,6 +456,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	is_move_lane: noopErlangRandom(5, 1.0),
+	is_overtake: noopErlangRandom(1, 2.0),
 	is_surrounded: noopErlangRandom(3, 2.0),
 	near_count: noopErlangRandom(3, 2.0),
 	order: noopImmediate,
@@ -462,6 +466,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	order_rate_out40_continue: noopImmediate,
 	order_rate_out50_continue: noopImmediate,
 	order_rate_out70_continue: noopImmediate,
+	overtake_target_time: noopErlangRandom(3, 2.0),
 	phase: {
 		samplePolicy: ImmediatePolicy,
 		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {

@@ -94,7 +94,7 @@ for (let i = 0; i < opts.nsamples; ++i) {
 	// bound the loop by s2.pos < course.distance and if s2 finishes before s, rerun s with s.accumulatetime < s2.accumulatetime and
 	// then compute the difference between them. that is mildly annoying though so i haven't done it yet.
 	// TODO see above
-	while (s2.accumulatetime < s.accumulatetime) {
+	while (s2.accumulatetime.t < s.accumulatetime.t) {
 		s2.step(1/60);
 	}
 	gain.push((s.pos - s2.pos) / 2.5);

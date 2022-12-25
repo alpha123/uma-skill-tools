@@ -28,7 +28,8 @@ cli.options(program => {
 			.default(defaultThresholds, defaultThresholds.join(','))
 			.argParser(t => t.split(',').map(parseFloat))
 		)
-		.option('--dump', 'instead of printing a summary, dump data. intended to be piped into histogram.py.');
+		.option('--dump', 'instead of printing a summary, dump data. intended to be piped into histogram.py.')
+		.option('--csv [first_col]', 'print data as a CSV row (intended for batch scripting)');
 });
 cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cliSkills: SkillData[], getPacer: PacerProvider, cliOptions: any) => {
 	const nsamples = cliOptions.nsamples;
@@ -92,9 +93,12 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 	// i'm not really sure if that's the expected thing to do or not, but it makes sense (imo)
 
 	const gain = [];
-	let min = Infinity, max = 0, mini = 0, maxi = 0;
+	let min = Infinity, max = 0,
+	    minconf = {i: 0, seedhi: 0, seedlo: 0, pacerseedhi: 0, pacerseedlo: 0},
+	    maxconf = {i: 0, seedhi: 0, seedlo: 0, pacerseedhi: 0, pacerseedlo: 0};
 	const dt = cliOptions.timestep;
 	for (let i = 0; i < nsamples; ++i) {
+		const seedhi = solverRng1.hi, seedlo = solverRng1.lo, pacerseedhi = pacerRng1.hi, pacerseedlo = pacerRng1.lo;
 		const skills1 = [];
 		defSkills.forEach((sd,sdi) => addSkill(skills1, sd, triggers[sdi], i));
 		cliSkills.forEach((sd,sdi) => addSkill(skills1, sd, triggers[sdi + defSkills.length], i));
@@ -108,18 +112,26 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		defSkills.forEach((sd,sdi) => addSkill(skills2, sd, triggers[sdi], i));
 		debuffs.forEach((sd,sdi) => addSkill(skills2, sd, triggers[sdi + defSkills.length + cliSkills.length], i));
 		const s2 = new RaceSolver({horse, course, skills: skills2, pacer: getPacer(pacerRng2), rng: solverRng2});
-		while (s2.accumulatetime < s.accumulatetime) {
+		while (s2.accumulatetime.t < s.accumulatetime.t) {
 			s2.step(dt);
 		}
 		const diff = (s.pos - s2.pos) / 2.5;
 		gain.push(diff);
 		if (diff < min) {
 			min = diff;
-			mini = i;
+			minconf.i = i;
+			minconf.seedhi = seedhi;
+			minconf.seedlo = seedlo;
+			minconf.pacerseedhi = pacerseedhi;
+			minconf.pacerseedlo = pacerseedlo;
 		}
 		if (diff > max) {
 			max = diff;
-			maxi = i;
+			maxconf.i = i;
+			maxconf.seedhi = seedhi;
+			maxconf.seedlo = seedlo;
+			maxconf.pacerseedhi = pacerseedhi;
+			maxconf.pacerseedlo = pacerseedlo;
 		}
 	}
 	gain.sort((a,b) => a - b);
@@ -129,30 +141,52 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		return;
 	}
 
-	console.log('min:\t' + min.toFixed(2));
-	console.log('max:\t' + max.toFixed(2));
 	const mid = Math.floor(gain.length / 2);
-	console.log('median:\t' + (gain.length % 2 == 0 ? (gain[mid-1] + gain[mid]) / 2 : gain[mid]).toFixed(2));
-	console.log('mean:\t' + (gain.reduce((a,b) => a + b) / gain.length).toFixed(2));
+	const median = (gain.length % 2 == 0 ? (gain[mid-1] + gain[mid]) / 2 : gain[mid]);
+	const mean = (gain.reduce((a,b) => a + b) / gain.length);
 
-	if (cliOptions.thresholds.length > 0) {
+	if (cliOptions.csv) {
+		const cols = [min.toFixed(2), max.toFixed(2), median.toFixed(2), mean.toFixed(2)];
+		cliOptions.thresholds.forEach(n => {
+			cols.push((gain.reduce((a,b) => a + +(b >= n), 0) / gain.length * 100).toFixed(2) + '%');
+		});
+		if (typeof cliOptions.csv == 'string') {
+			cols.unshift(cliOptions.csv);
+		}
+		console.log(cols.join(','));
+	} else {
+		console.log('min:\t' + min.toFixed(2));
+		console.log('max:\t' + max.toFixed(2));
+		console.log('median:\t' + median.toFixed(2));
+		console.log('mean:\t' + mean.toFixed(2));
+
+		if (cliOptions.thresholds.length > 0) {
+			console.log('');
+		}
+		cliOptions.thresholds.forEach(n => {
+		    console.log('≥' + n.toFixed(2) + ' | ' + (gain.reduce((a,b) => a + +(b >= n), 0) / gain.length * 100).toFixed(2) + '%');
+		});
+
 		console.log('');
+		console.log('seed: ' + seed);
+
+		console.log('');
+
+		const conf = Buffer.alloc(7 * 4);
+		const conf32 = new Int32Array(conf.buffer);
+		conf32[0] = seed;
+		conf32[1] = nsamples;
+		conf32[2] = minconf.i;
+		conf32[3] = minconf.seedhi >>> 0;
+		conf32[4] = minconf.seedlo >>> 0;
+		conf32[5] = minconf.pacerseedhi >>> 0;
+		conf32[6] = minconf.pacerseedlo >>> 0;
+		console.log('min configuration: ' + conf.toString('base64'))
+		conf32[2] = maxconf.i;
+		conf32[3] = maxconf.seedhi >>> 0;
+		conf32[4] = maxconf.seedlo >>> 0;
+		conf32[5] = maxconf.pacerseedhi >>> 0;
+		conf32[6] = maxconf.pacerseedlo >>> 0;
+		console.log('max configuration: ' + conf.toString('base64'));
 	}
-	cliOptions.thresholds.forEach(n => {
-	    console.log('≥' + n.toFixed(2) + ' | ' + (gain.reduce((a,b) => a + +(b >= n), 0) / gain.length * 100).toFixed(2) + '%');
-	});
-
-	console.log('');
-	console.log('seed: ' + seed);
-
-	console.log('');
-
-	const conf = Buffer.alloc(12);
-	const conf32 = new Int32Array(conf.buffer);
-	conf32[0] = seed;
-	conf32[1] = nsamples;
-	conf32[2] = mini;
-	console.log('min configuration: ' + conf.toString('base64'))
-	conf32[2] = maxi;
-	console.log('max configuration: ' + conf.toString('base64'));
 });

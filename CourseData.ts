@@ -18,13 +18,7 @@ export interface CourseData {
 	readonly slopes: readonly {readonly start: number, readonly length: number, readonly slope: number}[]
 }
 
-import tracks from './data/course_data.json';
-const courses = {};
-for (const trackId in tracks) {
-	for (const courseId in tracks[trackId].courses) {
-		courses[courseId] = tracks[trackId].courses[courseId];
-	}
-}
+import courses from './data/course_data.json';
 
 export namespace CourseHelpers {
 	export function assertIsPhase(phase: number): asserts phase is Phase {
@@ -76,7 +70,7 @@ export namespace CourseHelpers {
 		course: CourseData,
 		stats: Readonly<{speed: number, stamina: number, power: number, guts: number, wisdom: number}>
 	) {
-		const statvalues = [0, stats.speed, stats.stamina, stats.power, stats.guts, stats.wisdom];
+		const statvalues = [0, stats.speed, stats.stamina, stats.power, stats.guts, stats.wisdom].map(x => Math.min(x, 901));
 		return 1 + course.courseSetStatus.map(
 			stat => (1 + Math.floor(statvalues[stat] / 300.01)) * 0.05
 		).reduce((a,b) => a + b, 0) / Math.max(course.courseSetStatus.length,1);

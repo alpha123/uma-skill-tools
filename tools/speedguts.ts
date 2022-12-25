@@ -43,11 +43,8 @@ wholeCourse.push(new Region(0, course.distance));
 Object.freeze(wholeCourse);
 
 function buildSolver(speed: number, guts: number) {
-	const adjustedSpeed = speed > 1200 ? 1200 + (speed - 1200) / 2 : speed;
-	const adjustedGuts = guts > 1200 ? 1200 + (guts - 1200) / 2 : guts;
-
 	const rng = new Rule30CARng(seed);
-	const horse = buildHorseParameters(Object.assign(desc, {speed: adjustedSpeed, guts: adjustedGuts}), course, opts.mood, opts.ground);
+	const horse = buildHorseParameters(Object.assign(desc, {speed: speed, guts: guts}), course, opts.mood, opts.ground);
 	const skills = desc.skills.map(s => buildSkillData(horse, course, wholeCourse, s)).filter(s => s != null).map(sd => {
 		return {
 			skillId: sd.skillId,
@@ -72,8 +69,8 @@ const base = buildSolver(opts.standard[0], opts.standard[1]);
 // this is generally actually fine unless the horse has skills that would extend their duration past the end of the course, in which
 // case it overestimates
 // but those probably won't be used for just raw speed/guts comparisons
-while (base.accumulatetime <= min.accumulatetime) {
-	standard[base.accumulatetime] = base.pos;
+while (base.accumulatetime.t <= min.accumulatetime.t) {
+	standard[base.accumulatetime.t] = base.pos;
 	base.step(dt);
 }
 
@@ -86,7 +83,7 @@ for (let guts = opts.gutsRange[0]; guts <= opts.gutsRange[1]; guts += opts.step)
 		while (s.pos < course.distance) {
 			s.step(dt);
 		}
-		row.push((s.pos - standard[s.accumulatetime]) / 2.5);
+		row.push((s.pos - standard[s.accumulatetime.t]) / 2.5);
 	}
 }
 

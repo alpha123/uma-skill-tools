@@ -132,15 +132,19 @@ export function buildSkillData(horse: HorseParameters, course: CourseData, whole
 
 type Mood = -2 | -1 | 0 | 1 | 2;
 
+function adjustOvercap(stat: number) {
+	return stat > 1200 ? 1200 + Math.floor((stat - 1200) / 2) : stat;
+}
+
 export function buildHorseParameters(horseDesc, course: CourseData, mood: Mood, ground: GroundCondition) {
 	const motivCoef = 1 + 0.02 * mood;
 
 	const baseStats = {
-		speed: horseDesc.speed * motivCoef,
-		stamina: horseDesc.stamina * motivCoef,
-		power: horseDesc.power * motivCoef,
-		guts: horseDesc.guts * motivCoef,
-		wisdom: horseDesc.wisdom * motivCoef
+		speed: adjustOvercap(horseDesc.speed) * motivCoef,
+		stamina: adjustOvercap(horseDesc.stamina) * motivCoef,
+		power: adjustOvercap(horseDesc.power) * motivCoef,
+		guts: adjustOvercap(horseDesc.guts) * motivCoef,
+		wisdom: adjustOvercap(horseDesc.wisdom) * motivCoef
 	};
 
 	const raceCourseModifier = CourseHelpers.courseSpeedModifier(course, baseStats);

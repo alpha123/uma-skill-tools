@@ -22,7 +22,7 @@ cli.options(program => {
 		);
 });
 cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cliSkills: SkillData[], getPacer: PacerProvider, cliOptions: any) => {
-	let seed, nsamples = 1, sampleIdx = 0;
+	let seed, nsamples = 1, sampleIdx = 0, solverSeedHi, solverSeedLo, pacerSeedHi, pacerSeedLo;
 	if ('seed' in cliOptions) {
 		seed = cliOptions.seed;
 	} else if ('configuration' in cliOptions) {
@@ -30,12 +30,22 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		seed = readInt32LE(conf, 0) >>> 0;
 		nsamples = readInt32LE(conf, 4);
 		sampleIdx = readInt32LE(conf, 8);
+		solverSeedHi = readInt32LE(conf, 12) >>> 0;
+		solverSeedLo = readInt32LE(conf, 16) >>> 0;
+		pacerSeedHi = readInt32LE(conf, 20) >>> 0;
+		pacerSeedLo = readInt32LE(conf, 24) >>> 0;
 	} else {
 		seed = Math.floor(Math.random() * (-1 >>> 0)) >>> 0;
 	}
 	const rng = new Rule30CARng(seed);
-	const solverRng = new Rule30CARng(rng.int32());
-	const pacerRng = new Rule30CARng(rng.int32());
+	if (solverSeedHi == undefined) {
+		solverSeedHi = 0;
+		solverSeedLo = rng.int32();
+		pacerSeedHi = 0;
+		pacerSeedLo = rng.int32();
+	}
+	const solverRng = new Rule30CARng(solverSeedLo, solverSeedHi);
+	const pacerRng = new Rule30CARng(pacerSeedLo, pacerSeedHi);
 
 	const skillTypes = {};
 	const skills = [];
@@ -61,10 +71,10 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		pacer: getPacer(pacerRng),
 		rng: solverRng,
 		onSkillActivate: (s,skillId) => {
-			plotData.skills[skillId] = [skillTypes[skillId],s.accumulatetime,0,s.pos,0];
+			plotData.skills[skillId] = [skillTypes[skillId],s.accumulatetime.t,0,s.pos,0];
 		},
 		onSkillDeactivate: (s,skillId) => {
-			plotData.skills[skillId][2] = s.accumulatetime;
+			plotData.skills[skillId][2] = s.accumulatetime.t;
 			plotData.skills[skillId][4] = s.pos;
 		}
 	});
@@ -77,7 +87,7 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 	const dt = cliOptions.timestep;
 	while (s.pos < course.distance) {
 		s.step(dt);
-		plotData.t.push(s.accumulatetime);
+		plotData.t.push(s.accumulatetime.t);
 		plotData.pos.push(s.pos);
 		plotData.v.push(s.currentSpeed);
 		plotData.targetv.push(s.targetSpeed);
@@ -85,11 +95,11 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		if (s.isPaceDown != paceDownToggle) {
 			const k = 'pd' + paceDownN;
 			if (plotData.skills[k] && plotData.skills[k][2] == 0) {
-				plotData.skills[k][2] = s.accumulatetime;
+				plotData.skills[k][2] = s.accumulatetime.t;
 				plotData.skills[k][4] = s.pos;
 				++paceDownN;
 			} else {
-				plotData.skills[k] = [-1,s.accumulatetime,0,s.pos,0];
+				plotData.skills[k] = [-1,s.accumulatetime.t,0,s.pos,0];
 			}
 			paceDownToggle = s.isPaceDown;
 		}
@@ -98,7 +108,7 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 	// clean up skills that haven't deactivated by the end of the race
 	Object.keys(plotData.skills).forEach(sk => {
 		if (plotData.skills[sk][2] == 0) {
-			plotData.skills[sk][2] = s.accumulatetime;
+			plotData.skills[sk][2] = s.accumulatetime.t;
 			plotData.skills[sk][4] = s.pos;
 		}
 	});
