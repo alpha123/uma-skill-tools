@@ -145,6 +145,7 @@ export class RaceSolver {
 	course: CourseData
 	rng: PRNG
 	gorosiRng: PRNG
+	paceEffectRng: PRNG
 	timers: Timer[]
 	startDash: boolean
 	phase: Phase
@@ -189,6 +190,7 @@ export class RaceSolver {
 		this.rng = params.rng;
 		this.pendingSkills = params.skills.slice();  // copy since we remove from it
 		this.gorosiRng = new Rule30CARng(this.rng.int32());
+		this.paceEffectRng = new Rule30CARng(this.rng.int32());
 		this.timers = [];
 		this.accumulatetime = this.getNewTimer();
 		this.phase = 0;
@@ -321,7 +323,7 @@ export class RaceSolver {
 			this.posKeepEffectStart = this.pos;
 			const min = this.posKeepMinThreshold;
 			const max = this.phase == 1 ? min + 0.5 * (this.posKeepMaxThreshold - min) : this.posKeepMaxThreshold;
-			this.posKeepEffectExitDistance = min + this.rng.random() * (max - min);
+			this.posKeepEffectExitDistance = min + this.paceEffectRng.random() * (max - min);
 			this.posKeepSpeedCoef = this.phase == 1 ? 0.945 : 0.915;
 		}
 	}
