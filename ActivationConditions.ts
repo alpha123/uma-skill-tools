@@ -404,6 +404,8 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return Math.max(course.distance % 400, 1) == flag ? regions : new RegionList();
 		}
 	}),
+	is_badstart: noopImmediate,
+	is_behind_in: noopImmediate,
 	is_finalcorner: immediate({
 		filterEq(regions: RegionList, flag: number, course: CourseData, _: HorseParameters) {
 			assert(flag == 0 || flag == 1, 'must be is_finalcorner==0 or is_finalcorner==1');
@@ -460,6 +462,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	is_move_lane: noopErlangRandom(5, 1.0),
 	is_overtake: noopErlangRandom(1, 2.0),
 	is_surrounded: noopErlangRandom(3, 2.0),
+	lane_type: noopImmediate,
 	near_count: noopErlangRandom(3, 2.0),
 	order: noopImmediate,
 	order_rate: noopImmediate,
@@ -553,6 +556,10 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			}
 		}
 	}),
+	running_style_count_same: noopImmediate,
+	running_style_count_same_rate: noopImmediate,
+	running_style_equal_popularity_one: noopImmediate,
+	same_skill_horse_count: noopImmediate,
 	season: noopImmediate,  // TODO pass race conditions to filters
 	slope: immediate({
 		filterEq(regions: RegionList, slopeType: number, course: CourseData, _: HorseParameters) {
