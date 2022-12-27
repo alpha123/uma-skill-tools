@@ -501,6 +501,15 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	},
+	phase_firsthalf_random: random({
+		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
+			CourseHelpers.assertIsPhase(phase);
+			const start = CourseHelpers.phaseStart(course.distance, phase);
+			const end = CourseHelpers.phaseEnd(course.distance, phase);
+			const bounds = new Region(start, (start + end) / 2);
+			return regions.rmap(r => r.intersect(bounds));
+		}
+	}),
 	phase_laterhalf_random: random({
 		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
 			CourseHelpers.assertIsPhase(phase);
