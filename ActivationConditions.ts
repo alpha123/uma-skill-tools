@@ -329,6 +329,17 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
+	change_order_up_finalcorner_after: erlangRandom(3, 2.0, {
+		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters) {
+			assert(CourseHelpers.isSortedByStart(course.corners), 'course corners must be sorted by start');
+			if (course.corners.length == 0) {
+				return new RegionList();
+			}
+			const finalCornerStart = course.corners[course.corners.length - 1].start;
+			const bounds = new Region(finalCornerStart, course.distance);
+			return regions.rmap(r => r.intersect(bounds));
+		}
+	}),
 	compete_fight_count: uniformRandom({
 		filterGt(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters) {
 			assert(CourseHelpers.isSortedByStart(course.straights), 'course straights must be sorted by start');
