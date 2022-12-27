@@ -315,6 +315,12 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	bashin_diff_behind: noopErlangRandom(3, 2.0),
 	bashin_diff_infront: noopErlangRandom(3, 2.0),
 	behind_near_lane_time: noopErlangRandom(3, 2.0),
+	// NB. at least in theory _set1 should have a slightly more early-biased distribution since it's technically easier to activate, but I don't
+	// really think it makes much of a difference. Same with blocked_front vs blocked_front_continuetime I suppose.
+	behind_near_lane_time_set1: noopErlangRandom(3, 2.0),
+	blocked_all_continuetime: noopErlangRandom(3, 2.0),
+	blocked_front: noopErlangRandom(3, 2.0),
+	blocked_front_continuetime: noopErlangRandom(3, 2.0),
 	blocked_side_continuetime: noopErlangRandom(3, 2.0),
 	change_order_onetime: noopErlangRandom(3, 2.0),
 	change_order_up_end_after: noopImmediate,
@@ -472,6 +478,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	order_rate_out40_continue: noopImmediate,
 	order_rate_out50_continue: noopImmediate,
 	order_rate_out70_continue: noopImmediate,
+	overtake_target_no_order_up_time: noopErlangRandom(3, 2.0),
 	overtake_target_time: noopErlangRandom(3, 2.0),
 	phase: {
 		samplePolicy: ImmediatePolicy,
