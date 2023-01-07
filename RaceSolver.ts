@@ -18,7 +18,7 @@ namespace Speed {
 }
 
 function baseSpeed(course: CourseData) {
-	return 20.0 - (course.distance - 2000) / 1000;
+	return 20.0 - (course.distance - 2000) / 1000.0;
 }
 
 function baseTargetSpeed(horse: HorseParameters, course: CourseData, phase: Phase) {
@@ -57,11 +57,7 @@ function baseAccel(baseAccel: number, horse: HorseParameters, phase: Phase) {
 	  Acceleration.DistanceProficiencyModifier[horse.distanceAptitude];
 }
 
-function decel(pos: number, distance: number) {
-	if (pos >= distance * 2/3) return -1.0;
-	else if (pos >= distance * 1/6) return -0.8;
-	else return -1.2;
-}
+const PhaseDeceleration = [-1.2, -0.8, -1.0];
 
 namespace PositionKeep {
 	export const BaseMinimumThreshold = Object.freeze([0, 0, 3.0, 6.5, 7.5]);
@@ -272,10 +268,10 @@ export class RaceSolver {
 		// do this half-step update of velocity (halfv) because during the start dash acceleration depends on velocity
 		// (ie, velocity is given by the following system of differential equations)
 		//
-		// x′(t) = x′(t - Δt) + Δt * x′′(t)
-		//          ⎧ baseAccel(horse) + accelSkillModifier + 24.0	if x′(t) < 0.85 * baseSpeed(course)
-		// x′′(t) = ⎨
-		//          ⎩ baseAccel(horse) + accelSkillModifier			if x′(t) ≥ 0.85 * baseSpeed(course)
+		// x′(t + Δt) = x′(t) + Δt * x′′(t + Δt)
+		//               ⎧ baseAccel(horse) + accelSkillModifier + 24.0	if x′(t) < 0.85 * baseSpeed(course)
+		// x′′(t + Δt) = ⎨
+		//               ⎩ baseAccel(horse) + accelSkillModifier		if x′(t) ≥ 0.85 * baseSpeed(course)
 		//
 		// i dont actually know anything about numerical analysis but i saw this on the internet
 
@@ -283,8 +279,7 @@ export class RaceSolver {
 			this.pacer.step(dt);
 		}
 
-		let cap = this.getMaxSpeed();
-		const halfv = Math.min(this.currentSpeed + 0.5 * dt * this.accel, cap);
+		const halfv = Math.min(this.currentSpeed + 0.5 * dt * this.accel, this.getMaxSpeed());
 		this.pos += halfv * dt;
 		this.timers.forEach(tm => tm.t += dt);
 		this.updateHills();
@@ -293,8 +288,7 @@ export class RaceSolver {
 		this.updatePositionKeep();
 		this.updateTargetSpeed();
 		this.applyForces();
-		cap = this.getMaxSpeed();
-		this.currentSpeed = Math.min(halfv + 0.5 * dt * this.accel + this.currentSpeedModifier, cap);
+		this.currentSpeed = Math.min(halfv + 0.5 * dt * this.accel + this.currentSpeedModifier, this.getMaxSpeed());
 		if (!this.startDash && this.currentSpeed < this.minSpeed) {
 			this.currentSpeed = this.minSpeed;
 		} else if (this.startDash && this.currentSpeed >= 0.85 * baseSpeed(this.course)) {
@@ -337,13 +331,13 @@ export class RaceSolver {
 		this.targetSpeed += this.activeSpeedSkills.reduce((a,b) => a + b.modifier, 0);
 
 		if (this.hillIdx != -1) {
-			this.targetSpeed -= this.course.slopes[this.hillIdx].slope / 10000 * 200 / this.horse.power;
+			this.targetSpeed -= this.course.slopes[this.hillIdx].slope / 10000.0 * 200.0 / this.horse.power;
 		}
 	}
 
 	applyForces() {
 		if (this.currentSpeed > this.targetSpeed) {
-			this.accel = this.isPaceDown ? -0.5 : decel(this.pos, this.course.distance);
+			this.accel = this.isPaceDown ? -0.5 : PhaseDeceleration[this.phase];
 			return;
 		}
 		this.accel = baseAccel(this.hillIdx != -1 ? UphillBaseAccel : BaseAccel, this.horse, this.phase);
