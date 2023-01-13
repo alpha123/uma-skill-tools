@@ -312,6 +312,21 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		filterGte: notSupported
 	},
 	always: noopImmediate,
+	base_power: immediate({
+		// NB. since skill conditions are processed before any skill activations, just using power here is base power (i.e. greens are not included)
+		filterLt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+			return horse.power < threshold ? regions : new RegionList();
+		},
+		filterLte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+			return horse.power <= threshold ? regions : new RegionList();
+		},
+		filterGt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+			return horse.power > threshold ? regions : new RegionList();
+		},
+		filterGte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+			return horse.power >= threshold ? regions : new RegionList();
+		}
+	}),
 	bashin_diff_behind: noopErlangRandom(3, 2.0),
 	bashin_diff_infront: noopErlangRandom(3, 2.0),
 	behind_near_lane_time: noopErlangRandom(3, 2.0),
