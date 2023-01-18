@@ -500,6 +500,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	is_overtake: noopErlangRandom(1, 2.0),
 	is_surrounded: noopErlangRandom(3, 2.0),
 	lane_type: noopImmediate,
+	lastspurt: noopImmediate,
 	near_count: noopErlangRandom(3, 2.0),
 	order: noopImmediate,
 	order_rate: noopImmediate,
