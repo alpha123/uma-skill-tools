@@ -392,6 +392,10 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	distance_diff_rate: noopImmediate,
 	distance_diff_top: noopImmediate,
 	distance_rate: immediate({
+		filterLte(regions: RegionList, rate: number, course: CourseData, _: HorseParameters) {
+			const bounds = new Region(0, course.distance * rate / 100);
+			return regions.rmap(r => r.intersect(bounds));
+		},
 		filterGte(regions: RegionList, rate: number, course: CourseData, _: HorseParameters) {
 			const bounds = new Region(course.distance * rate / 100, course.distance);
 			return regions.rmap(r => r.intersect(bounds));
