@@ -83,9 +83,9 @@ export function buildHorseParameters(horseDesc: HorseDesc, course: CourseData, m
 	const raceCourseModifier = CourseHelpers.courseSpeedModifier(course, baseStats);
 
 	return Object.freeze({
-		speed: baseStats.speed * raceCourseModifier + GroundSpeedModifier[course.surface][ground],
+		speed: Math.max(baseStats.speed * raceCourseModifier + GroundSpeedModifier[course.surface][ground], 1),
 		stamina: baseStats.stamina,
-		power: baseStats.power + GroundPowerModifier[course.surface][ground],
+		power: Math.max(baseStats.power + GroundPowerModifier[course.surface][ground], 1),
 		guts: baseStats.guts,
 		wisdom: baseStats.wisdom * StrategyProficiencyModifier[parseAptitude(horseDesc.strategyAptitude, 'strategy')],
 		strategy: parseStrategy(horseDesc.strategy),
