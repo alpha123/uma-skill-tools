@@ -4,6 +4,7 @@ import { CourseData } from '../CourseData';
 import { Region } from '../Region';
 import { Rule30CARng } from '../Random';
 import { PendingSkill, RaceSolver } from '../RaceSolver';
+import { ImmediatePolicy, RandomPolicy } from '../ActivationSamplePolicy';
 import { SkillData, ToolCLI, PacerProvider, parseAptitude } from './ToolCLI';
 
 const defaultThresholds = [0.5,1.0,1.5,2.0,2.5];
@@ -163,6 +164,10 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		if (typeof cliOptions.csv == 'string') {
 			cols.unshift(cliOptions.csv);
 		}
+		cols.push(cliSkills.map(sd => {
+			const p = sd.samplePolicy;
+			return p == ImmediatePolicy ? 'ImmediatePolicy' : p == RandomPolicy ? 'RandomPolicy' : p.constructor.name;
+		}).join(';'));
 		console.log(cols.join(','));
 	} else {
 		console.log('min:\t' + min.toFixed(2));
