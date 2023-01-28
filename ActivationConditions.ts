@@ -179,8 +179,8 @@ const noopAll = Object.freeze({
 	filterGte: noop
 });
 
-const noopImmediate = Object.freeze(Object.assign({samplePolicy: ImmediatePolicy}, noopAll));
-const noopRandom = Object.freeze(Object.assign({samplePolicy: RandomPolicy}, noopAll));
+export const noopImmediate = Object.freeze(Object.assign({samplePolicy: ImmediatePolicy}, noopAll));
+export const noopRandom = Object.freeze(Object.assign({samplePolicy: RandomPolicy}, noopAll));
 
 const defaultImmediate = Object.freeze({
 	samplePolicy: ImmediatePolicy,
@@ -192,7 +192,7 @@ const defaultImmediate = Object.freeze({
 	filterGte: notSupported
 });
 
-function immediate(o: Partial<Condition>) {
+export function immediate(o: Partial<Condition>) {
 	return Object.assign({}, defaultImmediate, o);
 }
 
@@ -206,7 +206,7 @@ const defaultRandom = Object.freeze({
 	filterGte: notSupported
 });
 
-function random(o: Partial<Condition>) {
+export function random(o: Partial<Condition>) {
 	return Object.assign({}, defaultRandom, o);
 }
 
@@ -232,19 +232,19 @@ function distributionRandomFactory<Ts extends unknown[]>(cls: new (...args: Ts) 
 	};
 }
 
-const logNormalRandom = distributionRandomFactory(LogNormalRandomPolicy);
-const erlangRandom = distributionRandomFactory(ErlangRandomPolicy);
-const uniformRandom = distributionRandomFactory(UniformRandomPolicy);
+export const logNormalRandom = distributionRandomFactory(LogNormalRandomPolicy);
+export const erlangRandom = distributionRandomFactory(ErlangRandomPolicy);
+export const uniformRandom = distributionRandomFactory(UniformRandomPolicy);
 
-function noopLogNormalRandom(mu: number, sigma: number) {
+export function noopLogNormalRandom(mu: number, sigma: number) {
 	return logNormalRandom(mu, sigma, noopAll);
 }
 
-function noopErlangRandom(k: number, lambda: number) {
+export function noopErlangRandom(k: number, lambda: number) {
 	return erlangRandom(k, lambda, noopAll);
 }
 
-const noopUniformRandom = uniformRandom(noopAll);
+export const noopUniformRandom = uniformRandom(noopAll);
 
 /*
 	accumulatetime, activate_count_all, activate_count_end_after, activate_count_heal, activate_count_middle, activate_count_start,

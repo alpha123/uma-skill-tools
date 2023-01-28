@@ -2,8 +2,8 @@ import { HorseParameters, Strategy, Aptitude } from './HorseTypes';
 import { CourseData, CourseHelpers } from './CourseData';
 import { Region, RegionList } from './Region';
 import { Rule30CARng } from './Random';
+import { Conditions, random, immediate } from './ActivationConditions';
 import { ActivationSamplePolicy, ImmediatePolicy } from './ActivationSamplePolicy';
-import { Conditions } from './ActivationConditions';
 import { parse, tokenize } from './ConditionParser';
 import { RaceSolver, PendingSkill, DynamicCondition, SkillType, SkillRarity, SkillEffect } from './RaceSolver';
 
@@ -117,7 +117,7 @@ function buildSkillEffects(skill) {
 	}, []);
 }
 
-export function buildSkillData(horse: HorseParameters, course: CourseData, wholeCourse: RegionList, skillId: string) {
+export function buildSkillData(horse: HorseParameters, course: CourseData, wholeCourse: RegionList, conditions: typeof Conditions, skillId: string) {
 	if (!(skillId in skills)) {
 		throw new Error('bad skill ID ' + skillId);
 	}
@@ -125,12 +125,12 @@ export function buildSkillData(horse: HorseParameters, course: CourseData, whole
 	for (let i = 0; i < alternatives.length; ++i) {
 		const skill = alternatives[i];
 		if (skill.precondition) {
-			const pre = parse(tokenize(skill.precondition));
+			const pre = parse(tokenize(skill.precondition), {conditions});
 			if (pre.apply(wholeCourse, course, horse)[0].length == 0) {
 				continue;
 			}
 		}
-		const op = parse(tokenize(skill.condition));
+		const op = parse(tokenize(skill.condition), {conditions});
 		const [regions, extraCondition] = op.apply(wholeCourse, course, horse);
 		if (regions.length == 0) {
 			continue;
@@ -171,6 +171,33 @@ export function buildSkillData(horse: HorseParameters, course: CourseData, whole
 	}
 }
 
+const conditionsWithActivateCountsAsRandom = Object.freeze(Object.assign({}, Conditions, {
+	activate_count_end_after: random({
+		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters) {
+			const bounds = new Region(CourseHelpers.phaseStart(course.distance, 2), CourseHelpers.phaseEnd(course.distance, 3));
+			return regions.rmap(r => r.intersect(bounds));
+		}
+	}),
+	activate_count_later_half: random({
+		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters) {
+			const bounds = new Region(course.distance / 2, course.distance);
+			return regions.rmap(r => r.intersect(bounds));
+		}
+	}),
+	activate_count_middle: random({
+		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters) {
+			const bounds = new Region(CourseHelpers.phaseStart(course.distance, 1), CourseHelpers.phaseEnd(course.distance, 1));
+			return regions.rmap(r => r.intersect(bounds));
+		}
+	}),
+	activate_count_start: immediate({  // for 地固め
+		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters) {
+			const bounds = new Region(CourseHelpers.phaseStart(course.distance, 0), CourseHelpers.phaseEnd(course.distance, 0));
+			return regions.rmap(r => r.intersect(bounds));
+		}
+	})
+}));
+
 export class RaceSolverBuilder {
 	_course: CourseData | null
 	_ground: GroundCondition
@@ -179,6 +206,7 @@ export class RaceSolverBuilder {
 	_pacer: HorseDesc | null
 	_pacerSkills: PendingSkill[]
 	_rng: Rule30CARng
+	_conditions: typeof Conditions
 	_skills: string[]
 
 	constructor(readonly nsamples: number) {
@@ -189,6 +217,7 @@ export class RaceSolverBuilder {
 		this._pacer = null;
 		this._pacerSkills = [];
 		this._rng = new Rule30CARng(Math.floor(Math.random() * (-1 >>> 0)) >>> 0);
+		this._conditions = Conditions;
 		this._skills = [];
 	}
 
@@ -253,6 +282,11 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
+	withActivateCountsAsRandom() {
+		this._conditions = conditionsWithActivateCountsAsRandom;
+		return this;
+	}
+
 	addSkill(skillId: string) {
 		this._skills.push(skillId);
 		return this;
@@ -267,6 +301,7 @@ export class RaceSolverBuilder {
 		clone._pacer = this._pacer;
 		clone._pacerSkills = this._pacerSkills.slice();  // sharing the skill objects is fine but see the note below
 		clone._rng = new Rule30CARng(this._rng.lo, this._rng.hi);
+		clone._conditions = this._conditions;
 		clone._skills = this._skills.slice();
 		return clone;
 	}
@@ -283,7 +318,7 @@ export class RaceSolverBuilder {
 		wholeCourse.push(new Region(0, this._course.distance));
 		Object.freeze(wholeCourse);
 
-		const makeSkill = buildSkillData.bind(null, horse, this._course, wholeCourse) as (s: string) => SkillData | null;
+		const makeSkill = buildSkillData.bind(null, horse, this._course, wholeCourse, this._conditions) as (s: string) => SkillData | null;
 		const skilldata = this._skills.map(makeSkill).filter(s => s != null);
 		const triggers = skilldata.map(sd => sd.samplePolicy.sample(sd.regions, this.nsamples, this._rng));
 
