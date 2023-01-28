@@ -78,7 +78,7 @@ export namespace CourseHelpers {
 
 	export function getCourse(courseId: number): CourseData {
 		const course = courses[courseId];
-		course.slopes.sort((a,b) => a.start - b.start);
+		if (!isSortedByStart(course.slopes)) course.slopes.sort((a,b) => a.start - b.start);
 		Object.keys(course).forEach(k => Object.freeze(course[k]));
 		return Object.freeze(course);
 	}
