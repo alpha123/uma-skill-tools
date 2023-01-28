@@ -133,6 +133,16 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 			maxconf.pacerseedhi = pacerseedhi;
 			maxconf.pacerseedlo = pacerseedlo;
 		}
+
+		if (solverRng1.hi != solverRng2.hi || solverRng1.lo != solverRng2.lo || pacerRng1.hi != pacerRng2.hi || pacerRng1.lo != pacerRng2.lo) {
+			console.log('CONSISTENCY ERROR');
+			console.log(solverRng1);
+			console.log(solverRng2);
+			console.log(pacerRng1);
+			console.log(pacerRng2);
+			console.log('on iteration ' + i);
+			throw 1;
+		}
 	}
 	gain.sort((a,b) => a - b);
 
