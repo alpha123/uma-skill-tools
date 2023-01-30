@@ -415,6 +415,14 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			} else {
 				return new RegionList();
 			}
+		},
+		filterNeq(regions: RegionList, distanceType: number, course: CourseData, _: HorseParameters) {
+			CourseHelpers.assertIsDistanceType(distanceType);
+			if (course.distanceType != distanceType) {
+				return regions;
+			} else {
+				return new RegionList();
+			}
 		}
 	}),
 	down_slope_random: random({
