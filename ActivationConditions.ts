@@ -581,6 +581,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	popularity: noopImmediate,
+	post_number: noopImmediate,
 	remain_distance: immediate({
 		filterLte(regions: RegionList, remain: number, course: CourseData, _: HorseParameters) {
 			const bounds = new Region(course.distance - remain, course.distance);
