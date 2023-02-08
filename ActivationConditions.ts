@@ -377,10 +377,12 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 					nonCorners.push(new Region(lastEnd, course.distance));
 				}
 				return regions.rmap(r => nonCorners.map(s => r.intersect(s)));
-			} else {
+			} else if (course.corners.length + cornerNum >= 5) {
 				const corner = course.corners[course.corners.length + cornerNum - 5];
 				const cornerBounds = new Region(corner.start, corner.start + corner.length);
 				return regions.rmap(r => r.intersect(cornerBounds));
+			} else {
+				return new RegionList();
 			}
 		},
 		filterNeq(regions: RegionList, cornerNum: number, course: CourseData, _: HorseParameters) {
