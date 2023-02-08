@@ -332,6 +332,7 @@ export class RaceSolver {
 
 		if (this.hillIdx != -1) {
 			this.targetSpeed -= this.course.slopes[this.hillIdx].slope / 10000.0 * 200.0 / this.horse.power;
+			this.targetSpeed = Math.max(this.targetSpeed, this.minSpeed);
 		}
 	}
 
