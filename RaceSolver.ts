@@ -404,19 +404,19 @@ export class RaceSolver {
 			const scaledDuration = ef.baseDuration * this.course.distance / 1000;
 			switch (ef.type) {
 			case SkillType.SpeedUp:
-				this.horse.speed += ef.modifier;
+				this.horse.speed = Math.max(this.horse.speed + ef.modifier, 1);
 				break;
 			case SkillType.StaminaUp:
-				this.horse.stamina += ef.modifier;
+				this.horse.stamina = Math.max(this.horse.stamina + ef.modifier, 1);
 				break;
 			case SkillType.PowerUp:
-				this.horse.power += ef.modifier;
+				this.horse.power = Math.max(this.horse.power + ef.modifier, 1);
 				break;
 			case SkillType.GutsUp:
-				this.horse.guts += ef.modifier;
+				this.horse.guts = Math.max(this.horse.guts + ef.modifier, 1);
 				break;
 			case SkillType.WisdomUp:
-				this.horse.wisdom += ef.modifier;
+				this.horse.wisdom = Math.max(this.horse.wisdom + ef.modifier, 1);
 				break;
 			case SkillType.TargetSpeed:
 				this.activeSpeedSkills.push({skillId: s.skillId, durationTimer: this.getNewTimer(-scaledDuration), modifier: ef.modifier});
