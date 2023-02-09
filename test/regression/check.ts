@@ -1,0 +1,47 @@
+import * as fs from 'fs';
+import test from 'tape';
+
+import { makeBuilder } from '../arb/Race';
+import { RaceSolver } from '../../RaceSolver';
+
+// This is more or less arbitrary but results in basically the level of precision we care about for the sim results.
+const Epsilon = 5e11 * Number.EPSILON;
+function almostEqual(a: number, b: number) {
+	if (a == b) return true;
+	return Math.abs(a - b) < Math.max(Epsilon * (Math.abs(a) + Math.abs(b)), Number.EPSILON);
+}
+
+const cases = JSON.parse(fs.readFileSync(process.argv[2], 'utf-8'));
+
+test('should give results similar to the checkpoint', t => {
+	t.plan(cases.length + cases.reduce((a,b) => a + b.params.nsamples * +!b.result.err, 0));
+
+	cases.forEach(testCase => {
+		const standard = makeBuilder(testCase.params);
+		const compare = standard.fork();
+		testCase.params.skillsUnderTest.forEach(id => compare.addSkill(id));
+		const g1 = compare.build();
+		const g2 = standard.build();
+		let err = false;
+		for (let i = 0; i < testCase.params.nsamples; ++i) {
+			try {
+				const s1 = g1.next().value as RaceSolver;
+				const s2 = g2.next().value as RaceSolver;
+
+				while (s1.pos < standard._course.distance) {
+					s1.step(testCase.timestep);
+				}
+
+				while (s2.accumulatetime.t < s1.accumulatetime.t) {
+					s2.step(testCase.timestep);
+				}
+
+				t.assert(almostEqual(s1.pos - s2.pos, testCase.result.gain[i]));
+			} catch (_) {
+				err = true;
+				break;
+			}
+		}
+		t.assert(err == testCase.result.err);
+	});
+});
