@@ -1,8 +1,10 @@
 import * as fs from 'fs';
 import test from 'tape';
+import { program, Option } from 'commander';
 
 import { makeBuilder } from '../arb/Race';
 import { RaceSolver } from '../../RaceSolver';
+import { Rule30CARng } from '../../Random';
 
 // This is more or less arbitrary but results in basically the level of precision we care about for the sim results.
 const Epsilon = 5e11 * Number.EPSILON;
@@ -11,7 +13,27 @@ function almostEqual(a: number, b: number) {
 	return Math.abs(a - b) < Math.max(Epsilon * (Math.abs(a) + Math.abs(b)), Number.EPSILON);
 }
 
-const cases = JSON.parse(fs.readFileSync(process.argv[2], 'utf-8'));
+program
+	.argument('<cases>', 'JSON file of test cases')
+	.option('--fast', 'tests a random sample of cases instead of the entire set')
+	.addOption(new Option('--seed <number>', 'seed to use for random shuffle with --fast')
+		.implies({fast: true})
+		.default(Math.floor(Math.random() * (-1 >>> 0)) >>> 0)
+		.argParser(n => parseInt(n,10) >>> 0));
+
+program.parse();
+const options = program.opts();
+
+let cases = JSON.parse(fs.readFileSync(program.args[0], 'utf-8'));
+
+if (options.fast) {
+	const rng = new Rule30CARng(options.seed);
+	for (let i = cases.length; --i >= 0;) {
+		const j = rng.uniform(i + 1);
+		[cases[i], cases[j]] = [cases[j], cases[i]];
+	}
+	cases = cases.slice(0,100);
+}
 
 test('should give results similar to the checkpoint', t => {
 	t.plan(cases.length + cases.reduce((a,b) => a + b.params.nsamples * +!b.result.err, 0));
@@ -44,4 +66,8 @@ test('should give results similar to the checkpoint', t => {
 		}
 		t.assert(err == testCase.result.err);
 	});
+
+	if (options.fast) {
+		t.comment('seed ' + options.seed);
+	}
 });
