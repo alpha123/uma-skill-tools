@@ -19,7 +19,8 @@ program
 	.addOption(new Option('--seed <number>', 'seed to use for random shuffle with --fast')
 		.implies({fast: true})
 		.default(Math.floor(Math.random() * (-1 >>> 0)) >>> 0)
-		.argParser(n => parseInt(n,10) >>> 0));
+		.argParser(n => parseInt(n,10) >>> 0))
+	.option('-l, --failure-log <file>', 'file to log failing cases to', 'failures.json');
 
 program.parse();
 const options = program.opts();
@@ -38,6 +39,7 @@ if (options.fast) {
 test('should give results similar to the checkpoint', t => {
 	t.plan(cases.length + cases.reduce((a,b) => a + b.params.nsamples * +!b.result.err, 0));
 
+	const failures = [];
 	cases.forEach(testCase => {
 		const standard = makeBuilder(testCase.params);
 		const compare = standard.fork();
@@ -58,7 +60,12 @@ test('should give results similar to the checkpoint', t => {
 					s2.step(testCase.timestep);
 				}
 
-				t.assert(almostEqual(s1.pos - s2.pos, testCase.result.gain[i]));
+				if (almostEqual(s1.pos - s2.pos, testCase.result.gain[i])) {
+					t.ok(true);
+				} else {
+					t.ok(false);
+					failures.push({params: testCase.params, sampleIdx: i, expected: testCase.result.gain[i], actual: s1.pos - s2.pos});
+				}
 			} catch (_) {
 				err = true;
 				break;
@@ -66,6 +73,11 @@ test('should give results similar to the checkpoint', t => {
 		}
 		t.assert(err == testCase.result.err);
 	});
+
+	if (failures.length > 0) {
+		fs.writeFileSync(options.failureLog, JSON.stringify(failures));
+		t.comment('wrote ' + failures.length + ' failure' + (failures.length == 1 ? '' : 's') + ' to ' + options.failureLog);
+	}
 
 	if (options.fast) {
 		t.comment('seed ' + options.seed);
