@@ -69,17 +69,23 @@ function adjustOvercap(stat: number) {
 	return stat > 1200 ? 1200 + Math.floor((stat - 1200) / 2) : stat;
 }
 
-export function buildHorseParameters(horseDesc: HorseDesc, course: CourseData, mood: Mood, ground: GroundCondition) {
+export function buildBaseStats(horseDesc: HorseDesc, mood: Mood) {
 	const motivCoef = 1 + 0.02 * mood;
 
-	const baseStats = {
+	return Object.freeze({
 		speed: adjustOvercap(horseDesc.speed) * motivCoef,
 		stamina: adjustOvercap(horseDesc.stamina) * motivCoef,
 		power: adjustOvercap(horseDesc.power) * motivCoef,
 		guts: adjustOvercap(horseDesc.guts) * motivCoef,
-		wisdom: adjustOvercap(horseDesc.wisdom) * motivCoef
-	};
+		wisdom: adjustOvercap(horseDesc.wisdom) * motivCoef,
+		strategy: parseStrategy(horseDesc.strategy),
+		distanceAptitude: parseAptitude(horseDesc.distanceAptitude, 'distance'),
+		surfaceAptitude: parseAptitude(horseDesc.surfaceAptitude, 'surface'),
+		strategyAptitude: parseAptitude(horseDesc.strategyAptitude, 'strategy')
+	});
+}
 
+export function buildAdjustedStats(baseStats: HorseParameters, course: CourseData, ground: GroundCondition) {
 	const raceCourseModifier = CourseHelpers.courseSpeedModifier(course, baseStats);
 
 	return Object.freeze({
@@ -87,11 +93,11 @@ export function buildHorseParameters(horseDesc: HorseDesc, course: CourseData, m
 		stamina: baseStats.stamina,
 		power: Math.max(baseStats.power + GroundPowerModifier[course.surface][ground], 1),
 		guts: baseStats.guts,
-		wisdom: baseStats.wisdom * StrategyProficiencyModifier[parseAptitude(horseDesc.strategyAptitude, 'strategy')],
-		strategy: parseStrategy(horseDesc.strategy),
-		distanceAptitude: parseAptitude(horseDesc.distanceAptitude, 'distance'),
-		surfaceAptitude: parseAptitude(horseDesc.surfaceAptitude, 'surface'),
-		strategyAptitude: parseAptitude(horseDesc.strategyAptitude, 'strategy')
+		wisdom: baseStats.wisdom * StrategyProficiencyModifier[baseStats.strategyAptitude],
+		strategy: baseStats.strategy,
+		distanceAptitude: baseStats.distanceAptitude,
+		surfaceAptitude: baseStats.surfaceAptitude,
+		strategyAptitude: baseStats.strategyAptitude
 	});
 }
 
@@ -307,12 +313,12 @@ export class RaceSolverBuilder {
 	}
 
 	*build() {
-		const horse = buildHorseParameters(this._horse, this._course, this._mood, this._ground);
+		let horse = buildBaseStats(this._horse, this._mood);
 		const solverRng = new Rule30CARng(this._rng.int32());
 		const pacerRng = new Rule30CARng(this._rng.int32());  // need this even if _pacer is null in case we forked from/to something with a pacer
 		                                                      // (to keep the rngs in sync)
 
-		const pacerHorse = this._pacer ? buildHorseParameters(this._pacer, this._course, this._mood, this._ground) : null;
+		const pacerHorse = this._pacer ? buildAdjustedStats(buildBaseStats(this._pacer, this._mood), this._course, this._ground) : null;
 
 		const wholeCourse = new RegionList();
 		wholeCourse.push(new Region(0, this._course.distance));
@@ -321,6 +327,9 @@ export class RaceSolverBuilder {
 		const makeSkill = buildSkillData.bind(null, horse, this._course, wholeCourse, this._conditions) as (s: string) => SkillData | null;
 		const skilldata = this._skills.map(makeSkill).filter(s => s != null);
 		const triggers = skilldata.map(sd => sd.samplePolicy.sample(sd.regions, this.nsamples, this._rng));
+
+		// must come after skill activations are decided because conditions like base_power depend on base stats
+		horse = buildAdjustedStats(horse, this._course, this._ground);
 
 		for (let i = 0; i < this.nsamples; ++i) {
 			const skills = skilldata.map((sd,sdi) => ({
