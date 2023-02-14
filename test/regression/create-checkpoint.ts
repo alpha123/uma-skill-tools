@@ -10,10 +10,15 @@ program
 		.argParser(n => parseInt(n,10)))
 	.addOption(new Option('--timestep <dt>', 'integration timestep in seconds')
 		.default(1/15, '1/15')
-		.argParser(ts => ts.split('/').reduceRight((a,b) => +b / +a, 1.0)));
+		.argParser(ts => ts.split('/').reduceRight((a,b) => +b / +a, 1.0)))
+	.addOption(new Option('--seed <number>', 'seed for random generator')
+		.default((Date.now() ^ (Math.random() * 0x100000000)) >>> 0)  // this seems to be what fast-check uses by default
+		.argParser(x => parseInt(x,10)));
 
 program.parse();
 const options = program.opts();
+
+fc.configureGlobal({seed: options.seed});
 
 const results = [];
 fc.sample(arb.Race(), options.tests).forEach(params => {
