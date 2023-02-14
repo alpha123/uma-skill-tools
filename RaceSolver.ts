@@ -137,6 +137,8 @@ export class RaceSolver {
 	currentSpeed: number
 	targetSpeed: number
 	accel: number
+	baseTargetSpeed: number[]
+	lastSpurtSpeed: number
 	horse: { -readonly[P in keyof HorseParameters]: HorseParameters[P] }
 	course: CourseData
 	rng: PRNG
@@ -222,6 +224,9 @@ export class RaceSolver {
 		this.processSkillActivations();  // activate gate skills (must come before setting minimum speed because green skills can modify guts)
 		this.minSpeed = 0.85 * baseSpeed(this.course) + Math.sqrt(200.0 * this.horse.guts) * 0.001;
 		this.startDash = true;
+
+		this.baseTargetSpeed = ([0,1,2] as Phase[]).map(phase => baseTargetSpeed(this.horse, this.course, phase));
+		this.lastSpurtSpeed = lastSpurtSpeed(this.horse, this.course);
 	}
 
 	initHills() {
@@ -324,9 +329,9 @@ export class RaceSolver {
 
 	updateTargetSpeed() {
 		if (this.phase == 2) {
-			this.targetSpeed = lastSpurtSpeed(this.horse, this.course);
+			this.targetSpeed = this.lastSpurtSpeed;
 		} else {
-			this.targetSpeed = baseTargetSpeed(this.horse, this.course, this.phase) * this.posKeepSpeedCoef;
+			this.targetSpeed = this.baseTargetSpeed[this.phase] * this.posKeepSpeedCoef;
 		}
 		this.targetSpeed += this.activeSpeedSkills.reduce((a,b) => a + b.modifier, 0);
 
