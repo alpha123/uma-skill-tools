@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 import test from 'tape';
 import { program, Option } from 'commander';
 
@@ -13,8 +14,19 @@ function almostEqual(a: number, b: number) {
 	return Math.abs(a - b) < Math.max(Epsilon * (Math.abs(a) + Math.abs(b)), Number.EPSILON);
 }
 
+function getLatestCheckpoint() {
+	const dir = path.join(path.dirname(process.argv[1]), 'checkpoints');
+	// sort by the date contained in the filename; we can't sort by ctime/mtime since git does not preserve those when cloning
+	// this does mean this isn't guaranteed to find the latest file if multiple checkpoints were created on the same day, but we can
+	// simply avoid doing that for the most part.
+	// we could of course simply include the exact timestamp in the filename, but i dont like how that looks.
+	return fs.readdirSync(dir)
+		.map(f => [path.join(dir, f), Date.parse(f.split('.',1)[0].replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'))] as [string,number])
+		.sort((a,b) => b[1] - a[1])[0][0];
+}
+
 program
-	.argument('<cases>', 'JSON file of test cases')
+	.argument('[cases]', 'JSON file of test cases')
 	.option('--fast', 'tests a random sample of cases instead of the entire set')
 	.addOption(new Option('--seed <number>', 'seed to use for random shuffle with --fast')
 		.implies({fast: true})
@@ -25,7 +37,8 @@ program
 program.parse();
 const options = program.opts();
 
-let cases = JSON.parse(fs.readFileSync(program.args[0], 'utf-8'));
+const casefile = program.args.length > 0 ? program.args[0] : getLatestCheckpoint();
+let cases = JSON.parse(fs.readFileSync(casefile, 'utf-8'));
 
 if (options.fast) {
 	const rng = new Rule30CARng(options.seed);
