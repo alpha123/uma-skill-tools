@@ -441,7 +441,7 @@ export class RaceSolver {
 
 	doActivateRandomGold(ngolds: number) {
 		const goldIndices = this.pendingSkills.reduce((acc, skill, i) => {
-			if (skill.rarity == SkillRarity.Gold) acc.push(i);
+			if (skill.rarity == SkillRarity.Gold && skill.effects.every(ef => ef.type > SkillType.WisdomUp)) acc.push(i);
 			return acc;
 		}, []);
 		for (let i = goldIndices.length; --i >= 0;) {
