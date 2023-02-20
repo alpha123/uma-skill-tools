@@ -252,6 +252,7 @@ export class RaceSolver {
 		this.processSkillActivations();  // activate gate skills (must come before setting minimum speed because green skills can modify guts)
 		this.minSpeed = 0.85 * baseSpeed(this.course) + Math.sqrt(200.0 * this.horse.guts) * 0.001;
 		this.startDash = true;
+		this.modifiers.accel.add(24.0);  // start dash accel
 
 		this.baseTargetSpeed = ([0,1,2] as Phase[]).map(phase => baseTargetSpeed(this.horse, this.course, phase));
 		this.lastSpurtSpeed = lastSpurtSpeed(this.horse, this.course);
@@ -326,6 +327,7 @@ export class RaceSolver {
 			this.currentSpeed = this.minSpeed;
 		} else if (this.startDash && this.currentSpeed >= 0.85 * baseSpeed(this.course)) {
 			this.startDash = false;
+			this.modifiers.accel.add(-24.0);
 		}
 		this.currentSpeedModifier = 0.0;
 	}
@@ -375,9 +377,6 @@ export class RaceSolver {
 			return;
 		}
 		this.accel = baseAccel(this.hillIdx != -1 ? UphillBaseAccel : BaseAccel, this.horse, this.phase);
-		if (this.startDash) {
-			this.accel += 24.0;
-		}
 		this.accel += this.modifiers.accel.acc + this.modifiers.accel.err;
 	}
 
