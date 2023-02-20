@@ -85,6 +85,20 @@ export class Timer {
 	constructor(public t: number) {}
 }
 
+export class CompensatedAccumulator {
+	constructor(public acc: number, public err: number = 0.0) {}
+
+	add(n: number) {
+		const t = this.acc + n;
+		if (Math.abs(this.acc) >= Math.abs(n)) {
+			this.err += (this.acc - t) + n;
+		} else {
+			this.err += (n - t) + this.acc;
+		}
+		this.acc = t;
+	}
+}
+
 export interface RaceState {
 	readonly accumulatetime: Readonly<Timer>
 	readonly activateCount: readonly number[]
@@ -172,6 +186,13 @@ export class RaceSolver {
 	posKeepEffectExitDistance: number
 	updatePositionKeep: () => void
 
+	modifiers: {
+		targetSpeed: CompensatedAccumulator
+		currentSpeedDisplacement: CompensatedAccumulator
+		accel: CompensatedAccumulator
+		oneFrameAccel: number
+	}
+
 	constructor(params: {
 		horse: HorseParameters,
 		course: CourseData,
@@ -214,6 +235,13 @@ export class RaceSolver {
 		} else {
 			this.updatePositionKeep = this.updatePositionKeepNonNige;
 		}
+
+		this.modifiers = {
+			targetSpeed: new CompensatedAccumulator(0.0),
+			currentSpeedDisplacement: new CompensatedAccumulator(0.0),
+			accel: new CompensatedAccumulator(0.0),
+			oneFrameAccel: 0.0
+		};
 
 		this.initHills();
 
@@ -333,7 +361,7 @@ export class RaceSolver {
 		} else {
 			this.targetSpeed = this.baseTargetSpeed[this.phase] * this.posKeepSpeedCoef;
 		}
-		this.targetSpeed += this.activeSpeedSkills.reduce((a,b) => a + b.modifier, 0);
+		this.targetSpeed += this.modifiers.targetSpeed.acc + this.modifiers.targetSpeed.err;
 
 		if (this.hillIdx != -1) {
 			this.targetSpeed -= this.course.slopes[this.hillIdx].slope / 10000.0 * 200.0 / this.horse.power;
@@ -350,7 +378,7 @@ export class RaceSolver {
 		if (this.startDash) {
 			this.accel += 24.0;
 		}
-		this.accel += this.activeAccelSkills.reduce((a,b) => a + b.modifier, 0);
+		this.accel += this.modifiers.accel.acc + this.modifiers.accel.err;
 	}
 
 	updateHills() {
@@ -382,6 +410,7 @@ export class RaceSolver {
 			const s = this.activeSpeedSkills[i];
 			if (s.durationTimer.t >= 0) {
 				this.activeSpeedSkills.splice(i,1);
+				this.modifiers.targetSpeed.add(-s.modifier);
 				this.onSkillDeactivate(this, s.skillId);
 			}
 		}
@@ -389,6 +418,7 @@ export class RaceSolver {
 			const s = this.activeAccelSkills[i];
 			if (s.durationTimer.t >= 0) {
 				this.activeAccelSkills.splice(i,1);
+				this.modifiers.accel.add(-s.modifier);
 				this.onSkillDeactivate(this, s.skillId);
 			}
 		}
@@ -424,9 +454,11 @@ export class RaceSolver {
 				this.horse.wisdom = Math.max(this.horse.wisdom + ef.modifier, 1);
 				break;
 			case SkillType.TargetSpeed:
+				this.modifiers.targetSpeed.add(ef.modifier);
 				this.activeSpeedSkills.push({skillId: s.skillId, durationTimer: this.getNewTimer(-scaledDuration), modifier: ef.modifier});
 				break;
 			case SkillType.Accel:
+				this.modifiers.accel.add(ef.modifier);
 				this.activeAccelSkills.push({skillId: s.skillId, durationTimer: this.getNewTimer(-scaledDuration), modifier: ef.modifier});
 				break;
 			case SkillType.CurrentSpeed:
