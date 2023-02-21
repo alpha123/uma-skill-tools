@@ -153,6 +153,7 @@ export class RaceSolver {
 	accel: number
 	baseTargetSpeed: number[]
 	lastSpurtSpeed: number
+	baseAccel: number[]
 	horse: { -readonly[P in keyof HorseParameters]: HorseParameters[P] }
 	course: CourseData
 	rng: PRNG
@@ -254,8 +255,11 @@ export class RaceSolver {
 		this.startDash = true;
 		this.modifiers.accel.add(24.0);  // start dash accel
 
+		// similarly this must also come after the first round of skill activations
 		this.baseTargetSpeed = ([0,1,2] as Phase[]).map(phase => baseTargetSpeed(this.horse, this.course, phase));
 		this.lastSpurtSpeed = lastSpurtSpeed(this.horse, this.course);
+
+		this.baseAccel = ([0,1,2,0,1,2] as Phase[]).map((phase,i) => baseAccel(i > 2 ? UphillBaseAccel : BaseAccel, this.horse, phase));
 	}
 
 	initHills() {
@@ -376,7 +380,7 @@ export class RaceSolver {
 			this.accel = this.isPaceDown ? -0.5 : PhaseDeceleration[this.phase];
 			return;
 		}
-		this.accel = baseAccel(this.hillIdx != -1 ? UphillBaseAccel : BaseAccel, this.horse, this.phase);
+		this.accel = this.baseAccel[+(this.hillIdx != -1) * 3 + this.phase];
 		this.accel += this.modifiers.accel.acc + this.modifiers.accel.err;
 	}
 
