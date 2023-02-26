@@ -370,6 +370,7 @@ export class RaceSolver {
 		this.targetSpeed += this.modifiers.targetSpeed.acc + this.modifiers.targetSpeed.err;
 
 		if (this.hillIdx != -1) {
+			// recalculating this every frame is actually measurably faster than calculating the penalty for each slope ahead of time, somehow
 			this.targetSpeed -= this.course.slopes[this.hillIdx].slope / 10000.0 * 200.0 / this.horse.power;
 			this.targetSpeed = Math.max(this.targetSpeed, this.minSpeed);
 		}
