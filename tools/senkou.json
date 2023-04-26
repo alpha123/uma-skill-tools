@@ -1,9 +1,9 @@
 {
-	"speed": 1600,
+	"speed": 1500,
 	"stamina": 800,
 	"power": 1200,
 	"guts": 700,
-	"wisdom": 1100,
+	"wisdom": 1200,
 	"strategy": "Senkou",
 	"distanceAptitude": "S",
 	"surfaceAptitude": "A",
