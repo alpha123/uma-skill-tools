@@ -15,10 +15,10 @@ export interface HorseDesc {
 	power: number
 	guts: number
 	wisdom: number
-	strategy: string
-	distanceAptitude: string
-	surfaceAptitude: string
-	strategyAptitude: string
+	strategy: string | Strategy
+	distanceAptitude: string | Aptitude
+	surfaceAptitude: string | Aptitude
+	strategyAptitude: string | Aptitude
 }
 
 export const enum GroundCondition { Good, Yielding, Soft, Heavy }
@@ -39,7 +39,10 @@ const GroundPowerModifier = Object.freeze([
 
 const StrategyProficiencyModifier = Object.freeze([1.1, 1.0, 0.85, 0.75, 0.6, 0.4, 0.2, 0.1]);
 
-export function parseStrategy(s: string) {
+export function parseStrategy(s: string | Strategy) {
+	if (typeof s != 'string') {
+		return s;
+	}
 	switch (s.toUpperCase()) {
 	case 'NIGE': return Strategy.Nige;
 	case 'SENKOU': return Strategy.Senkou;
@@ -51,7 +54,10 @@ export function parseStrategy(s: string) {
 	}
 }
 
-export function parseAptitude(a: string, type: string) {
+export function parseAptitude(a: string | Aptitude, type: string) {
+	if (typeof a != 'string') {
+		return a;
+	}
 	switch (a.toUpperCase()) {
 	case 'S': return Aptitude.S;
 	case 'A': return Aptitude.A;
@@ -262,8 +268,16 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
+	_isNige() {
+		if (typeof this._horse.strategy == 'string') {
+			return this._horse.strategy.toUpperCase() == 'NIGE' || this._horse.strategy.toUpperCase() == 'OONIGE';
+		} else {
+			return this._horse.strategy == Strategy.Nige || this._horse.strategy == Strategy.Oonige;
+		}
+	}
+
 	useDefaultPacer(openingLegAccel: boolean = false) {
-		if (this._horse.strategy.toUpperCase() == 'NIGE' || this._horse.strategy.toUpperCase() == 'OONIGE') {
+		if (this._isNige()) {
 			return this;
 		}
 
