@@ -96,10 +96,11 @@ export function buildSkillData(horse: HorseParameters, course: CourseData, whole
 		}
 		const effects = buildSkillEffects(skill);
 		if (effects.length > 0) {
+			const rarity = skills[skillId].rarity;
 			return {
 				skillId: skillId,
 				// for some reason 1*/2* uniques, 1*/2* upgraded to 3*, and naturally 3* uniques all have different rarity (3, 4, 5 respectively)
-				rarity: Math.min(skills[skillId].rarity, 3),
+				rarity: rarity >= 3 && rarity <= 5 ? 3 : rarity,
 				samplePolicy: op.samplePolicy,
 				regions: regions,
 				extraCondition: extraCondition,

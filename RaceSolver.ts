@@ -120,7 +120,7 @@ export const enum SkillType {
 	ActivateRandomGold = 37
 }
 
-export const enum SkillRarity { White = 1, Gold, Unique }
+export const enum SkillRarity { White = 1, Gold, Unique, Evolution = 6 }
 
 export interface SkillEffect {
 	type: SkillType
@@ -482,7 +482,7 @@ export class RaceSolver {
 
 	doActivateRandomGold(ngolds: number) {
 		const goldIndices = this.pendingSkills.reduce((acc, skill, i) => {
-			if (skill.rarity == SkillRarity.Gold && skill.effects.every(ef => ef.type > SkillType.WisdomUp)) acc.push(i);
+			if ((skill.rarity == SkillRarity.Gold || skill.rarity == SkillRarity.Evolution) && skill.effects.every(ef => ef.type > SkillType.WisdomUp)) acc.push(i);
 			return acc;
 		}, []);
 		for (let i = goldIndices.length; --i >= 0;) {
