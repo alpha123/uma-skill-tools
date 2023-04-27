@@ -1,5 +1,5 @@
 import { HorseParameters, Strategy, Aptitude } from './HorseTypes';
-import { CourseData, CourseHelpers } from './CourseData';
+import { CourseData, CourseHelpers, DistanceType } from './CourseData';
 import { Region, RegionList } from './Region';
 import { Rule30CARng } from './Random';
 import { Conditions, random, immediate } from './ActivationConditions';
@@ -38,6 +38,22 @@ const GroundPowerModifier = Object.freeze([
 ].map(o => Object.freeze(o)));
 
 const StrategyProficiencyModifier = Object.freeze([1.1, 1.0, 0.85, 0.75, 0.6, 0.4, 0.2, 0.1]);
+
+namespace Asitame {
+	export const StrategyDistanceCoefficient = Object.freeze([
+		[],  // distances are 1-indexed (as are strategies, hence the 0 in the first column for every row)
+		[0, 1.0, 0.7, 0.75,  0.7,  1.0],  // short (nige, senkou, sasi, oikomi, oonige)
+		[0, 1.0, 0.8, 0.7,   0.75, 1.0],  // mile
+		[0, 1.0, 0.9, 0.875, 0.86, 1.0],  // medium
+		[0, 1.0, 0.9, 1.0,   0.9,  1.0]   // long
+	]);
+
+	export const BaseModifier = 0.00875;
+
+	export function calcApproximateModifier(power: number, strategy: Strategy, distance: DistanceType) {
+		return BaseModifier * Math.sqrt(power - 1200) * StrategyDistanceCoefficient[distance][strategy];
+	}
+}
 
 export function parseStrategy(s: string | Strategy) {
 	if (typeof s != 'string') {
@@ -221,6 +237,7 @@ export class RaceSolverBuilder {
 	_rng: Rule30CARng
 	_conditions: typeof Conditions
 	_skills: string[]
+	_extraSkillHooks: ((skilldata: SkillData[], horse: HorseParameters, course: CourseData) => void)[]
 
 	constructor(readonly nsamples: number) {
 		this._course = null;
@@ -232,6 +249,7 @@ export class RaceSolverBuilder {
 		this._rng = new Rule30CARng(Math.floor(Math.random() * (-1 >>> 0)) >>> 0);
 		this._conditions = Conditions;
 		this._skills = [];
+		this._extraSkillHooks = [];
 	}
 
 	seed(seed: number) {
@@ -308,6 +326,40 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
+	// NB. must be called after horse and mood are set
+	withAsiwotameru() {
+		// for some reason, asitame (probably??) uses *displayed* power adjusted for motivation + greens
+		const baseDisplayedPower = this._horse.power * (1 + 0.02 * this._mood);
+		this._extraSkillHooks.push((skilldata, horse, course) => {
+			const power = skilldata.reduce((acc,sd) => {
+				const powerUp = sd.effects.find(ef => ef.type == SkillType.PowerUp);
+				if (powerUp && sd.regions.length > 0) {
+					return acc + powerUp.modifier;
+				} else {
+					return acc;
+				}
+			}, baseDisplayedPower);
+
+			if (power > 1200) {
+				const spurtStart = new RegionList();
+				spurtStart.push(new Region(CourseHelpers.phaseStart(course.distance, 2), course.distance));
+				skilldata.push({
+					skillId: 'asitame',
+					rarity: SkillRarity.White,
+					regions: spurtStart,
+					samplePolicy: ImmediatePolicy,
+					extraCondition: (_) => true,
+					effects: [{
+						type: SkillType.Accel,
+						baseDuration: 3.0 / (course.distance / 1000.0),
+						modifier: Asitame.calcApproximateModifier(power, horse.strategy, course.distanceType)
+					}]
+				});
+			}
+		});
+		return this;
+	}
+
 	addSkill(skillId: string) {
 		this._skills.push(skillId);
 		return this;
@@ -324,6 +376,12 @@ export class RaceSolverBuilder {
 		clone._rng = new Rule30CARng(this._rng.lo, this._rng.hi);
 		clone._conditions = this._conditions;
 		clone._skills = this._skills.slice();
+
+		// NB. GOTCHA: if asitame is enabled, it closes over *our* horse and mood data, and not the clone's
+		// this is assumed to be fine, since fork() is intended to be used after everything is added except skills,
+		// but it does mean that if you want to compare different power stats or moods, you must call withAsiwotameru()
+		// after fork() on each instance separately, which is a potential gotcha
+		clone._extraSkillHooks = this._extraSkillHooks.slice();
 		return clone;
 	}
 
@@ -341,6 +399,7 @@ export class RaceSolverBuilder {
 
 		const makeSkill = buildSkillData.bind(null, horse, this._course, wholeCourse, this._conditions) as (s: string) => SkillData | null;
 		const skilldata = this._skills.map(makeSkill).filter(s => s != null);
+		this._extraSkillHooks.forEach(h => h(skilldata, horse, this._course));
 		const triggers = skilldata.map(sd => sd.samplePolicy.sample(sd.regions, this.nsamples, this._rng));
 
 		// must come after skill activations are decided because conditions like base_power depend on base stats

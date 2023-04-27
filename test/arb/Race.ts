@@ -107,6 +107,7 @@ export function makeBuilder(params: RaceParams) {
 	if (params.paceEffectsEnabled) {
 		builder.useDefaultPacer();
 	}
+	builder.withAsiwotameru();
 	params.presupposedSkills.forEach(id => builder.addSkill(id));
 	return builder;
 }
