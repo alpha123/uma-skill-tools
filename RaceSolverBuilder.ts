@@ -333,7 +333,7 @@ export class RaceSolverBuilder {
 		this._extraSkillHooks.push((skilldata, horse, course) => {
 			const power = skilldata.reduce((acc,sd) => {
 				const powerUp = sd.effects.find(ef => ef.type == SkillType.PowerUp);
-				if (powerUp && sd.regions.length > 0) {
+				if (powerUp && sd.regions.length > 0 && sd.regions[0].start < 9999) {
 					return acc + powerUp.modifier;
 				} else {
 					return acc;
