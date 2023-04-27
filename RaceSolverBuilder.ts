@@ -21,20 +21,20 @@ export interface HorseDesc {
 	strategyAptitude: string | Aptitude
 }
 
-export const enum GroundCondition { Good, Yielding, Soft, Heavy }
+export const enum GroundCondition { Good = 1, Yielding, Soft, Heavy }
 
 export type Mood = -2 | -1 | 0 | 1 | 2;
 
 const GroundSpeedModifier = Object.freeze([
 	null, // ground types started at 1
-	[0, 0, 0, -50],
-	[0, 0, 0, -50]
+	[0, 0, 0, 0, -50],
+	[0, 0, 0, 0, -50]
 ].map(o => Object.freeze(o)));
 
 const GroundPowerModifier = Object.freeze([
 	null,
-	[0, -50, -50, -50],
-	[-100, -50, -100, -100]
+	[0, 0, -50, -50, -50],
+	[0, -100, -50, -100, -100]
 ].map(o => Object.freeze(o)));
 
 const StrategyProficiencyModifier = Object.freeze([1.1, 1.0, 0.85, 0.75, 0.6, 0.4, 0.2, 0.1]);
