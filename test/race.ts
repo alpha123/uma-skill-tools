@@ -51,3 +51,24 @@ prop('position should always be defined', forAll(arb.Race(), params => {
 	}
 	return true;
 }));
+
+prop('identical race solvers should always stay in sync', forAll(arb.Race(), params => {
+	const b1 = arb.makeBuilder(params);
+	const b2 = b1.fork();
+	const g1 = b1.build();
+	const g2 = b2.build();
+
+	for (let i = 0; i < params.nsamples; ++i) {
+		const s1 = g1.next().value as RaceSolver;
+		const s2 = g2.next().value as RaceSolver;
+
+		while (s1.pos < b1._course.distance) {
+			s1.step(options.timestep);
+			s2.step(options.timestep);
+			if (s1.pos != s2.pos) {
+				return false;
+			}
+		}
+	}
+	return true;
+}));
