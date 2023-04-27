@@ -114,7 +114,8 @@ export const enum SkillType {
 	GutsUp = 4,
 	WisdomUp = 5,
 	Recovery = 9,
-	CurrentSpeed = 22,
+	CurrentSpeed = 21,
+	CurrentSpeedWithNaturalDeceleration = 22,
 	TargetSpeed = 27,
 	Accel = 31,
 	ActivateRandomGold = 37
@@ -163,10 +164,10 @@ export class RaceSolver {
 	startDash: boolean
 	phase: Phase
 	nextPhaseTransition: number
-	activeSpeedSkills: ActiveSkill[]
+	activeTargetSpeedSkills: ActiveSkill[]
+	activeCurrentSpeedSkills: (ActiveSkill & {naturalDeceleration: boolean})[]
 	activeAccelSkills: ActiveSkill[]
 	pendingSkills: PendingSkill[]
-	currentSpeedModifier: number
 	nHills: number
 	hillIdx: number
 	hillStart: number[]
@@ -189,7 +190,7 @@ export class RaceSolver {
 
 	modifiers: {
 		targetSpeed: CompensatedAccumulator
-		currentSpeedDisplacement: CompensatedAccumulator
+		currentSpeed: CompensatedAccumulator
 		accel: CompensatedAccumulator
 		oneFrameAccel: number
 	}
@@ -215,9 +216,9 @@ export class RaceSolver {
 		this.accumulatetime = this.getNewTimer();
 		this.phase = 0;
 		this.nextPhaseTransition = CourseHelpers.phaseStart(this.course.distance, 1);
-		this.activeSpeedSkills = [];
+		this.activeTargetSpeedSkills = [];
+		this.activeCurrentSpeedSkills = [];
 		this.activeAccelSkills = [];
-		this.currentSpeedModifier = 0.0;
 		this.activateCount = [0,0,0];
 		this.activateCountHeal = 0;
 		this.onSkillActivate = params.onSkillActivate || noop;
@@ -239,7 +240,7 @@ export class RaceSolver {
 
 		this.modifiers = {
 			targetSpeed: new CompensatedAccumulator(0.0),
-			currentSpeedDisplacement: new CompensatedAccumulator(0.0),
+			currentSpeed: new CompensatedAccumulator(0.0),
 			accel: new CompensatedAccumulator(0.0),
 			oneFrameAccel: 0.0
 		};
@@ -293,7 +294,7 @@ export class RaceSolver {
 			// target speed can be below 0.85 * BaseSpeed for non-runners if there is a hill at the start of the course
 			// in this case you actually don't exit start dash until your target speed is high enough to be over 0.85 * BaseSpeed
 			return Math.min(this.targetSpeed, 0.85 * baseSpeed(this.course));
-		} else  if (this.currentSpeed > this.targetSpeed) {
+		} else  if (this.currentSpeed + this.modifiers.oneFrameAccel > this.targetSpeed) {
 			return 9999.0;  // allow decelerating if targetSpeed drops
 		} else {
 			return this.targetSpeed;
@@ -318,7 +319,8 @@ export class RaceSolver {
 		}
 
 		const halfv = Math.min(this.currentSpeed + 0.5 * dt * this.accel, this.getMaxSpeed());
-		this.pos += halfv * dt;
+		const displacement = halfv + this.modifiers.currentSpeed.acc + this.modifiers.currentSpeed.err;
+		this.pos += displacement * dt;
 		this.timers.forEach(tm => tm.t += dt);
 		this.updateHills();
 		this.updatePhase();
@@ -326,14 +328,14 @@ export class RaceSolver {
 		this.updatePositionKeep();
 		this.updateTargetSpeed();
 		this.applyForces();
-		this.currentSpeed = Math.min(halfv + 0.5 * dt * this.accel + this.currentSpeedModifier, this.getMaxSpeed());
+		this.currentSpeed = Math.min(halfv + 0.5 * dt * this.accel + this.modifiers.oneFrameAccel, this.getMaxSpeed());
 		if (!this.startDash && this.currentSpeed < this.minSpeed) {
 			this.currentSpeed = this.minSpeed;
 		} else if (this.startDash && this.currentSpeed >= 0.85 * baseSpeed(this.course)) {
 			this.startDash = false;
 			this.modifiers.accel.add(-24.0);
 		}
-		this.currentSpeedModifier = 0.0;
+		this.modifiers.oneFrameAccel = 0.0;
 	}
 
 	updatePositionKeepNonNige() {
@@ -345,13 +347,19 @@ export class RaceSolver {
 			if (
 			   this.pacer.pos - this.pos > this.posKeepEffectExitDistance
 			|| this.pos - this.posKeepEffectStart > this.sectionLength
-			|| this.activeSpeedSkills.length > 0
+			|| this.activeTargetSpeedSkills.length > 0
+			|| this.activeCurrentSpeedSkills.length > 0
 			) {
 				this.isPaceDown = false;
 				this.posKeepCooldown.t = -3.0;
 				this.posKeepSpeedCoef = 1.0;
 			}
-		} else if (this.pacer.pos - this.pos < this.posKeepMinThreshold && this.activeSpeedSkills.length == 0 && this.posKeepCooldown.t >= 0) {
+		} else if (
+			   this.pacer.pos - this.pos < this.posKeepMinThreshold
+			&& this.activeTargetSpeedSkills.length == 0
+			&& this.activeCurrentSpeedSkills.length == 0
+			&& this.posKeepCooldown.t >= 0
+		) {
 			this.isPaceDown = true;
 			this.posKeepEffectStart = this.pos;
 			const min = this.posKeepMinThreshold;
@@ -410,11 +418,22 @@ export class RaceSolver {
 	}
 
 	processSkillActivations() {
-		for (let i = this.activeSpeedSkills.length; --i >= 0;) {
-			const s = this.activeSpeedSkills[i];
+		for (let i = this.activeTargetSpeedSkills.length; --i >= 0;) {
+			const s = this.activeTargetSpeedSkills[i];
 			if (s.durationTimer.t >= 0) {
-				this.activeSpeedSkills.splice(i,1);
+				this.activeTargetSpeedSkills.splice(i,1);
 				this.modifiers.targetSpeed.add(-s.modifier);
+				this.onSkillDeactivate(this, s.skillId);
+			}
+		}
+		for (let i = this.activeCurrentSpeedSkills.length; --i >= 0;) {
+			const s = this.activeCurrentSpeedSkills[i];
+			if (s.durationTimer.t >= 0) {
+				this.activeCurrentSpeedSkills.splice(i,1);
+				this.modifiers.currentSpeed.add(-s.modifier);
+				if (s.naturalDeceleration) {
+					this.modifiers.oneFrameAccel += s.modifier;
+				}
 				this.onSkillDeactivate(this, s.skillId);
 			}
 		}
@@ -459,14 +478,19 @@ export class RaceSolver {
 				break;
 			case SkillType.TargetSpeed:
 				this.modifiers.targetSpeed.add(ef.modifier);
-				this.activeSpeedSkills.push({skillId: s.skillId, durationTimer: this.getNewTimer(-scaledDuration), modifier: ef.modifier});
+				this.activeTargetSpeedSkills.push({skillId: s.skillId, durationTimer: this.getNewTimer(-scaledDuration), modifier: ef.modifier});
 				break;
 			case SkillType.Accel:
 				this.modifiers.accel.add(ef.modifier);
 				this.activeAccelSkills.push({skillId: s.skillId, durationTimer: this.getNewTimer(-scaledDuration), modifier: ef.modifier});
 				break;
 			case SkillType.CurrentSpeed:
-				this.currentSpeedModifier += ef.modifier;
+			case SkillType.CurrentSpeedWithNaturalDeceleration:
+				this.modifiers.currentSpeed.add(ef.modifier);
+				this.activeCurrentSpeedSkills.push({
+					skillId: s.skillId, durationTimer: this.getNewTimer(-scaledDuration), modifier: ef.modifier,
+					naturalDeceleration: ef.type == SkillType.CurrentSpeedWithNaturalDeceleration
+				});
 				break;
 			case SkillType.Recovery:
 				++this.activateCountHeal;

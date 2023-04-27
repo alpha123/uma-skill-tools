@@ -89,7 +89,7 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		s.step(dt);
 		plotData.t.push(s.accumulatetime.t);
 		plotData.pos.push(s.pos);
-		plotData.v.push(s.currentSpeed);
+		plotData.v.push(s.currentSpeed + s.modifiers.currentSpeed.acc + s.modifiers.currentSpeed.err);
 		plotData.targetv.push(s.targetSpeed);
 		plotData.a.push(s.accel);
 		if (s.isPaceDown != paceDownToggle) {
