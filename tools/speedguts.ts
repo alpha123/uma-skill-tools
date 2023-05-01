@@ -1,9 +1,7 @@
 import * as fs from 'fs';
 import { program, Option } from 'commander';
-import { buildSkillData, buildHorseParameters } from './ToolCLI';
 import { CourseHelpers } from '../CourseData';
-import { Region, RegionList } from '../Region';
-import { Rule30CARng } from '../Random';
+import { RaceSolverBuilder } from '../RaceSolverBuilder';
 import { RaceSolver } from '../RaceSolver';
 
 program
@@ -36,26 +34,18 @@ const seed = 1;
 const dt = 1/60;
 
 const course = CourseHelpers.getCourse(opts.course);
-const desc = JSON.parse(fs.readFileSync(program.args[0], 'utf8'));
-
-const wholeCourse = new RegionList();
-wholeCourse.push(new Region(0, course.distance));
-Object.freeze(wholeCourse);
+const desc = Object.freeze(JSON.parse(fs.readFileSync(program.args[0], 'utf8')));
 
 function buildSolver(speed: number, guts: number) {
-	const rng = new Rule30CARng(seed);
-	const horse = buildHorseParameters(Object.assign(desc, {speed: speed, guts: guts}), course, opts.mood, opts.ground);
-	const skills = desc.skills.map(s => buildSkillData(horse, course, wholeCourse, s)).filter(s => s != null).map(sd => {
-		return {
-			skillId: sd.skillId,
-			rarity: sd.rarity,
-			trigger: sd.samplePolicy.sample(sd.regions, 1, rng)[0],
-			extraCondition: sd.extraCondition,
-			effects: sd.effects
-		};
-	});
-
-	return new RaceSolver({horse, course, skills, rng});
+	const b = new RaceSolverBuilder(1)
+		.seed(seed)
+		.course(course)
+		.ground(opts.ground)
+		.mood(opts.mood)
+		.horse(Object.assign({}, desc, {speed: speed, guts: guts}))
+		.withAsiwotameru();
+	desc.skills.forEach(id => b.addSkill(id));
+	return b.build().next().value as RaceSolver;
 }
 
 const min = buildSolver(opts.speedRange[0], opts.gutsRange[0]);
