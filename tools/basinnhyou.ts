@@ -53,16 +53,6 @@ const options = program.opts();
 
 const cmdef = JSON.parse(fs.readFileSync(program.args[0], 'utf8'));
 
-function parseGround(g: string) {
-	switch (g.toUpperCase()) {
-	case 'GOOD': return GroundCondition.Good;
-	case 'YIELDING': return GroundCondition.Yielding;
-	case 'SOFT': return GroundCondition.Soft;
-	case 'HEAVY': return GroundCondition.Heavy;
-	default: throw new Error('Invalid ground condition.');
-	}
-}
-
 const WEATHER = Object.freeze({
 	SUNNY: 1,
 	CLOUDY: 2,
@@ -88,7 +78,7 @@ const builder = new RaceSolverBuilder(options.nsamples)
 	.horse(horsedesc)
 	.course(cmdef.courseid)
 	.mood(options.mood)
-	.ground(parseGround(cmdef.groundCondition))
+	.ground(cmdef.groundCondition)
 	.withActivateCountsAsRandom()
 	.withAsiwotameru();
 

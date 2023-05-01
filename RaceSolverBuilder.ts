@@ -87,6 +87,19 @@ export function parseAptitude(a: string | Aptitude, type: string) {
 	}
 }
 
+export function parseGroundCondition(g: string | GroundCondition) {
+	if (typeof g != 'string') {
+		return g;
+	}
+	switch (g.toUpperCase()) {
+	case 'GOOD': return GroundCondition.Good;
+	case 'YIELDING': return GroundCondition.Yielding;
+	case 'SOFT': return GroundCondition.Soft;
+	case 'HEAVY': return GroundCondition.Heavy;
+	default: throw new Error('Invalid ground condition.');
+	}
+}
+
 function adjustOvercap(stat: number) {
 	return stat > 1200 ? 1200 + Math.floor((stat - 1200) / 2) : stat;
 }
@@ -266,8 +279,8 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
-	ground(ground: GroundCondition) {
-		this._ground = ground;
+	ground(ground: string | GroundCondition) {
+		this._ground = parseGroundCondition(ground);
 		return this;
 	}
 
