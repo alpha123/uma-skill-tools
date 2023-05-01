@@ -82,7 +82,7 @@ while ($select->fetch) {
 		baseDuration => $float_ability_time_1,
 		effects => \@effects_1
 	});
-	if ($condition_2 ne '') {
+	if ($condition_2 ne '' && $condition_2 ne '0') {
 		my @effects_2 = ({type => $ability_type_2_1, modifier => $float_ability_value_2_1});
 		if ($ability_type_2_2 != 0) {
 			push @effects_2, {type => $ability_type_2_2, modifier => $float_ability_value_2_2};
