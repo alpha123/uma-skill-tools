@@ -135,7 +135,10 @@ export interface SkillData {
 function buildSkillEffects(skill) {
 	// im on a really old version of node and cant use flatMap
 	return skill.effects.reduce((acc,ef) => {
-		if (SkillType.hasOwnProperty(ef.type)) {
+		// TODO implement debuffs
+		// a little bit hard since some skills have both buff and debuff effects, and those should go on different solver instances
+		// (there is probably no good way to do this with the current RaceSolverBuilder architecture)
+		if (SkillType.hasOwnProperty(ef.type) && ef.modifier > 0) {
 			acc.push({type: ef.type, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
 		}
 		return acc;
