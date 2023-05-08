@@ -121,16 +121,21 @@ const mockConditions = new Proxy({}, {
 const match = opts.name ? opts.condition.toUpperCase() : parseAny(tokenize(opts.condition), {conditions: mockConditions});
 
 for (const id in skills) {
+	if (id[0] == '9') continue;
+	let logged = false;
 	skills[id].alternatives.forEach(ef => {
 		if (
 		   opts.name ? skillnames[id].find(s => s.toUpperCase().indexOf(match) > -1)
 		 : (!opts.excludePre && ef.precondition.length > 0 && treeMatch(match, parse(tokenize(ef.precondition), {conditions: mockConditions})))
 		|| (!opts.pre && ef.condition.length > 0 && treeMatch(match, parse(tokenize(ef.condition), {conditions: mockConditions})))
 		) {
-			if (opts.id) {
-				console.log(id);
-			} else {
-				console.log(skillnames[id][+(opts.lang == 'en')]);
+			if (!logged) {
+				if (opts.id) {
+					console.log(id);
+				} else {
+					console.log(skillnames[id][+(opts.lang == 'en')] + ' ('+id+')');
+				}
+				logged = true;
 			}
 			if (!opts.list) {
 				if (ef.precondition.length > 0) {
