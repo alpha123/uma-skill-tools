@@ -296,7 +296,7 @@ function calcRows(skillids, thresholds: number[]) {
 			thresholds: thresholds.map(n => gain.reduce((a,b) => a + +(b >= n), 0) / gain.length)
 		};
 	}).filter(r => r != null && r.max > 0.0);
-	rows.sort((a,b) => b.median - a.median);
+	rows.sort((a,b) => b.mean - a.mean);
 	return rows;
 }
 
