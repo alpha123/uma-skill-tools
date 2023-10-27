@@ -64,7 +64,7 @@ $get_courses->bind_columns(\($id, $race_track_id, $distance, $ground, $inout, $t
 
 my $courses = {};
 while ($get_courses->fetch) {
-	if ($race_track_id == 10201) {  # Longchamp
+	if ($id == 11201 || $id == 11202) {  # Longchamp 1000m course is incomplete and data for id 11202 doesn't exist
 		next;
 	}
 
