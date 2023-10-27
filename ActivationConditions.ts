@@ -327,6 +327,20 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return horse.power >= threshold ? regions : new RegionList();
 		}
 	}),
+	base_speed: immediate({
+		filterLt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+			return horse.speed < threshold ? regions : new RegionList();
+		},
+		filterLte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+			return horse.speed <= threshold ? regions : new RegionList();
+		},
+		filterGt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+			return horse.speed > threshold ? regions : new RegionList();
+		},
+		filterGte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+			return horse.speed >= threshold ? regions : new RegionList();
+		}
+	}),
 	bashin_diff_behind: noopErlangRandom(3, 2.0),
 	bashin_diff_infront: noopErlangRandom(3, 2.0),
 	behind_near_lane_time: noopErlangRandom(3, 2.0),
@@ -352,6 +366,12 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			}
 			const finalCornerStart = course.corners[course.corners.length - 1].start;
 			const bounds = new Region(finalCornerStart, course.distance);
+			return regions.rmap(r => r.intersect(bounds));
+		}
+	}),
+	change_order_up_middle: erlangRandom(3, 2.0, {
+		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters) {
+			const bounds = new Region(CourseHelpers.phaseStart(course.distance, 1), CourseHelpers.phaseEnd(course.distance, 1));
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
@@ -389,6 +409,29 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			assert(cornerNum == 0, 'only supports corner!=0');
 			const corners = course.corners.map(c => new Region(c.start, c.start + c.length));
 			return regions.rmap(r => corners.map(c => r.intersect(c)));
+		}
+	}),
+	// FIXME this shouldn't actually be random, since in cases like corner_random==1@corner_random==2 it should sample
+	// only from the first corner and not from the combined regions, so it needs its own sample policy
+	// actually, that's slightly annoying to handle since corners come in back-to-back pairs, so their regions will
+	// get merged by the union operation.
+	// the real way to fix this is to finally allow placing multiple triggers, then each branch of an @ can simply
+	// place its own trigger and the problem goes away.
+	corner_random: random({
+		filterEq(regions: RegionList, cornerNum: number, course: CourseData, _: HorseParameters) {
+			assert(CourseHelpers.isSortedByStart(course.corners), 'course corners must be sorted by start');
+			if (course.corners.length + cornerNum >= 5) {
+				const corner = course.corners[course.corners.length + cornerNum - 5];
+				const cornerBounds = new Region(corner.start, corner.start + corner.length);
+				return regions.rmap(r => r.intersect(cornerBounds));
+			} else {
+				return new RegionList();
+			}
+		}
+	}),
+	course_distance: immediate({
+		filterEq(regions: RegionList, distance: number, course: CourseData, _: HorseParameters) {
+			return distance == course.distance ? regions : new RegionList();
 		}
 	}),
 	distance_diff_rate: noopImmediate,
@@ -449,6 +492,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	// The only skill likely severely affected by this is Akebono's unique.
 	hp_per: noopImmediate,
 	infront_near_lane_time: noopErlangRandom(3, 2.0),
+	is_activate_other_skill_detail: noopImmediate,  // TODO FIXME
 	is_basis_distance: immediate({
 		filterEq(regions: RegionList, flag: number, course: CourseData, _: HorseParameters) {
 			assert(flag == 0 || flag == 1, 'must be is_basis_distance==0 or is_basis_distance==1');
@@ -500,6 +544,14 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
+	is_last_straight: immediate({
+		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
+			assert(one == 1, 'must be is_last_straight_onetime==1');
+			assert(CourseHelpers.isSortedByStart(course.straights), 'course straights must be sorted by start');
+			const lastStraight = course.straights[course.straights.length - 1];
+			return regions.rmap(r => r.intersect(lastStraight));
+		}
+	}),
 	is_last_straight_onetime: immediate({
 		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
 			assert(one == 1, 'must be is_last_straight_onetime==1');
@@ -520,6 +572,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	order_rate: noopImmediate,
 	order_rate_in20_continue: noopImmediate,
 	order_rate_in40_continue: noopImmediate,
+	order_rate_in80_continue: noopImmediate,
 	order_rate_out20_continue: noopImmediate,
 	order_rate_out40_continue: noopImmediate,
 	order_rate_out50_continue: noopImmediate,
@@ -557,6 +610,17 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	},
+	phase_corner_random: random({
+		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
+			CourseHelpers.assertIsPhase(phase);
+			const phaseStart = CourseHelpers.phaseStart(course.distance, phase);
+			const phaseEnd = CourseHelpers.phaseEnd(course.distance, phase);
+			const corners = course.corners
+				.filter(c => (c.start >= phaseStart && c.start < phaseEnd) || (c.start + c.length >= phaseStart && c.start + c.length < phaseEnd))
+				.map(c => new Region(Math.max(c.start, phaseStart), Math.min(c.start + c.length, phaseEnd)));
+			return regions.rmap(r => corners.map(c => r.intersect(c)));
+		}
+	}),
 	phase_firsthalf_random: random({
 		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
 			CourseHelpers.assertIsPhase(phase);
