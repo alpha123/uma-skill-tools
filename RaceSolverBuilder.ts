@@ -173,6 +173,7 @@ export function buildSkillData(horse: HorseParameters, course: CourseData, whole
 				continue;
 			}
 		}
+
 		const op = parse(tokenize(skill.condition), {conditions});
 		const [regions, extraCondition] = op.apply(wholeCourse, course, horse);
 		if (regions.length == 0) {
@@ -309,7 +310,7 @@ export class RaceSolverBuilder {
 		}
 	}
 
-	useDefaultPacer(openingLegAccel: boolean = false) {
+	useDefaultPacer(openingLegAccel: boolean = true) {
 		if (this._isNige()) {
 			return this;
 		}
