@@ -116,7 +116,8 @@ export function buildBaseStats(horseDesc: HorseDesc, mood: Mood) {
 		strategy: parseStrategy(horseDesc.strategy),
 		distanceAptitude: parseAptitude(horseDesc.distanceAptitude, 'distance'),
 		surfaceAptitude: parseAptitude(horseDesc.surfaceAptitude, 'surface'),
-		strategyAptitude: parseAptitude(horseDesc.strategyAptitude, 'strategy')
+		strategyAptitude: parseAptitude(horseDesc.strategyAptitude, 'strategy'),
+		rawStamina: horseDesc.stamina * motivCoef
 	});
 }
 
@@ -132,7 +133,8 @@ export function buildAdjustedStats(baseStats: HorseParameters, course: CourseDat
 		strategy: baseStats.strategy,
 		distanceAptitude: baseStats.distanceAptitude,
 		surfaceAptitude: baseStats.surfaceAptitude,
-		strategyAptitude: baseStats.strategyAptitude
+		strategyAptitude: baseStats.strategyAptitude,
+		rawStamina: baseStats.rawStamina
 	});
 }
 

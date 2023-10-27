@@ -159,7 +159,8 @@ export function buildHorseParameters(horseDesc, course: CourseData, mood: Mood, 
 		strategy: parseStrategy(horseDesc.strategy),
 		distanceAptitude: parseAptitude(horseDesc.distanceAptitude, 'distance'),
 		surfaceAptitude: parseAptitude(horseDesc.surfaceAptitude, 'surface'),
-		strategyAptitude: parseAptitude(horseDesc.strategyAptitude, 'strategy')
+		strategyAptitude: parseAptitude(horseDesc.strategyAptitude, 'strategy'),
+		rawStamina: horseDesc.stamina * motivCoef
 	});
 }
 

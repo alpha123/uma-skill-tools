@@ -34,6 +34,19 @@ function lastSpurtSpeed(horse: HorseParameters, course: CourseData) {
 		Math.pow(450.0 * horse.guts, 0.597) * 0.0001;
 }
 
+function staminaSyoubuDistanceFactor(distance: number) {
+	if (distance < 2101) return 0.0;
+	else if (distance < 2201) return 0.5;
+	else if (distance < 2401) return 1.0;
+	else if (distance < 2601) return 1.2;
+	else return 1.5;
+}
+
+function staminaSyoubuBonus(horse: HorseParameters, course: CourseData) {
+	const randomFactor = 1.0;  // TODO implement random factor scaling based on power (unclear how this works currently)
+	return Math.sqrt(horse.rawStamina - 1200) * 0.0085 * staminaSyoubuDistanceFactor(course.distance) * randomFactor;
+}
+
 namespace Acceleration {
 	export const StrategyPhaseCoefficient = Object.freeze([
 		[],
@@ -259,6 +272,9 @@ export class RaceSolver {
 		// similarly this must also come after the first round of skill activations
 		this.baseTargetSpeed = ([0,1,2] as Phase[]).map(phase => baseTargetSpeed(this.horse, this.course, phase));
 		this.lastSpurtSpeed = lastSpurtSpeed(this.horse, this.course);
+		if (this.horse.rawStamina > 1200) {
+			this.lastSpurtSpeed += staminaSyoubuBonus(this.horse, this.course);
+		}
 
 		this.baseAccel = ([0,1,2,0,1,2] as Phase[]).map((phase,i) => baseAccel(i > 2 ? UphillBaseAccel : BaseAccel, this.horse, phase));
 	}
@@ -466,6 +482,7 @@ export class RaceSolver {
 				break;
 			case SkillType.StaminaUp:
 				this.horse.stamina = Math.max(this.horse.stamina + ef.modifier, 1);
+				this.horse.rawStamina = Math.max(this.horse.rawStamina + ef.modifier, 1);
 				break;
 			case SkillType.PowerUp:
 				this.horse.power = Math.max(this.horse.power + ef.modifier, 1);

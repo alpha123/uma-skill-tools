@@ -13,6 +13,7 @@ export interface HorseParameters {
 	readonly distanceAptitude: Aptitude
 	readonly surfaceAptitude: Aptitude
 	readonly strategyAptitude: Aptitude
+	readonly rawStamina: number
 }
 
 export namespace StrategyHelpers {
