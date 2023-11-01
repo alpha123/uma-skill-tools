@@ -341,6 +341,20 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return horse.speed >= threshold ? regions : new RegionList();
 		}
 	}),
+	base_stamina: immediate({
+		filterLt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+			return horse.stamina < threshold ? regions : new RegionList();
+		},
+		filterLte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+			return horse.stamina <= threshold ? regions : new RegionList();
+		},
+		filterGt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+			return horse.stamina > threshold ? regions : new RegionList();
+		},
+		filterGte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+			return horse.stamina >= threshold ? regions : new RegionList();
+		}
+	}),
 	bashin_diff_behind: noopErlangRandom(3, 2.0),
 	bashin_diff_infront: noopErlangRandom(3, 2.0),
 	behind_near_lane_time: noopErlangRandom(3, 2.0),
@@ -432,6 +446,21 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	course_distance: immediate({
 		filterEq(regions: RegionList, distance: number, course: CourseData, _: HorseParameters) {
 			return distance == course.distance ? regions : new RegionList();
+		},
+		filterNeq(regions: RegionList, distance: number, course: CourseData, _: HorseParameters) {
+			return distance != course.distance ? regions : new RegionList();
+		},
+		filterLt(regions: RegionList, distance: number, course: CourseData, _: HorseParameters) {
+			return distance < course.distance ? regions : new RegionList();
+		},
+		filterLte(regions: RegionList, distance: number, course: CourseData, _: HorseParameters) {
+			return distance <= course.distance ? regions : new RegionList();
+		},
+		filterGt(regions: RegionList, distance: number, course: CourseData, _: HorseParameters) {
+			return distance > course.distance ? regions : new RegionList();
+		},
+		filterGte(regions: RegionList, distance: number, course: CourseData, _: HorseParameters) {
+			return distance >= course.distance ? regions : new RegionList();
 		}
 	}),
 	distance_diff_rate: noopImmediate,
@@ -627,6 +656,15 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			const start = CourseHelpers.phaseStart(course.distance, phase);
 			const end = CourseHelpers.phaseEnd(course.distance, phase);
 			const bounds = new Region(start, (start + end) / 2);
+			return regions.rmap(r => r.intersect(bounds));
+		}
+	}),
+	phase_firstquarter_random: random({
+		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
+			CourseHelpers.assertIsPhase(phase);
+			const start = CourseHelpers.phaseStart(course.distance, phase);
+			const end = CourseHelpers.phaseEnd(course.distance, phase);
+			const bounds = new Region(start, (start + end) / 4);
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
