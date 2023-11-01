@@ -83,14 +83,20 @@ export function buildSkillData(horse: HorseParameters, course: CourseData, whole
 	const alternatives = skills[skillId].alternatives;
 	for (let i = 0; i < alternatives.length; ++i) {
 		const skill = alternatives[i];
+		let full = new RegionList();
+		wholeCourse.forEach(r => full.push(r));
 		if (skill.precondition) {
 			const pre = parse(tokenize(skill.precondition));
-			if (pre.apply(wholeCourse, course, horse)[0].length == 0) {
+			const preRegions = pre.apply(wholeCourse, course, horse)[0];
+			if (preRegions.length == 0) {
 				continue;
+			} else {
+				const bounds = new Region(preRegions[0].start, wholeCourse[wholeCourse.length-1].end);
+				full = full.rmap(r => r.intersect(bounds));
 			}
 		}
 		const op = parse(tokenize(skill.condition));
-		const [regions, extraCondition] = op.apply(wholeCourse, course, horse);
+		const [regions, extraCondition] = op.apply(full, course, horse);
 		if (regions.length == 0) {
 			continue;
 		}
