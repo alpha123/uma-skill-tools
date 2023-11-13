@@ -412,9 +412,13 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 				}
 				return regions.rmap(r => nonCorners.map(s => r.intersect(s)));
 			} else if (course.corners.length + cornerNum >= 5) {
-				const corner = course.corners[course.corners.length + cornerNum - 5];
-				const cornerBounds = new Region(corner.start, corner.start + corner.length);
-				return regions.rmap(r => r.intersect(cornerBounds));
+				const corners = [];
+				for (let cornerIdx = course.corners.length + cornerNum - 5; cornerIdx >= 0; cornerIdx -= 4) {
+					const corner = course.corners[cornerIdx];
+					corners.push(new Region(corner.start, corner.start + corner.length));
+				}
+				corners.reverse();
+				return regions.rmap(r => corners.map(c => r.intersect(c)));
 			} else {
 				return new RegionList();
 			}
