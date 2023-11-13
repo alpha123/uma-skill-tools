@@ -222,7 +222,7 @@ export function buildSkillData(horse: HorseParameters, course: CourseData, whole
 	}
 }
 
-const conditionsWithActivateCountsAsRandom = Object.freeze(Object.assign({}, Conditions, {
+export const conditionsWithActivateCountsAsRandom = Object.freeze(Object.assign({}, Conditions, {
 	activate_count_end_after: random({
 		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters) {
 			const bounds = new Region(CourseHelpers.phaseStart(course.distance, 2), CourseHelpers.phaseEnd(course.distance, 3));
