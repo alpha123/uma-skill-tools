@@ -1,6 +1,6 @@
 import { program, Option } from 'commander';
 
-import { parseAny, parse, tokenize } from '../ConditionParser';
+import { getParser } from '../ConditionParser';
 import { mockConditions, treeMatch } from './ConditionMatcher';
 
 import skills from '../data/skill_data.json';
@@ -21,7 +21,9 @@ program
 program.parse();
 const opts = program.opts();
 
-const match = opts.name ? opts.condition.toUpperCase() : parseAny(tokenize(opts.condition), {conditions: mockConditions});
+const { parseAny, parse, tokenize } = getParser(mockConditions);
+
+const match = opts.name ? opts.condition.toUpperCase() : parseAny(tokenize(opts.condition));
 
 for (const id in skills) {
 	if (id[0] == '9') continue;
@@ -29,8 +31,8 @@ for (const id in skills) {
 	skills[id].alternatives.forEach(ef => {
 		if (
 		   opts.name ? skillnames[id].find(s => s.toUpperCase().indexOf(match) > -1)
-		 : (!opts.excludePre && ef.precondition.length > 0 && treeMatch(match, parse(tokenize(ef.precondition), {conditions: mockConditions})))
-		|| (!opts.pre && ef.condition.length > 0 && treeMatch(match, parse(tokenize(ef.condition), {conditions: mockConditions})))
+		 : (!opts.excludePre && ef.precondition.length > 0 && treeMatch(match, parse(tokenize(ef.precondition))))
+		|| (!opts.pre && ef.condition.length > 0 && treeMatch(match, parse(tokenize(ef.condition))))
 		) {
 			if (!logged) {
 				if (opts.id) {

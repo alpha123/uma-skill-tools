@@ -7,10 +7,12 @@ import { Region, RegionList } from '../Region';
 import { PRNG } from '../Random';
 import { ActivationSamplePolicy, ImmediatePolicy } from '../ActivationSamplePolicy';
 import { Conditions } from '../ActivationConditions';
-import { parse, tokenize } from '../ConditionParser';
+import { getParser } from '../ConditionParser';
 import { RaceSolver, DynamicCondition, SkillType, SkillRarity, SkillEffect } from '../RaceSolver';
 
 import skills from '../data/skill_data.json';
+
+const { parse, tokenize } = getParser();
 
 export function parseStrategy(s: string) {
 	switch (s.toUpperCase()) {

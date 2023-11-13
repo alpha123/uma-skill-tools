@@ -4,7 +4,7 @@ import { Region, RegionList } from './Region';
 import { Rule30CARng } from './Random';
 import { Conditions, random, immediate } from './ActivationConditions';
 import { ActivationSamplePolicy, ImmediatePolicy } from './ActivationSamplePolicy';
-import { parse, tokenize } from './ConditionParser';
+import { getParser } from './ConditionParser';
 import { RaceSolver, PendingSkill, DynamicCondition, SkillType, SkillRarity, SkillEffect } from './RaceSolver';
 
 import skills from './data/skill_data.json';
@@ -160,7 +160,7 @@ function buildSkillEffects(skill) {
 	}, []);
 }
 
-export function buildSkillData(horse: HorseParameters, course: CourseData, wholeCourse: RegionList, conditions: typeof Conditions, skillId: string) {
+export function buildSkillData(horse: HorseParameters, course: CourseData, wholeCourse: RegionList, parser: {parse: any, tokenize: any}, skillId: string) {
 	if (!(skillId in skills)) {
 		throw new Error('bad skill ID ' + skillId);
 	}
@@ -170,7 +170,7 @@ export function buildSkillData(horse: HorseParameters, course: CourseData, whole
 		let full = new RegionList();
 		wholeCourse.forEach(r => full.push(r));
 		if (skill.precondition) {
-			const pre = parse(tokenize(skill.precondition), {conditions});
+			const pre = parser.parse(parser.tokenize(skill.precondition));
 			const preRegions = pre.apply(wholeCourse, course, horse)[0];
 			if (preRegions.length == 0) {
 				continue;
@@ -180,7 +180,7 @@ export function buildSkillData(horse: HorseParameters, course: CourseData, whole
 			}
 		}
 
-		const op = parse(tokenize(skill.condition), {conditions});
+		const op = parser.parse(parser.tokenize(skill.condition));
 		const [regions, extraCondition] = op.apply(full, course, horse);
 		if (regions.length == 0) {
 			continue;
@@ -249,6 +249,9 @@ export const conditionsWithActivateCountsAsRandom = Object.freeze(Object.assign(
 	})
 }));
 
+const defaultParser = getParser();
+const acrParser = getParser(conditionsWithActivateCountsAsRandom);
+
 export class RaceSolverBuilder {
 	_course: CourseData | null
 	_ground: GroundCondition
@@ -257,7 +260,7 @@ export class RaceSolverBuilder {
 	_pacer: HorseDesc | null
 	_pacerSkills: PendingSkill[]
 	_rng: Rule30CARng
-	_conditions: typeof Conditions
+	_parser: {parse: any, tokenize: any}
 	_skills: string[]
 	_extraSkillHooks: ((skilldata: SkillData[], horse: HorseParameters, course: CourseData) => void)[]
 
@@ -269,7 +272,7 @@ export class RaceSolverBuilder {
 		this._pacer = null;
 		this._pacerSkills = [];
 		this._rng = new Rule30CARng(Math.floor(Math.random() * (-1 >>> 0)) >>> 0);
-		this._conditions = Conditions;
+		this._parser = defaultParser;
 		this._skills = [];
 		this._extraSkillHooks = [];
 	}
@@ -344,7 +347,7 @@ export class RaceSolverBuilder {
 	}
 
 	withActivateCountsAsRandom() {
-		this._conditions = conditionsWithActivateCountsAsRandom;
+		this._parser = acrParser;
 		return this;
 	}
 
@@ -396,7 +399,7 @@ export class RaceSolverBuilder {
 		clone._pacer = this._pacer;
 		clone._pacerSkills = this._pacerSkills.slice();  // sharing the skill objects is fine but see the note below
 		clone._rng = new Rule30CARng(this._rng.lo, this._rng.hi);
-		clone._conditions = this._conditions;
+		clone._parser = this._parser;
 		clone._skills = this._skills.slice();
 
 		// NB. GOTCHA: if asitame is enabled, it closes over *our* horse and mood data, and not the clone's
@@ -411,7 +414,7 @@ export class RaceSolverBuilder {
 		let horse = buildBaseStats(this._horse, this._mood);
 		const solverRng = new Rule30CARng(this._rng.int32());
 		const pacerRng = new Rule30CARng(this._rng.int32());  // need this even if _pacer is null in case we forked from/to something with a pacer
-		                                                      // (to keep the rngs in sync)
+																													// (to keep the rngs in sync)
 
 		const pacerHorse = this._pacer ? buildAdjustedStats(buildBaseStats(this._pacer, this._mood), this._course, this._ground) : null;
 
@@ -419,7 +422,7 @@ export class RaceSolverBuilder {
 		wholeCourse.push(new Region(0, this._course.distance));
 		Object.freeze(wholeCourse);
 
-		const makeSkill = buildSkillData.bind(null, horse, this._course, wholeCourse, this._conditions) as (s: string) => SkillData | null;
+		const makeSkill = buildSkillData.bind(null, horse, this._course, wholeCourse, this._parser) as (s: string) => SkillData | null;
 		const skilldata = this._skills.map(makeSkill).filter(s => s != null);
 		this._extraSkillHooks.forEach(h => h(skilldata, horse, this._course));
 		const triggers = skilldata.map(sd => sd.samplePolicy.sample(sd.regions, this.nsamples, this._rng));

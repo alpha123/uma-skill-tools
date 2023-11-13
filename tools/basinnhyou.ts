@@ -10,11 +10,12 @@ import { JWT } from 'google-auth-library';
 import { RaceSolver, SkillType, SkillRarity } from '../RaceSolver';
 import { RaceSolverBuilder, GroundCondition, buildBaseStats, buildSkillData, parseGroundCondition } from '../RaceSolverBuilder';
 import { Region, RegionList } from '../Region';
-import { parse, tokenize } from '../ConditionParser';
+import { getParser } from '../ConditionParser';
 import {
 	Operator, CmpOperator, EqOperator, NeqOperator, LtOperator, LteOperator, GtOperator, GteOperator, AndOperator, OrOperator
 } from '../ActivationConditions';
 import { ErlangRandomPolicy } from '../ActivationSamplePolicy';
+import { mockConditions } from './ConditionMatcher';
 
 import skills from '../data/skill_data.json';
 import skillnames from '../data/skillnames.json';
@@ -99,24 +100,6 @@ function getBuilder(strategy: string) {
 	cmdef.presupposedSkills[strategy].forEach(id => builder.addSkill(id));
 	return builder;
 }
-
-const mockSamplePolicy = Object.freeze({
-	sample(_0,_1) { assert(false); },
-	reconcile(_) { return this; },
-	reconcileAsap(_) { return this; },
-	reconcileLogNormalRandom(_) { return this; },
-	reconcileRandom(_) { return this; },
-	reconcileStraightRandom(_) { return this; },
-	reconcileAllCornerRandom(_) { return this; }
-});
-const mockConditions = new Proxy({}, {
-	get(cache: object, prop: string) {
-		if (cache.hasOwnProperty(prop)) {
-			return cache[prop];  // cache to allow identity comparison
-		}
-		return cache[prop] = {name: prop, samplePolicy: mockSamplePolicy};
-	}
-});
 
 function isCmpOperator(tree: Operator): tree is CmpOperator {
 	return 'condition' in tree;
@@ -233,13 +216,15 @@ const greens = [], pinks = [], golds = [], whites = [], uniques = [];
 
 const BLACKLIST_ALL = ['910071', '910081', '910171', '200333', '200343', '202303', '201081', '201561', '105601211'];
 
+const { parse, tokenize } = getParser(mockConditions);
+
 Object.keys(skills).forEach(id => {
 	if (BLACKLIST_ALL.indexOf(id) > -1) return;
 
 	const skill = skills[id];
 	let skip = skill.alternatives.every(alt => {
-		const pregroups = alt.precondition.length > 0 ? flattenConditions(parse(tokenize(alt.precondition), {conditions: mockConditions})) : [];
-		const groups = flattenConditions(parse(tokenize(alt.condition), {conditions: mockConditions}));
+		const pregroups = alt.precondition.length > 0 ? flattenConditions(parse(tokenize(alt.precondition))) : [];
+		const groups = flattenConditions(parse(tokenize(alt.condition)));
 
 		return (notMatchRaceConditions(pregroups) || notMatchRaceConditions(groups)) || !(strategyMatches(pregroups) && strategyMatches(groups));
 	});

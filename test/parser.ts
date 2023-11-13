@@ -5,7 +5,9 @@ import {
 	Operator, CmpOperator, EqOperator, NeqOperator, LtOperator, LteOperator, GtOperator, GteOperator, AndOperator, OrOperator,
 	Conditions
 } from '../ActivationConditions';
-import { parse, tokenize } from '../ConditionParser';
+import { getParser } from '../ConditionParser';
+
+const { parse, tokenize } = getParser();
 
 function pick<T>(array: T[]) {
 	return fc.mapToConstant({
