@@ -772,5 +772,6 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => slopes.map(s => r.intersect(s)));
 		}
 	}),
+	visiblehorse: noopImmediate,
 	weather: noopImmediate  // TODO pass race conditions to filters
 });
