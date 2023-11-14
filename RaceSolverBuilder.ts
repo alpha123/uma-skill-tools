@@ -2,7 +2,7 @@ import { HorseParameters, Strategy, Aptitude } from './HorseTypes';
 import { CourseData, CourseHelpers, DistanceType } from './CourseData';
 import { Region, RegionList } from './Region';
 import { Rule30CARng } from './Random';
-import { Conditions, random, immediate } from './ActivationConditions';
+import { Conditions, random, immediate, noopRandom } from './ActivationConditions';
 import { ActivationSamplePolicy, ImmediatePolicy } from './ActivationSamplePolicy';
 import { getParser } from './ConditionParser';
 import { RaceSolver, PendingSkill, DynamicCondition, SkillType, SkillRarity, SkillEffect } from './RaceSolver';
@@ -229,6 +229,7 @@ export const conditionsWithActivateCountsAsRandom = Object.freeze(Object.assign(
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
+	activate_count_heal: noopRandom,
 	activate_count_later_half: random({
 		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters) {
 			const bounds = new Region(course.distance / 2, course.distance);
