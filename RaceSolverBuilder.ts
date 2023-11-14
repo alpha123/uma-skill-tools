@@ -160,7 +160,7 @@ function buildSkillEffects(skill) {
 	}, []);
 }
 
-export function buildSkillData(horse: HorseParameters, course: CourseData, wholeCourse: RegionList, parser: {parse: any, tokenize: any}, skillId: string) {
+export function buildSkillData(horse: HorseParameters, course: CourseData, wholeCourse: RegionList, parser: {parse: any, tokenize: any}, skillId: string, ignoreNullEffects: boolean = false) {
 	if (!(skillId in skills)) {
 		throw new Error('bad skill ID ' + skillId);
 	}
@@ -186,7 +186,7 @@ export function buildSkillData(horse: HorseParameters, course: CourseData, whole
 			continue;
 		}
 		const effects = buildSkillEffects(skill);
-		if (effects.length > 0) {
+		if (effects.length > 0 || ignoreNullEffects) {
 			const rarity = skills[skillId].rarity;
 			return {
 				skillId: skillId,
@@ -206,7 +206,7 @@ export function buildSkillData(horse: HorseParameters, course: CourseData, whole
 	// that could still cause them to activate. so just add the first alternative at a location after the course
 	// is over with a constantly false dynamic condition so that it never activates normally.
 	const effects = buildSkillEffects(alternatives[0]);
-	if (effects.length == 0) {
+	if (effects.length == 0 && !ignoreNullEffects) {
 		return null;
 	} else {
 		const afterEnd = new RegionList();
