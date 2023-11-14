@@ -623,12 +623,12 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		filterLt(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
 			CourseHelpers.assertIsPhase(phase);
 			assert(phase > 0, 'phase == 0');
-			const bounds = new Region(0, CourseHelpers.phaseStart(course.distance, (phase - 1) as Phase));
+			const bounds = new Region(0, CourseHelpers.phaseStart(course.distance, phase));
 			return regions.rmap(r => r.intersect(bounds));
 		},
 		filterLte(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
 			CourseHelpers.assertIsPhase(phase);
-			const bounds = new Region(0, CourseHelpers.phaseStart(course.distance, phase));
+			const bounds = new Region(0, CourseHelpers.phaseEnd(course.distance, phase));
 			return regions.rmap(r => r.intersect(bounds));
 		},
 		filterGt(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
