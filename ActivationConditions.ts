@@ -355,6 +355,20 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return horse.stamina >= threshold ? regions : new RegionList();
 		}
 	}),
+	base_wiz: immediate({
+		filterLt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+			return horse.wisdom < threshold ? regions : new RegionList();
+		},
+		filterLte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+			return horse.wisdom <= threshold ? regions : new RegionList();
+		},
+		filterGt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+			return horse.wisdom > threshold ? regions : new RegionList();
+		},
+		filterGte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+			return horse.wisdom >= threshold ? regions : new RegionList();
+		}
+	}),
 	bashin_diff_behind: noopErlangRandom(3, 2.0),
 	bashin_diff_infront: noopErlangRandom(3, 2.0),
 	behind_near_lane_time: noopErlangRandom(3, 2.0),
