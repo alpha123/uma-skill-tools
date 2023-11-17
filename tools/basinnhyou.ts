@@ -214,7 +214,7 @@ function strategyMatches(groups: CmpOperator[][]) {
 
 const greens = [], pinks = [], golds = [], whites = [], uniques = [];
 
-const BLACKLIST_ALL = ['910071', '910081', '910171', '200333', '200343', '202303', '201081', '201561', '105601211'];
+const BLACKLIST_ALL = ['910071', '200333', '200343', '202303', '201081', '201561', '105601211'];
 
 const { parse, tokenize } = getParser(mockConditions);
 
