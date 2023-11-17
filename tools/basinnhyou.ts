@@ -245,6 +245,8 @@ Object.keys(skills).forEach(id => {
 	}
 });
 
+const normalParser = getParser();
+
 function calcRows(builder, skillids, thresholds: number[]) {
 	const dt = options.timestep;
 	const horse = buildBaseStats(builder._horse, builder._mood);
@@ -257,7 +259,7 @@ function calcRows(builder, skillids, thresholds: number[]) {
 		wholeCourse.push(new Region(0, b2._course.distance));
 		let sd;
 		try {
-			sd = buildSkillData(horse, b2._course, wholeCourse, b2._conditions, id);
+			sd = buildSkillData(horse, b2._course, wholeCourse, normalParser, id);
 		} catch (e) {
 			return null;
 		}
