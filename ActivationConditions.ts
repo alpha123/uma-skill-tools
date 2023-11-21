@@ -537,7 +537,30 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	// would be kind of a pain in general, and probably impossible to do accurately due to things like 位置取り争い that depend on other
 	// umas, as well as random factors like downhill accel mode.
 	// The only skill likely severely affected by this is Akebono's unique.
-	hp_per: noopImmediate,
+	hp_per: (function () {
+		const StrategyHpCoefficient = Object.freeze([0, 0.95, 0.89, 1.0, 0.995, 0.86]);
+		// we can't know the phase statically so just use course base speed as a very rough approximation
+		function baseSpeed(distance: number) {
+			return 20.0 - (distance - 2000) / 1000.0;
+		}
+		return immediate({
+			// for <= we do have to make some sort of guess as to when hp will drop below the threshold.
+			// this is almost entirely for the skill 火事場のバ鹿力 for which the only conditions are distance_type==4&hp_per<=30,
+			// so if we don't make this estimate it will activate out of the gate, which screws up the numbers a lot.
+			filterLte(regions: RegionList, hpPer: number, course: CourseData, horse: HorseParameters) {
+				const maxHp = 0.8 * StrategyHpCoefficient[horse.strategy] * horse.stamina + course.distance;
+				const bounds = new Region(maxHp * (hpPer - 100) / 100 / -20 * baseSpeed(course.distance), course.distance);
+				return regions.rmap(r => r.intersect(bounds));
+			},
+			filterGte(regions: RegionList, _0: number, _1: CourseData, _2: HorseParameters) {
+				// however for >= we don't actually have to do anything
+				// since hp (mostly) only goes down, there are no skills that would activate either too early or too late; for skills
+				// with hp_per>=n conditions it mostly just controls whether they activate at all, so we can safely assume you always
+				// have enough hp for them.
+				return regions;
+			}
+		});
+	})(),
 	infront_near_lane_time: noopErlangRandom(3, 2.0),
 	is_activate_other_skill_detail: noopImmediate,  // TODO FIXME
 	is_basis_distance: immediate({
