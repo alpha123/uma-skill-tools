@@ -81,11 +81,17 @@ export abstract class DistributionRandomPolicy {
 	reconcile(other: ActivationSamplePolicy) { return other.reconcileDistributionRandom(this); }
 	reconcileImmediate(_: ActivationSamplePolicy) { return this; }
 	reconcileDistributionRandom(other: ActivationSamplePolicy) {
-		if (this === other) {  // compare by identity since DistributionRandomPolicy subclasses are cached by their parameters
-			return this;
-		}
-		throw new Error('cannot reconcile different distributions');
+		// this is, strictly speaking, probably not the right thing to do
+		// probably this should be the joint probability distribution of `this` and `other`, but that is too complex to implement
+		// TODO this is something of a stopgap measure anyway, since eventually we'd like to model most of the conditions that use
+		// DistributionRandomPolicy with dynamic conditions using a Poisson process or something, which would make this obsolete
+		// (this would also enable other features like cooldowns for distribution-random skills).
+		return this;
 	}
+	// this is probably not exactly the right thing to do either, but the true random conditions do need to place a fixed trigger
+	// statically ahead of time, uninfluenced by us. this means that the only alternatives are 1) this condition is coincidentally
+	// fulfilled during the static random trigger or 2) the skill does not activate at all.
+	// since the latter is not particularly interesting, it's safe to just ignore this sample policy and use only the true random one.
 	reconcileRandom(other: ActivationSamplePolicy) { return other; }
 	reconcileStraightRandom(other: ActivationSamplePolicy) { return other; }
 	reconcileAllCornerRandom(other: ActivationSamplePolicy) { return other; }
