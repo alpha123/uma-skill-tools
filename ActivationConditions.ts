@@ -571,6 +571,12 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	}),
 	is_badstart: noopImmediate,
 	is_behind_in: noopImmediate,
+	is_dirtgrade: immediate({
+		filterEq(regions: RegionList, flag: number, course: CourseData, _: HorseParameters) {
+			assert(flag == 1, 'must be is_dirtgrade==1');
+			return [10101, 10103, 10104, 10105].indexOf(course.raceTrackId) > -1 ? regions : new RegionList();
+		}
+	}),
 	is_finalcorner: immediate({
 		filterEq(regions: RegionList, flag: number, course: CourseData, _: HorseParameters) {
 			assert(flag == 0 || flag == 1, 'must be is_finalcorner==0 or is_finalcorner==1');
