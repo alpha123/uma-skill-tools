@@ -17,6 +17,23 @@ my $db = DBI->connect("dbi:SQLite:$mastermdb", undef, undef, {
 });
 $db->{RaiseError} = 1;
 
+sub patch_modifier {
+	my ($id, $value) = @_;
+	my @scenario_skills = (
+		210011, 210012, 210021, 210022, 210031, 210032, 210041, 210042, 210051, 210052,  # Aoharu
+		210061, 210062,  # Make A New Track
+		210071, 210072,  # Grand Live
+		210081, 210082,  # updated URA
+		210261, 210262, 210271, 210272, 210281, 210282,  # Grand Masters
+		210291  # RFTS (white version of RFTS scenario skill doesn't have scaling for some reason)
+	);
+	if (grep(/^$id$/, @scenario_skills)) {
+		return $value * 1.2;
+	} else {
+		return $value;
+	}
+}
+
 my $select = $db->prepare(<<SQL
 SELECT id, rarity,
        precondition_1, condition_1,
@@ -69,12 +86,12 @@ $select->bind_columns(\(
 
 my $skills = {};
 while ($select->fetch) {
-	my @effects_1 = ({type => $ability_type_1_1, modifier => $float_ability_value_1_1});
+	my @effects_1 = ({type => $ability_type_1_1, modifier => patch_modifier($id, $float_ability_value_1_1)});
 	if ($ability_type_1_2 != 0) {
-		push @effects_1, {type => $ability_type_1_2, modifier => $float_ability_value_1_2};
+		push @effects_1, {type => $ability_type_1_2, modifier => patch_modifier($id, $float_ability_value_1_2)};
 	}
 	if ($ability_type_1_3 != 0) {
-		push @effects_1, {type => $ability_type_1_3, modifier => $float_ability_value_1_3};
+		push @effects_1, {type => $ability_type_1_3, modifier => patch_modifier($id, $float_ability_value_1_3)};
 	}
 	my @triggers = ({
 		precondition => $precondition_1,
