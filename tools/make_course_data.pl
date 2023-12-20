@@ -20,7 +20,7 @@ $db->{RaiseError} = 1;
 
 sub distance_type {
 	my $distance = shift;
-	if ($distance <= 1200) {
+	if ($distance <= 1400) {
 		return 1;
 	} elsif ($distance <= 1800) {
 		return 2;
