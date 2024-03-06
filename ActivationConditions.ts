@@ -702,7 +702,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			CourseHelpers.assertIsPhase(phase);
 			const start = CourseHelpers.phaseStart(course.distance, phase);
 			const end = CourseHelpers.phaseEnd(course.distance, phase);
-			const bounds = new Region(start, (start + end) / 2);
+			const bounds = new Region(start, start + (end - start) / 2);
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
@@ -711,7 +711,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			CourseHelpers.assertIsPhase(phase);
 			const start = CourseHelpers.phaseStart(course.distance, phase);
 			const end = CourseHelpers.phaseEnd(course.distance, phase);
-			const bounds = new Region(start, (start + end) / 4);
+			const bounds = new Region(start, start + (end - start) / 4);
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
