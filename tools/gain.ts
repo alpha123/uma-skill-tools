@@ -3,7 +3,7 @@ import { HorseParameters } from '../HorseTypes';
 import { CourseData } from '../CourseData';
 import { Region } from '../Region';
 import { Rule30CARng } from '../Random';
-import { PendingSkill, RaceSolver } from '../RaceSolver';
+import { SkillRarity, PendingSkill, RaceSolver } from '../RaceSolver';
 import { ImmediatePolicy, RandomPolicy } from '../ActivationSamplePolicy';
 import { SkillData, ToolCLI, PacerProvider, parseAptitude } from './ToolCLI';
 
@@ -17,6 +17,7 @@ cli.options(program => {
 			.argParser(x => parseInt(x,10))
 		)
 		.option('--seed <seed>', 'seed value for pseudorandom number generator', (value,_) => parseInt(value,10) >>> 0)
+		.option('--enable-wisdom-checks', 'base skill activation on random checks dependent on wisdom')
 		.addOption(new Option('-D, --distance-aptitude <letter>', 'compare with a different distance aptitude from the value in the horse definition')
 			.choices(['S', 'A', 'B', 'C', 'D', 'E', 'F', 'G'])
 			.argParser(a => parseAptitude(a, 'distance'))
@@ -44,6 +45,10 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 	const pacerRngSeed = rng.int32();
 	const pacerRng1 = new Rule30CARng(pacerRngSeed);
 	const pacerRng2 = new Rule30CARng(pacerRngSeed);
+
+	// TODO bugged since this will be affected by strategy aptitude—will be fixed once we ditch this mess and use
+	// RaceSolverBuilder for gain.ts
+	const skillActivationChance = cliOptions.enableWisdomChecks ? Math.max(100.0 - 9000.0 / horse.wisdom) / 100.0 : 1.0;
 
 	function addTriggers(sd: SkillData) {
 		triggers.push(sd.samplePolicy.sample(sd.regions, nsamples, rng));
@@ -100,9 +105,20 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 	const dt = cliOptions.timestep;
 	for (let i = 0; i < nsamples; ++i) {
 		const seedhi = solverRng1.hi, seedlo = solverRng1.lo, pacerseedhi = pacerRng1.hi, pacerseedlo = pacerRng1.lo;
+		const skillCheckRolls = [];
+		for (let i = 0; i < defSkills.length + cliSkills.length + debuffs.length; ++i) {
+			skillCheckRolls.push(solverRng1.random());
+			solverRng2.random();  // have to keep them in sync
+		}
+		function wisdomCheck(sd: SkillData, i: number) {
+			return sd.rarity == SkillRarity.Unique || skillCheckRolls[i] <= skillActivationChance;
+		}
+
 		const skills1 = [];
-		defSkills.forEach((sd,sdi) => addSkill(skills1, sd, triggers[sdi], i));
-		cliSkills.forEach((sd,sdi) => addSkill(skills1, sd, triggers[sdi + defSkills.length], i));
+		defSkills.filter(wisdomCheck).forEach((sd,sdi) => addSkill(skills1, sd, triggers[sdi], i));
+		cliSkills
+			.filter((sd,sdi) => wisdomCheck(sd, sdi + defSkills.length))
+			.forEach((sd,sdi) => addSkill(skills1, sd, triggers[sdi + defSkills.length], i));
 		const s = new RaceSolver({horse: testHorse, course, skills: skills1, pacer: getPacer(pacerRng1), rng: solverRng1});
 
 		while (s.pos < course.distance) {
@@ -110,8 +126,10 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		}
 
 		const skills2 = [];
-		defSkills.forEach((sd,sdi) => addSkill(skills2, sd, triggers[sdi], i));
-		debuffs.forEach((sd,sdi) => addSkill(skills2, sd, triggers[sdi + defSkills.length + cliSkills.length], i));
+		defSkills.filter(wisdomCheck).forEach((sd,sdi) => addSkill(skills2, sd, triggers[sdi], i));
+		debuffs
+			.filter((sd,sdi) => wisdomCheck(sd, sdi + defSkills.length + cliSkills.length))
+			.forEach((sd,sdi) => addSkill(skills2, sd, triggers[sdi + defSkills.length + cliSkills.length], i));
 		const s2 = new RaceSolver({horse, course, skills: skills2, pacer: getPacer(pacerRng2), rng: solverRng2});
 		while (s2.accumulatetime.t < s.accumulatetime.t) {
 			s2.step(dt);
