@@ -463,22 +463,22 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	}),
 	course_distance: immediate({
 		filterEq(regions: RegionList, distance: number, course: CourseData, _: HorseParameters) {
-			return distance == course.distance ? regions : new RegionList();
+			return course.distance == distance ? regions : new RegionList();
 		},
 		filterNeq(regions: RegionList, distance: number, course: CourseData, _: HorseParameters) {
-			return distance != course.distance ? regions : new RegionList();
+			return course.distance != distance ? regions : new RegionList();
 		},
 		filterLt(regions: RegionList, distance: number, course: CourseData, _: HorseParameters) {
-			return distance < course.distance ? regions : new RegionList();
+			return course.distance < distance ? regions : new RegionList();
 		},
 		filterLte(regions: RegionList, distance: number, course: CourseData, _: HorseParameters) {
-			return distance <= course.distance ? regions : new RegionList();
+			return course.distance <= distance ? regions : new RegionList();
 		},
 		filterGt(regions: RegionList, distance: number, course: CourseData, _: HorseParameters) {
-			return distance > course.distance ? regions : new RegionList();
+			return course.distance > distance ? regions : new RegionList();
 		},
 		filterGte(regions: RegionList, distance: number, course: CourseData, _: HorseParameters) {
-			return distance >= course.distance ? regions : new RegionList();
+			return course.distance >= distance ? regions : new RegionList();
 		}
 	}),
 	distance_diff_rate: noopImmediate,
