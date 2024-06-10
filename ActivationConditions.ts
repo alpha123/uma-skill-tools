@@ -483,6 +483,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	}),
 	distance_diff_rate: noopImmediate,
 	distance_diff_top: noopImmediate,
+	distance_diff_top_float: noopImmediate,
 	distance_rate: immediate({
 		filterLte(regions: RegionList, rate: number, course: CourseData, _: HorseParameters) {
 			const bounds = new Region(0, course.distance * rate / 100);
