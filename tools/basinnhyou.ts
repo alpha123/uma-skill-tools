@@ -220,6 +220,7 @@ const { parse, tokenize } = getParser(mockConditions);
 
 Object.keys(skills).forEach(id => {
 	if (BLACKLIST_ALL.indexOf(id) > -1) return;
+	if (cmdef.presupposedSkills[options.strategy].indexOf(id) > -1) return;
 
 	const skill = skills[id];
 	let skip = skill.alternatives.every(alt => {
