@@ -536,7 +536,11 @@ if (options.csv) {
 			format(STRINGS['strat'][lang], options.strategyAptitude)
 		].join(STRINGS[','][lang]);
 
-		sheet.getCellByA1('E4').value = cmdef.presupposedSkills[strategy].map(id => skillnames[id][lang]).join(STRINGS[','][lang]);
+		sheet.getCellByA1('E4').value = cmdef.presupposedSkills[strategy].map(id => skillnames[id][0]).join(STRINGS[','][0]);
+		if (lang != 0) {  // non-jp
+			sheet.getCellByA1('E4').note = cmdef.presupposedSkills[strategy].map(id => skillnames[id][lang]).join(STRINGS[','][lang]);
+			sheet.getCellByA1('E4').textFormat = {'bold': true};
+		}
 
 		sheet.getCellByA1('D6').value = STRINGS['disclaimer'][lang];
 		if (lang != 1) {
