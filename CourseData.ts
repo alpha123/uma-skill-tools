@@ -3,7 +3,7 @@ const assert = require('assert').strict;
 export type Phase = 0 | 1 | 2 | 3;
 export const enum Surface { Turf = 1, Dirt }
 export const enum DistanceType { Short = 1, Mile, Mid, Long }
-export const enum Orientation { Clockwise = 1, Counterclockwise }
+export const enum Orientation { Clockwise = 1, Counterclockwise, UnusedOrientation, NoTurns }
 export const enum ThresholdStat { Speed = 1, Stamina, Power, Guts, Int }
 
 export interface CourseData {
