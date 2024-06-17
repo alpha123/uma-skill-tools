@@ -8,7 +8,7 @@ import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
 
 import { RaceSolver, SkillType, SkillRarity } from '../RaceSolver';
-import { RaceSolverBuilder, GroundCondition, buildBaseStats, buildSkillData, parseGroundCondition } from '../RaceSolverBuilder';
+import { RaceSolverBuilder, buildBaseStats, buildSkillData } from '../RaceSolverBuilder';
 import { Region, RegionList } from '../Region';
 import { getParser } from '../ConditionParser';
 import {
@@ -63,20 +63,6 @@ const lang = +(options.lang == 'en');
 
 const cmdef = JSON.parse(fs.readFileSync(program.args[0], 'utf8'));
 
-const WEATHER = Object.freeze({
-	SUNNY: 1,
-	CLOUDY: 2,
-	RAINY: 3,
-	SNOWY: 4
-});
-
-const SEASONS = Object.freeze({
-	SPRING: 1,
-	SUMMER: 2,
-	AUTUMN: 3,
-	WINTER: 4
-});
-
 function getBuilder(strategy: string) {
 	const horsedesc = Object.assign({
 		strategy: strategy,
@@ -90,6 +76,10 @@ function getBuilder(strategy: string) {
 		.course(cmdef.courseid)
 		.mood(options.mood)
 		.ground(cmdef.groundCondition)
+		.weather(cmdef.weather)
+		.season(cmdef.season)
+		.time(cmdef.time || 'Midday')
+		.popularity(!('popularity' in cmdef) ? 1 : cmdef.popularity < 0 ? cmdef.totalUmas + 1 + cmdef.popularity : cmdef.popularity)
 		.withActivateCountsAsRandom()
 		.withAsiwotameru();
 
@@ -127,20 +117,6 @@ function flattenConditions(tree: Operator) {
 	const groups = [[]];
 	doFlatten(tree, groups);
 	return groups;
-}
-
-const thisWeather = WEATHER[cmdef.weather.toUpperCase()];
-const thisSeason = SEASONS[cmdef.season.toUpperCase()];
-const thisGround = parseGroundCondition(cmdef.groundCondition);
-
-function notMatchRaceConditions(groups: CmpOperator[][]) {
-	if (groups.length == 0) return false;
-	return groups.every(conds => conds.some(c => {
-		return c instanceof EqOperator
-		    && (   (c.condition == mockConditions['weather'] && c.argument != thisWeather)
-		        || (c.condition == mockConditions['ground_condition'] && c.argument != thisGround)
-		        || (c.condition == mockConditions['season'] && c.argument != thisSeason));
-	}));
 }
 
 function intersect(a: Set<number>, b: Set<number>) {
@@ -227,7 +203,7 @@ Object.keys(skills).forEach(id => {
 		const pregroups = alt.precondition.length > 0 ? flattenConditions(parse(tokenize(alt.precondition))) : [];
 		const groups = flattenConditions(parse(tokenize(alt.condition)));
 
-		return (notMatchRaceConditions(pregroups) || notMatchRaceConditions(groups)) || !(strategyMatches(pregroups) && strategyMatches(groups));
+		return !(strategyMatches(pregroups) && strategyMatches(groups));
 	});
 
 	if (skip) return;
@@ -260,7 +236,7 @@ function calcRows(builder, skillids, thresholds: number[]) {
 		wholeCourse.push(new Region(0, b2._course.distance));
 		let sd;
 		try {
-			sd = buildSkillData(horse, b2._course, wholeCourse, normalParser, id);
+			sd = buildSkillData(horse, b2._raceParams, b2._course, wholeCourse, normalParser, id);
 		} catch (e) {
 			return null;
 		}

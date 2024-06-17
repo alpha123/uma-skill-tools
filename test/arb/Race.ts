@@ -1,5 +1,6 @@
 import * as fc from 'fast-check';
 
+import * as rparams from '../../RaceParameters';
 import * as build from '../../RaceSolverBuilder';
 
 import courses from '../../data/course_data.json';
@@ -33,12 +34,12 @@ export function CourseId() {
 }
 
 export function GroundCondition() {
-	return fc.constantFrom(build.GroundCondition.Good, build.GroundCondition.Yielding, build.GroundCondition.Soft, build.GroundCondition.Heavy)
+	return fc.constantFrom(rparams.GroundCondition.Good, rparams.GroundCondition.Yielding, rparams.GroundCondition.Soft, rparams.GroundCondition.Heavy)
 	         .noBias();
 }
 
 export function Mood() {
-	return fc.constantFrom<build.Mood>(-2, -1, 0, 1, 2).noBias();
+	return fc.constantFrom<rparams.Mood>(-2, -1, 0, 1, 2).noBias();
 }
 
 export function Stat() {
@@ -74,8 +75,8 @@ export function SkillList(max: number = 30) {
 export interface RaceParams {
 	seed: number
 	courseId: string
-	groundCondition: build.GroundCondition
-	mood: build.Mood
+	groundCondition: rparams.GroundCondition
+	mood: rparams.Mood
 	horse: build.HorseDesc
 	paceEffectsEnabled: boolean
 	nsamples: number

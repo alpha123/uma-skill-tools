@@ -89,7 +89,7 @@ export function buildSkillData(horse: HorseParameters, course: CourseData, whole
 		wholeCourse.forEach(r => full.push(r));
 		if (skill.precondition) {
 			const pre = parse(tokenize(skill.precondition));
-			const preRegions = pre.apply(wholeCourse, course, horse)[0];
+			const preRegions = pre.apply(wholeCourse, course, horse, null as any)[0];
 			if (preRegions.length == 0) {
 				continue;
 			} else {
@@ -98,7 +98,7 @@ export function buildSkillData(horse: HorseParameters, course: CourseData, whole
 			}
 		}
 		const op = parse(tokenize(skill.condition));
-		const [regions, extraCondition] = op.apply(full, course, horse);
+		const [regions, extraCondition] = op.apply(full, course, horse, null as any);
 		if (regions.length == 0) {
 			continue;
 		}

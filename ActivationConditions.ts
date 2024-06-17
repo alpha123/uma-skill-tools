@@ -4,6 +4,7 @@ import { CourseData, CourseHelpers, Phase } from './CourseData';
 import { HorseParameters, StrategyHelpers } from './HorseTypes';
 import { Region, RegionList } from './Region';
 import { RaceState, DynamicCondition } from './RaceSolver';
+import { RaceParameters } from './RaceParameters';
 import {
 	ActivationSamplePolicy,
 	ImmediatePolicy, RandomPolicy,
@@ -25,7 +26,7 @@ function withDefaultCond(r: RegionList | [RegionList, DynamicCondition]) {
 
 export interface Operator {
 	samplePolicy: ActivationSamplePolicy
-	apply(regions: RegionList, course: CourseData, horse: HorseParameters): [RegionList, DynamicCondition]
+	apply(regions: RegionList, course: CourseData, horse: HorseParameters, extra: RaceParameters): [RegionList, DynamicCondition]
 }
 
 export interface CmpOperator extends Operator {
@@ -40,8 +41,8 @@ export class EqOperator {
 		this.samplePolicy = condition.samplePolicy;
 	}
 
-	apply(regions: RegionList, course: CourseData, horse: HorseParameters) {
-		return withDefaultCond(this.condition.filterEq(regions, this.argument, course, horse));
+	apply(regions: RegionList, course: CourseData, horse: HorseParameters, extra: RaceParameters) {
+		return withDefaultCond(this.condition.filterEq(regions, this.argument, course, horse, extra));
 	}
 }
 
@@ -52,8 +53,8 @@ export class NeqOperator {
 		this.samplePolicy = condition.samplePolicy;
 	}
 
-	apply(regions: RegionList, course: CourseData, horse: HorseParameters) {
-		return withDefaultCond(this.condition.filterNeq(regions, this.argument, course, horse));
+	apply(regions: RegionList, course: CourseData, horse: HorseParameters, extra: RaceParameters) {
+		return withDefaultCond(this.condition.filterNeq(regions, this.argument, course, horse, extra));
 	}
 }
 
@@ -64,8 +65,8 @@ export class LtOperator {
 		this.samplePolicy = condition.samplePolicy;
 	}
 
-	apply(regions: RegionList, course: CourseData, horse: HorseParameters) {
-		return withDefaultCond(this.condition.filterLt(regions, this.argument, course, horse));
+	apply(regions: RegionList, course: CourseData, horse: HorseParameters, extra: RaceParameters) {
+		return withDefaultCond(this.condition.filterLt(regions, this.argument, course, horse, extra));
 	}
 }
 
@@ -76,8 +77,8 @@ export class LteOperator {
 		this.samplePolicy = condition.samplePolicy;
 	}
 
-	apply(regions: RegionList, course: CourseData, horse: HorseParameters) {
-		return withDefaultCond(this.condition.filterLte(regions, this.argument, course, horse));
+	apply(regions: RegionList, course: CourseData, horse: HorseParameters, extra: RaceParameters) {
+		return withDefaultCond(this.condition.filterLte(regions, this.argument, course, horse, extra));
 	}
 }
 
@@ -88,8 +89,8 @@ export class GtOperator {
 		this.samplePolicy = condition.samplePolicy;
 	}
 
-	apply(regions: RegionList, course: CourseData, horse: HorseParameters) {
-		return withDefaultCond(this.condition.filterGt(regions, this.argument, course, horse));
+	apply(regions: RegionList, course: CourseData, horse: HorseParameters, extra: RaceParameters) {
+		return withDefaultCond(this.condition.filterGt(regions, this.argument, course, horse, extra));
 	}
 }
 
@@ -100,8 +101,8 @@ export class GteOperator {
 		this.samplePolicy = condition.samplePolicy;
 	}
 
-	apply(regions: RegionList, course: CourseData, horse: HorseParameters) {
-		return withDefaultCond(this.condition.filterGte(regions, this.argument, course, horse));
+	apply(regions: RegionList, course: CourseData, horse: HorseParameters, extra: RaceParameters) {
+		return withDefaultCond(this.condition.filterGte(regions, this.argument, course, horse, extra));
 	}
 }
 
@@ -112,9 +113,9 @@ export class AndOperator {
 		this.samplePolicy = left.samplePolicy.reconcile(right.samplePolicy);
 	}
 
-	apply(regions: RegionList, course: CourseData, horse: HorseParameters) {
-		const [leftval, leftcond] = this.left.apply(regions, course, horse);
-		const [rightval, rightcond] = this.right.apply(leftval, course, horse);
+	apply(regions: RegionList, course: CourseData, horse: HorseParameters, extra: RaceParameters) {
+		const [leftval, leftcond] = this.left.apply(regions, course, horse, extra);
+		const [rightval, rightcond] = this.right.apply(leftval, course, horse, extra);
 		if (leftcond === kTrue && rightcond === kTrue) {
 			// avoid allocating an unnecessary closure object in the common case of no dynamic conditions
 			return [rightval, kTrue] as [RegionList, DynamicCondition];
@@ -133,9 +134,9 @@ export class OrOperator {
 		this.samplePolicy = left.samplePolicy.reconcile(right.samplePolicy);
 	}
 
-	apply(regions: RegionList, course: CourseData, horse: HorseParameters) {
-		const [leftval, leftcond] = this.left.apply(regions, course, horse);
-		const [rightval, rightcond] = this.right.apply(regions, course, horse);
+	apply(regions: RegionList, course: CourseData, horse: HorseParameters, extra: RaceParameters) {
+		const [leftval, leftcond] = this.left.apply(regions, course, horse, extra);
+		const [rightval, rightcond] = this.right.apply(regions, course, horse, extra);
 		// FIXME this is, technically, completely broken. really the correct way to do this is to tie dynamic conditions to regions
 		// and propagate them during union and intersection. however, that's really annoying, and it turns out in practice that
 		// dynamic conditions never actually change between branches of an or operator if the static conditions differ, in which case
@@ -153,20 +154,20 @@ export class OrOperator {
 
 export interface Condition {
 	samplePolicy: ActivationSamplePolicy
-	filterEq(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters): RegionList | [RegionList, DynamicCondition]
-	filterNeq(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters): RegionList | [RegionList, DynamicCondition]
-	filterLt(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters): RegionList | [RegionList, DynamicCondition]
-	filterLte(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters): RegionList | [RegionList, DynamicCondition]
-	filterGt(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters): RegionList | [RegionList, DynamicCondition]
-	filterGte(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters): RegionList | [RegionList, DynamicCondition]
+	filterEq(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters, extra: RaceParameters): RegionList | [RegionList, DynamicCondition]
+	filterNeq(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters, extra: RaceParameters): RegionList | [RegionList, DynamicCondition]
+	filterLt(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters, extra: RaceParameters): RegionList | [RegionList, DynamicCondition]
+	filterLte(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters, extra: RaceParameters): RegionList | [RegionList, DynamicCondition]
+	filterGt(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters, extra: RaceParameters): RegionList | [RegionList, DynamicCondition]
+	filterGte(regions: RegionList, arg: number, course: CourseData, horse: HorseParameters, extra: RaceParameters): RegionList | [RegionList, DynamicCondition]
 }
 
-function notSupported(_0: RegionList, _1: number, _2: CourseData, _3: HorseParameters): never {
+function notSupported(_0: RegionList, _1: number, _2: CourseData, _3: HorseParameters, extra: RaceParameters): never {
 	assert(false, 'unsupported comparison');
 	throw 0; // appease typescript
 }
 
-function noop(regions: RegionList, _1: number, _2: CourseData, _3: HorseParameters) {
+function noop(regions: RegionList, _1: number, _2: CourseData, _3: HorseParameters, extra: RaceParameters) {
 	return regions;
 }
 
@@ -266,41 +267,41 @@ export const noopUniformRandom = uniformRandom(noopAll);
 
 export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	accumulatetime: immediate({
-		filterGte(regions: RegionList, t: number, _0: CourseData, _1: HorseParameters) {
+		filterGte(regions: RegionList, t: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
 			return [regions, (s: RaceState) => s.accumulatetime.t >= t] as [RegionList, DynamicCondition];
 		}
 	}),
 	activate_count_all: immediate({
-		filterLte(regions: RegionList, n: number, _0: CourseData, _1: HorseParameters) {
+		filterLte(regions: RegionList, n: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
 			return [regions, (s: RaceState) => s.activateCount.reduce((a,b) => a + b) <= n] as [RegionList, DynamicCondition];
 		},
-		filterGte(regions: RegionList, n: number, _0: CourseData, _1: HorseParameters) {
+		filterGte(regions: RegionList, n: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
 			return [regions, (s: RaceState) => s.activateCount.reduce((a,b) => a + b) >= n] as [RegionList, DynamicCondition];
 		}
 	}),
 	activate_count_end_after: immediate({
-		filterGte(regions: RegionList, n: number, _0: CourseData, _1: HorseParameters) {
+		filterGte(regions: RegionList, n: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
 			return [regions, (s: RaceState) => s.activateCount[2] >= n] as [RegionList, DynamicCondition];
 		}
 	}),
 	activate_count_heal: immediate({
-		filterGte(regions: RegionList, n: number, _0: CourseData, _1: HorseParameters) {
+		filterGte(regions: RegionList, n: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
 			return [regions, (s: RaceState) => s.activateCountHeal >= n] as [RegionList, DynamicCondition];
 		}
 	}),
 	activate_count_middle: immediate({
-		filterGte(regions: RegionList, n: number, _0: CourseData, _1: HorseParameters) {
+		filterGte(regions: RegionList, n: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
 			return [regions, (s: RaceState) => s.activateCount[1] >= n] as [RegionList, DynamicCondition];
 		}
 	}),
 	activate_count_start: immediate({
-		filterGte(regions: RegionList, n: number, _0: CourseData, _1: HorseParameters) {
+		filterGte(regions: RegionList, n: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
 			return [regions, (s: RaceState) => s.activateCount[0] >= n] as [RegionList, DynamicCondition];
 		}
 	}),
 	all_corner_random: {
 		samplePolicy: AllCornerRandomPolicy,
-		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(one == 1, 'must be all_corner_random==1');
 			const corners = course.corners.map(c => new Region(c.start, c.start + c.length));
 			return regions.rmap(r => corners.map(c => r.intersect(c)));
@@ -314,58 +315,58 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	always: noopImmediate,
 	base_power: immediate({
 		// NB. since skill conditions are processed before any skill activations, just using power here is base power (i.e. greens are not included)
-		filterLt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+		filterLt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
 			return horse.power < threshold ? regions : new RegionList();
 		},
-		filterLte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+		filterLte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
 			return horse.power <= threshold ? regions : new RegionList();
 		},
-		filterGt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+		filterGt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
 			return horse.power > threshold ? regions : new RegionList();
 		},
-		filterGte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+		filterGte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
 			return horse.power >= threshold ? regions : new RegionList();
 		}
 	}),
 	base_speed: immediate({
-		filterLt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+		filterLt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
 			return horse.speed < threshold ? regions : new RegionList();
 		},
-		filterLte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+		filterLte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
 			return horse.speed <= threshold ? regions : new RegionList();
 		},
-		filterGt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+		filterGt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
 			return horse.speed > threshold ? regions : new RegionList();
 		},
-		filterGte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+		filterGte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
 			return horse.speed >= threshold ? regions : new RegionList();
 		}
 	}),
 	base_stamina: immediate({
-		filterLt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+		filterLt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
 			return horse.stamina < threshold ? regions : new RegionList();
 		},
-		filterLte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+		filterLte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
 			return horse.stamina <= threshold ? regions : new RegionList();
 		},
-		filterGt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+		filterGt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
 			return horse.stamina > threshold ? regions : new RegionList();
 		},
-		filterGte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+		filterGte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
 			return horse.stamina >= threshold ? regions : new RegionList();
 		}
 	}),
 	base_wiz: immediate({
-		filterLt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+		filterLt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
 			return horse.wisdom < threshold ? regions : new RegionList();
 		},
-		filterLte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+		filterLte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
 			return horse.wisdom <= threshold ? regions : new RegionList();
 		},
-		filterGt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+		filterGt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
 			return horse.wisdom > threshold ? regions : new RegionList();
 		},
-		filterGte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters) {
+		filterGte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
 			return horse.wisdom >= threshold ? regions : new RegionList();
 		}
 	}),
@@ -381,13 +382,13 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	blocked_side_continuetime: noopErlangRandom(3, 2.0),
 	change_order_onetime: noopErlangRandom(3, 2.0),
 	change_order_up_end_after: erlangRandom(3, 2.0, {
-		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters) {
+		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters, extra: RaceParameters) {
 			const bounds = new Region(CourseHelpers.phaseStart(course.distance, 2), course.distance);
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
 	change_order_up_finalcorner_after: erlangRandom(3, 2.0, {
-		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters) {
+		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters, extra: RaceParameters) {
 			assert(CourseHelpers.isSortedByStart(course.corners), 'course corners must be sorted by start');
 			if (course.corners.length == 0) {
 				return new RegionList();
@@ -398,20 +399,20 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	change_order_up_middle: erlangRandom(3, 2.0, {
-		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters) {
+		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters, extra: RaceParameters) {
 			const bounds = new Region(CourseHelpers.phaseStart(course.distance, 1), CourseHelpers.phaseEnd(course.distance, 1));
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
 	compete_fight_count: uniformRandom({
-		filterGt(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters) {
+		filterGt(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters, extra: RaceParameters) {
 			assert(CourseHelpers.isSortedByStart(course.straights), 'course straights must be sorted by start');
 			const lastStraight = course.straights[course.straights.length - 1];
 			return regions.rmap(r => r.intersect(lastStraight));
 		}
 	}),
 	corner: immediate({
-		filterEq(regions: RegionList, cornerNum: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, cornerNum: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(CourseHelpers.isSortedByStart(course.corners), 'course corners must be sorted by start');
 			if (cornerNum == 0) {
 				// can't simply use straights here as there may be parts of a course which are neither corners nor straights
@@ -437,7 +438,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 				return new RegionList();
 			}
 		},
-		filterNeq(regions: RegionList, cornerNum: number, course: CourseData, _: HorseParameters) {
+		filterNeq(regions: RegionList, cornerNum: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(cornerNum == 0, 'only supports corner!=0');
 			const corners = course.corners.map(c => new Region(c.start, c.start + c.length));
 			return regions.rmap(r => corners.map(c => r.intersect(c)));
@@ -450,7 +451,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	// the real way to fix this is to finally allow placing multiple triggers, then each branch of an @ can simply
 	// place its own trigger and the problem goes away.
 	corner_random: random({
-		filterEq(regions: RegionList, cornerNum: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, cornerNum: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(CourseHelpers.isSortedByStart(course.corners), 'course corners must be sorted by start');
 			if (course.corners.length + cornerNum >= 5) {
 				const corner = course.corners[course.corners.length + cornerNum - 5];
@@ -462,22 +463,22 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	course_distance: immediate({
-		filterEq(regions: RegionList, distance: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, distance: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			return course.distance == distance ? regions : new RegionList();
 		},
-		filterNeq(regions: RegionList, distance: number, course: CourseData, _: HorseParameters) {
+		filterNeq(regions: RegionList, distance: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			return course.distance != distance ? regions : new RegionList();
 		},
-		filterLt(regions: RegionList, distance: number, course: CourseData, _: HorseParameters) {
+		filterLt(regions: RegionList, distance: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			return course.distance < distance ? regions : new RegionList();
 		},
-		filterLte(regions: RegionList, distance: number, course: CourseData, _: HorseParameters) {
+		filterLte(regions: RegionList, distance: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			return course.distance <= distance ? regions : new RegionList();
 		},
-		filterGt(regions: RegionList, distance: number, course: CourseData, _: HorseParameters) {
+		filterGt(regions: RegionList, distance: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			return course.distance > distance ? regions : new RegionList();
 		},
-		filterGte(regions: RegionList, distance: number, course: CourseData, _: HorseParameters) {
+		filterGte(regions: RegionList, distance: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			return course.distance >= distance ? regions : new RegionList();
 		}
 	}),
@@ -485,23 +486,23 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	distance_diff_top: noopImmediate,
 	distance_diff_top_float: noopImmediate,
 	distance_rate: immediate({
-		filterLte(regions: RegionList, rate: number, course: CourseData, _: HorseParameters) {
+		filterLte(regions: RegionList, rate: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			const bounds = new Region(0, course.distance * rate / 100);
 			return regions.rmap(r => r.intersect(bounds));
 		},
-		filterGte(regions: RegionList, rate: number, course: CourseData, _: HorseParameters) {
+		filterGte(regions: RegionList, rate: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			const bounds = new Region(course.distance * rate / 100, course.distance);
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
 	distance_rate_after_random: random({
-		filterEq(regions: RegionList, rate: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, rate: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			const bounds = new Region(course.distance * rate / 100, course.distance);
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
 	distance_type: immediate({
-		filterEq(regions: RegionList, distanceType: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, distanceType: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			CourseHelpers.assertIsDistanceType(distanceType);
 			if (course.distanceType == distanceType) {
 				return regions;
@@ -509,7 +510,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 				return new RegionList();
 			}
 		},
-		filterNeq(regions: RegionList, distanceType: number, course: CourseData, _: HorseParameters) {
+		filterNeq(regions: RegionList, distanceType: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			CourseHelpers.assertIsDistanceType(distanceType);
 			if (course.distanceType != distanceType) {
 				return regions;
@@ -519,16 +520,24 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	down_slope_random: random({
-		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(one == 1, 'must be down_slope_random==1');
 			const slopes = course.slopes.filter(s => s.slope < 0).map(s => new Region(s.start, s.start + s.length));
 			return regions.rmap(r => slopes.map(s => r.intersect(s)));
 		}
 	}),
-	grade: noopImmediate,  // TODO pass race conditions to filters
-	ground_condition: noopImmediate,  // TODO pass race conditions to filters
+	grade: immediate({
+		filterEq(regions: RegionList, grade: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
+			return extra.grade == grade ? regions : new RegionList();
+		}
+	}),
+	ground_condition: immediate({
+		filterEq(regions: RegionList, groundCondition: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
+			return extra.groundCondition == groundCondition ? regions : new RegionList();
+		}
+	}),
 	ground_type: immediate({
-		filterEq(regions: RegionList, surface: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, surface: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			CourseHelpers.assertIsSurface(surface);
 			return course.surface == surface ? regions : new RegionList();
 		}
@@ -548,12 +557,12 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			// for <= we do have to make some sort of guess as to when hp will drop below the threshold.
 			// this is almost entirely for the skill 火事場のバ鹿力 for which the only conditions are distance_type==4&hp_per<=30,
 			// so if we don't make this estimate it will activate out of the gate, which screws up the numbers a lot.
-			filterLte(regions: RegionList, hpPer: number, course: CourseData, horse: HorseParameters) {
+			filterLte(regions: RegionList, hpPer: number, course: CourseData, horse: HorseParameters, extra: RaceParameters) {
 				const maxHp = 0.8 * StrategyHpCoefficient[horse.strategy] * horse.stamina + course.distance;
 				const bounds = new Region(maxHp * (hpPer - 100) / 100 / -20 * baseSpeed(course.distance), course.distance);
 				return regions.rmap(r => r.intersect(bounds));
 			},
-			filterGte(regions: RegionList, _0: number, _1: CourseData, _2: HorseParameters) {
+			filterGte(regions: RegionList, _0: number, _1: CourseData, _2: HorseParameters, extra: RaceParameters) {
 				// however for >= we don't actually have to do anything
 				// since hp (mostly) only goes down, there are no skills that would activate either too early or too late; for skills
 				// with hp_per>=n conditions it mostly just controls whether they activate at all, so we can safely assume you always
@@ -565,7 +574,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	infront_near_lane_time: noopErlangRandom(3, 2.0),
 	is_activate_other_skill_detail: noopImmediate,  // TODO FIXME
 	is_basis_distance: immediate({
-		filterEq(regions: RegionList, flag: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, flag: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(flag == 0 || flag == 1, 'must be is_basis_distance==0 or is_basis_distance==1');
 			return Math.min(course.distance % 400, 1) != flag ? regions : new RegionList();
 		}
@@ -573,13 +582,13 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	is_badstart: noopImmediate,
 	is_behind_in: noopImmediate,
 	is_dirtgrade: immediate({
-		filterEq(regions: RegionList, flag: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, flag: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(flag == 1, 'must be is_dirtgrade==1');
 			return [10101, 10103, 10104, 10105].indexOf(course.raceTrackId) > -1 ? regions : new RegionList();
 		}
 	}),
 	is_finalcorner: immediate({
-		filterEq(regions: RegionList, flag: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, flag: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(flag == 0 || flag == 1, 'must be is_finalcorner==0 or is_finalcorner==1');
 			assert(CourseHelpers.isSortedByStart(course.corners), 'course corners must be sorted by start');
 			if (course.corners.length == 0) {
@@ -591,7 +600,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	is_finalcorner_laterhalf: immediate({
-		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(one == 1, 'must be is_finalcorner_laterhalf==1');
 			assert(CourseHelpers.isSortedByStart(course.corners), 'course corners must be sorted by start');
 			if (course.corners.length == 0) {
@@ -603,7 +612,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	is_finalcorner_random: random({
-		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(one == 1, 'must be is_finalcorner_random==1');
 			assert(CourseHelpers.isSortedByStart(course.corners), 'course corners must be sorted by start');
 			if (course.corners.length == 0) {
@@ -615,14 +624,14 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	is_lastspurt: immediate({
-		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(one == 1, 'must be is_lastspurt==1');
 			const bounds = new Region(CourseHelpers.phaseStart(course.distance, 2), course.distance);
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
 	is_last_straight: immediate({
-		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(one == 1, 'must be is_last_straight_onetime==1');
 			assert(CourseHelpers.isSortedByStart(course.straights), 'course straights must be sorted by start');
 			const lastStraight = course.straights[course.straights.length - 1];
@@ -630,7 +639,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	is_last_straight_onetime: immediate({
-		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(one == 1, 'must be is_last_straight_onetime==1');
 			assert(CourseHelpers.isSortedByStart(course.straights), 'course straights must be sorted by start');
 			const lastStraightStart = course.straights[course.straights.length - 1].start;
@@ -658,37 +667,37 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	overtake_target_time: noopErlangRandom(3, 2.0),
 	phase: {
 		samplePolicy: ImmediatePolicy,
-		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			CourseHelpers.assertIsPhase(phase);
 			const bounds = new Region(CourseHelpers.phaseStart(course.distance, phase), CourseHelpers.phaseEnd(course.distance, phase));
 			return regions.rmap(r => r.intersect(bounds));
 		},
 		filterNeq: notSupported,
-		filterLt(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
+		filterLt(regions: RegionList, phase: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			CourseHelpers.assertIsPhase(phase);
 			assert(phase > 0, 'phase == 0');
 			const bounds = new Region(0, CourseHelpers.phaseStart(course.distance, phase));
 			return regions.rmap(r => r.intersect(bounds));
 		},
-		filterLte(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
+		filterLte(regions: RegionList, phase: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			CourseHelpers.assertIsPhase(phase);
 			const bounds = new Region(0, CourseHelpers.phaseEnd(course.distance, phase));
 			return regions.rmap(r => r.intersect(bounds));
 		},
-		filterGt(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
+		filterGt(regions: RegionList, phase: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			CourseHelpers.assertIsPhase(phase);
 			assert(phase < 3, 'phase > 2');
 			const bounds = new Region(CourseHelpers.phaseStart(course.distance, (phase + 1) as Phase), course.distance);
 			return regions.rmap(r => r.intersect(bounds));
 		},
-		filterGte(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
+		filterGte(regions: RegionList, phase: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			CourseHelpers.assertIsPhase(phase);
 			const bounds = new Region(CourseHelpers.phaseStart(course.distance, phase), course.distance);
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	},
 	phase_corner_random: random({
-		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			CourseHelpers.assertIsPhase(phase);
 			const phaseStart = CourseHelpers.phaseStart(course.distance, phase);
 			const phaseEnd = CourseHelpers.phaseEnd(course.distance, phase);
@@ -699,7 +708,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	phase_firsthalf_random: random({
-		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			CourseHelpers.assertIsPhase(phase);
 			const start = CourseHelpers.phaseStart(course.distance, phase);
 			const end = CourseHelpers.phaseEnd(course.distance, phase);
@@ -708,7 +717,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	phase_firstquarter_random: random({
-		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			CourseHelpers.assertIsPhase(phase);
 			const start = CourseHelpers.phaseStart(course.distance, phase);
 			const end = CourseHelpers.phaseEnd(course.distance, phase);
@@ -717,7 +726,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	phase_laterhalf_random: random({
-		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			CourseHelpers.assertIsPhase(phase);
 			const start = CourseHelpers.phaseStart(course.distance, phase);
 			const end = CourseHelpers.phaseEnd(course.distance, phase);
@@ -726,7 +735,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	phase_random: random({
-		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			CourseHelpers.assertIsPhase(phase);
 			const bounds = new Region(CourseHelpers.phaseStart(course.distance, phase), CourseHelpers.phaseEnd(course.distance, phase));
 			return regions.rmap(r => r.intersect(bounds));
@@ -735,23 +744,23 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	popularity: noopImmediate,
 	post_number: noopImmediate,
 	remain_distance: immediate({
-		filterLte(regions: RegionList, remain: number, course: CourseData, _: HorseParameters) {
+		filterLte(regions: RegionList, remain: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			const bounds = new Region(course.distance - remain, course.distance);
 			return regions.rmap(r => r.intersect(bounds));
 		},
-		filterGte(regions: RegionList, remain: number, course: CourseData, _: HorseParameters) {
+		filterGte(regions: RegionList, remain: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			const bounds = new Region(0, course.distance - remain);
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
 	rotation: immediate({
-		filterEq(regions: RegionList, rotation: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, rotation: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			CourseHelpers.assertIsOrientation(rotation);
 			return course.turn == rotation ? regions : new RegionList();
 		}
 	}),
 	running_style: immediate({
-		filterEq(regions: RegionList, strategy: number, _: CourseData, horse: HorseParameters) {
+		filterEq(regions: RegionList, strategy: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
 			StrategyHelpers.assertIsStrategy(strategy);
 			if (StrategyHelpers.strategyMatches(horse.strategy, strategy)) {
 				return regions;
@@ -764,9 +773,13 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	running_style_count_same_rate: noopImmediate,
 	running_style_equal_popularity_one: noopImmediate,
 	same_skill_horse_count: noopImmediate,
-	season: noopImmediate,  // TODO pass race conditions to filters
+	season: immediate({
+		filterEq(regions: RegionList, season: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
+			return extra.season == season ? regions : new RegionList();
+		}
+	}),
 	slope: immediate({
-		filterEq(regions: RegionList, slopeType: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, slopeType: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(slopeType == 0 || slopeType == 1 || slopeType == 2, 'slopeType');
 			// Requires course.slopes is sorted by slope start— this is not always the case, since in course_data.json they are
 			// (sometimes?) sorted first by uphill/downhill and then by start. They should be sorted when the course is loaded.
@@ -785,7 +798,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	straight_front_type: immediate({
-		filterEq(regions: RegionList, frontType: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, frontType: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(frontType == 1 || frontType == 2, 'frontType');
 			const straights = course.straights.filter(s => s.frontType == frontType);
 			return regions.rmap(r => straights.map(s => r.intersect(s)));
@@ -793,7 +806,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	}),
 	straight_random: {
 		samplePolicy: StraightRandomPolicy,
-		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(one == 1, 'must be straight_random==1');
 			return regions.rmap(r => course.straights.map(s => r.intersect(s)));
 		},
@@ -805,17 +818,21 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	},
 	temptation_count: noopImmediate,
 	track_id: immediate({
-		filterEq(regions: RegionList, trackId: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, trackId: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			return trackId == course.raceTrackId ? regions : new RegionList();
 		}
 	}),
 	up_slope_random: random({
-		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters) {
+		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(one == 1, 'must be up_slope_random==1');
 			const slopes = course.slopes.filter(s => s.slope > 0).map(s => new Region(s.start, s.start + s.length));
 			return regions.rmap(r => slopes.map(s => r.intersect(s)));
 		}
 	}),
 	visiblehorse: noopImmediate,
-	weather: noopImmediate  // TODO pass race conditions to filters
+	weather: immediate({
+		filterEq(regions: RegionList, weather: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
+			return extra.weather == weather ? regions : new RegionList();
+		}
+	})
 });

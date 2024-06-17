@@ -6,8 +6,11 @@ import { Conditions, random, immediate, noopRandom } from './ActivationCondition
 import { ActivationSamplePolicy, ImmediatePolicy } from './ActivationSamplePolicy';
 import { getParser } from './ConditionParser';
 import { RaceSolver, PendingSkill, DynamicCondition, SkillType, SkillRarity, SkillEffect } from './RaceSolver';
+import { Mood, GroundCondition, Weather, Season, Time, Grade, RaceParameters } from './RaceParameters';
 
 import skills from './data/skill_data.json';
+
+type PartialRaceParameters = Omit<{ -readonly [K in keyof RaceParameters]: RaceParameters[K] }, 'skillId'>;
 
 export interface HorseDesc {
 	speed: number
@@ -20,10 +23,6 @@ export interface HorseDesc {
 	surfaceAptitude: string | Aptitude
 	strategyAptitude: string | Aptitude
 }
-
-export const enum GroundCondition { Good = 1, Yielding, Soft, Heavy }
-
-export type Mood = -2 | -1 | 0 | 1 | 2;
 
 const GroundSpeedModifier = Object.freeze([
 	null, // ground types started at 1
@@ -100,6 +99,64 @@ export function parseGroundCondition(g: string | GroundCondition) {
 	}
 }
 
+export function parseWeather(w: string | Weather) {
+	if (typeof w != 'string') {
+		return w;
+	}
+	switch (w.toUpperCase()) {
+	case 'SUNNY': return Weather.Sunny;
+	case 'CLOUDY': return Weather.Cloudy;
+	case 'RAINY': return Weather.Rainy;
+	case 'SNOWY': return Weather.Snowy;
+	default: throw new Error('Invalid weather.');
+	}
+}
+
+export function parseSeason(s: string | Season) {
+	if (typeof s != 'string') {
+		return s;
+	}
+	switch (s.toUpperCase()) {
+	case 'SPRING': return Season.Spring;
+	case 'SUMMER': return Season.Summer;
+	case 'AUTUMN': return Season.Autumn;
+	case 'WINTER': return Season.Winter;
+	case 'SAKURA': return Season.Sakura;
+	default: throw new Error('Invalid season.');
+	}
+}
+
+export function parseTime(t: string | Time) {
+	if (typeof t != 'string') {
+		return t;
+	}
+	switch (t.toUpperCase()) {
+	case 'NONE': case 'NOTIME': return Time.NoTime;
+	case 'MORNING': return Time.Morning;
+	case 'MIDDAY': return Time.Midday;
+	case 'EVENING': return Time.Evening;
+	case 'NIGHT': return Time.Night;
+	default: throw new Error('Invalid race time.');
+	}
+}
+
+export function parseGrade(g: string | Grade) {
+	if (typeof g != 'string') {
+		return g;
+	}
+	switch (g.toUpperCase()) {
+	case 'G1': return Grade.G1;
+	case 'G2': return Grade.G2;
+	case 'G3': return Grade.G3;
+	case 'OP': return Grade.OP;
+	case 'PRE-OP': case 'PREOP': return Grade.PreOP;
+	case 'MAIDEN': return Grade.Maiden;
+	case 'DEBUT': return Grade.Debut;
+	case 'DAILY': return Grade.Daily;
+	default: throw new Error('Invalid race grade.');
+	}
+}
+
 function adjustOvercap(stat: number) {
 	return stat > 1200 ? 1200 + Math.floor((stat - 1200) / 2) : stat;
 }
@@ -160,10 +217,11 @@ function buildSkillEffects(skill) {
 	}, []);
 }
 
-export function buildSkillData(horse: HorseParameters, course: CourseData, wholeCourse: RegionList, parser: {parse: any, tokenize: any}, skillId: string, ignoreNullEffects: boolean = false) {
+export function buildSkillData(horse: HorseParameters, raceParams: PartialRaceParameters, course: CourseData, wholeCourse: RegionList, parser: {parse: any, tokenize: any}, skillId: string, ignoreNullEffects: boolean = false) {
 	if (!(skillId in skills)) {
 		throw new Error('bad skill ID ' + skillId);
 	}
+	const extra = Object.assign({skillId}, raceParams);
 	const alternatives = skills[skillId].alternatives;
 	for (let i = 0; i < alternatives.length; ++i) {
 		const skill = alternatives[i];
@@ -171,7 +229,7 @@ export function buildSkillData(horse: HorseParameters, course: CourseData, whole
 		wholeCourse.forEach(r => full.push(r));
 		if (skill.precondition) {
 			const pre = parser.parse(parser.tokenize(skill.precondition));
-			const preRegions = pre.apply(wholeCourse, course, horse)[0];
+			const preRegions = pre.apply(wholeCourse, course, horse, extra)[0];
 			if (preRegions.length == 0) {
 				continue;
 			} else {
@@ -181,7 +239,7 @@ export function buildSkillData(horse: HorseParameters, course: CourseData, whole
 		}
 
 		const op = parser.parse(parser.tokenize(skill.condition));
-		const [regions, extraCondition] = op.apply(full, course, horse);
+		const [regions, extraCondition] = op.apply(full, course, horse, extra);
 		if (regions.length == 0) {
 			continue;
 		}
@@ -255,8 +313,7 @@ const acrParser = getParser(conditionsWithActivateCountsAsRandom);
 
 export class RaceSolverBuilder {
 	_course: CourseData | null
-	_ground: GroundCondition
-	_mood: Mood
+	_raceParams: PartialRaceParameters
 	_horse: HorseDesc | null
 	_pacer: HorseDesc | null
 	_pacerSkills: PendingSkill[]
@@ -267,8 +324,15 @@ export class RaceSolverBuilder {
 
 	constructor(readonly nsamples: number) {
 		this._course = null;
-		this._ground = GroundCondition.Good;
-		this._mood = 2;
+		this._raceParams = {
+			mood: 2,
+			groundCondition: GroundCondition.Good,
+			weather: Weather.Sunny,
+			season: Season.Spring,
+			time: Time.Midday,
+			grade: Grade.G1,
+			popularity: 1
+		};
 		this._horse = null;
 		this._pacer = null;
 		this._pacerSkills = [];
@@ -292,13 +356,38 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
-	ground(ground: string | GroundCondition) {
-		this._ground = parseGroundCondition(ground);
+	mood(mood: Mood) {
+		this._raceParams.mood = mood;
 		return this;
 	}
 
-	mood(mood: Mood) {
-		this._mood = mood;
+	ground(ground: string | GroundCondition) {
+		this._raceParams.groundCondition = parseGroundCondition(ground);
+		return this;
+	}
+
+	weather(weather: string | Weather) {
+		this._raceParams.weather = parseWeather(weather);
+		return this;
+	}
+
+	season(season: string | Season) {
+		this._raceParams.season = parseSeason(season);
+		return this;
+	}
+
+	time(time: string | Time) {
+		this._raceParams.time = parseTime(time);
+		return this;
+	}
+
+	grade(grade: string | Grade) {
+		this._raceParams.grade = parseGrade(grade);
+		return this;
+	}
+
+	popularity(popularity: number) {
+		this._raceParams.popularity = popularity;
 		return this;
 	}
 
@@ -355,7 +444,7 @@ export class RaceSolverBuilder {
 	// NB. must be called after horse and mood are set
 	withAsiwotameru() {
 		// for some reason, asitame (probably??) uses *displayed* power adjusted for motivation + greens
-		const baseDisplayedPower = this._horse.power * (1 + 0.02 * this._mood);
+		const baseDisplayedPower = this._horse.power * (1 + 0.02 * this._raceParams.mood);
 		this._extraSkillHooks.push((skilldata, horse, course) => {
 			const power = skilldata.reduce((acc,sd) => {
 				const powerUp = sd.effects.find(ef => ef.type == SkillType.PowerUp);
@@ -394,8 +483,7 @@ export class RaceSolverBuilder {
 	fork() {
 		const clone = new RaceSolverBuilder(this.nsamples);
 		clone._course = this._course;
-		clone._ground = this._ground;
-		clone._mood = this._mood;
+		clone._raceParams = Object.assign({}, this._raceParams);
 		clone._horse = this._horse;
 		clone._pacer = this._pacer;
 		clone._pacerSkills = this._pacerSkills.slice();  // sharing the skill objects is fine but see the note below
@@ -412,24 +500,24 @@ export class RaceSolverBuilder {
 	}
 
 	*build() {
-		let horse = buildBaseStats(this._horse, this._mood);
+		let horse = buildBaseStats(this._horse, this._raceParams.mood);
 		const solverRng = new Rule30CARng(this._rng.int32());
 		const pacerRng = new Rule30CARng(this._rng.int32());  // need this even if _pacer is null in case we forked from/to something with a pacer
 																													// (to keep the rngs in sync)
 
-		const pacerHorse = this._pacer ? buildAdjustedStats(buildBaseStats(this._pacer, this._mood), this._course, this._ground) : null;
+		const pacerHorse = this._pacer ? buildAdjustedStats(buildBaseStats(this._pacer, this._raceParams.mood), this._course, this._raceParams.groundCondition) : null;
 
 		const wholeCourse = new RegionList();
 		wholeCourse.push(new Region(0, this._course.distance));
 		Object.freeze(wholeCourse);
 
-		const makeSkill = buildSkillData.bind(null, horse, this._course, wholeCourse, this._parser) as (s: string) => SkillData | null;
+		const makeSkill = buildSkillData.bind(null, horse, this._raceParams, this._course, wholeCourse, this._parser) as (s: string) => SkillData | null;
 		const skilldata = this._skills.map(makeSkill).filter(s => s != null);
 		this._extraSkillHooks.forEach(h => h(skilldata, horse, this._course));
 		const triggers = skilldata.map(sd => sd.samplePolicy.sample(sd.regions, this.nsamples, this._rng));
 
 		// must come after skill activations are decided because conditions like base_power depend on base stats
-		horse = buildAdjustedStats(horse, this._course, this._ground);
+		horse = buildAdjustedStats(horse, this._course, this._raceParams.groundCondition);
 
 		for (let i = 0; i < this.nsamples; ++i) {
 			const skills = skilldata.map((sd,sdi) => ({
