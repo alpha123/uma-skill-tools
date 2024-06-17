@@ -592,6 +592,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	is_surrounded: noopErlangRandom(3, 2.0),
 	lane_type: noopImmediate,
 	lastspurt: noopImmediate,
+	motivation: valueFilter((_0: CourseData, _1: HorseParameters, extra: RaceParameters) => extra.mood + 3),  // go from -2 to 2 to 1-5 scale
 	near_count: noopErlangRandom(3, 2.0),
 	order: noopImmediate,
 	order_rate: noopImmediate,
