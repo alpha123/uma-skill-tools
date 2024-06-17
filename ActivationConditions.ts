@@ -748,6 +748,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		filterGte: notSupported
 	},
 	temptation_count: noopImmediate,
+	time: valueFilter((_0: CourseData, _1: HorseParameters, extra: RaceParameters) => extra.time),
 	track_id: valueFilter((course: CourseData, _: HorseParameters, extra: RaceParameters) => course.raceTrackId),
 	up_slope_random: random({
 		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
