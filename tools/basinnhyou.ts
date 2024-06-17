@@ -24,7 +24,6 @@ program
 	.argument('<cmdef>', 'path to CM definition file')
 	.option('--csv', 'output chart as a CSV file', true)
 	.addOption(new Option('--sheet <sheet ID>', 'use the Google Sheets API').implies({'csv': false}))
-	.addOption(new Option('--api-email <email>', 'service account email to authenticate with').env('GOOGLE_SERVICE_ACCOUNT_EMAIL'))
 	.addOption(new Option('--api-key <path to key>', 'path to service account private key (JSON)').env('GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY'))
 	.addOption(new Option('-N, --nsamples <N>', 'number of random samples to use for skills with random conditions')
 		.default(500)
@@ -361,9 +360,10 @@ if (options.csv) {
 	printRows(calcRows(builder, whites, [0.5,1.0,1.5]), '≥0.50,≥1.00,≥1.50');
 	printRows(calcRows(builder, uniques, [0.5,1.0,1.5]), '≥0.50,≥1.00,≥1.50');
 } else {
+	const apiKey = JSON.parse(fs.readFileSync(options.apiKey, 'utf8'));
 	const auth = new JWT({
-		email: options.apiEmail,
-		key: JSON.parse(fs.readFileSync(options.apiKey, 'utf8'))['private_key'],
+		email: apiKey['client_email'],
+		key: apiKey['private_key'],
 		scopes: ['https://www.googleapis.com/auth/spreadsheets']
 	});
 
