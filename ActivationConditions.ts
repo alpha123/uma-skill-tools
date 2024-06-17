@@ -247,6 +247,29 @@ export function noopErlangRandom(k: number, lambda: number) {
 
 export const noopUniformRandom = uniformRandom(noopAll);
 
+function valueFilter(getValue: (c: CourseData, h: HorseParameters, e: RaceParameters) => number) {
+	return immediate({
+		filterEq(regions: RegionList, value: number, course: CourseData, horse: HorseParameters, extra: RaceParameters) {
+			return getValue(course, horse, extra) == value ? regions : new RegionList();
+		},
+		filterNeq(regions: RegionList, value: number, course: CourseData, horse: HorseParameters, extra: RaceParameters) {
+			return getValue(course, horse, extra) != value ? regions : new RegionList();
+		},
+		filterLt(regions: RegionList, value: number, course: CourseData, horse: HorseParameters, extra: RaceParameters) {
+			return getValue(course, horse, extra) < value ? regions : new RegionList();
+		},
+		filterLte(regions: RegionList, value: number, course: CourseData, horse: HorseParameters, extra: RaceParameters) {
+			return getValue(course, horse, extra) <= value ? regions : new RegionList();
+		},
+		filterGt(regions: RegionList, value: number, course: CourseData, horse: HorseParameters, extra: RaceParameters) {
+			return getValue(course, horse, extra) > value ? regions : new RegionList();
+		},
+		filterGte(regions: RegionList, value: number, course: CourseData, horse: HorseParameters, extra: RaceParameters) {
+			return getValue(course, horse, extra) >= value ? regions : new RegionList();
+		}
+	});
+}
+
 /*
 	accumulatetime, activate_count_all, activate_count_end_after, activate_count_heal, activate_count_middle, activate_count_start,
 	all_corner_random, always, bashin_diff_behind, bashin_diff_infront, behind_near_lane_time, behind_near_lane_time_set1, blocked_all_continuetime,
@@ -313,63 +336,11 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		filterGte: notSupported
 	},
 	always: noopImmediate,
-	base_power: immediate({
-		// NB. since skill conditions are processed before any skill activations, just using power here is base power (i.e. greens are not included)
-		filterLt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
-			return horse.power < threshold ? regions : new RegionList();
-		},
-		filterLte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
-			return horse.power <= threshold ? regions : new RegionList();
-		},
-		filterGt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
-			return horse.power > threshold ? regions : new RegionList();
-		},
-		filterGte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
-			return horse.power >= threshold ? regions : new RegionList();
-		}
-	}),
-	base_speed: immediate({
-		filterLt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
-			return horse.speed < threshold ? regions : new RegionList();
-		},
-		filterLte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
-			return horse.speed <= threshold ? regions : new RegionList();
-		},
-		filterGt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
-			return horse.speed > threshold ? regions : new RegionList();
-		},
-		filterGte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
-			return horse.speed >= threshold ? regions : new RegionList();
-		}
-	}),
-	base_stamina: immediate({
-		filterLt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
-			return horse.stamina < threshold ? regions : new RegionList();
-		},
-		filterLte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
-			return horse.stamina <= threshold ? regions : new RegionList();
-		},
-		filterGt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
-			return horse.stamina > threshold ? regions : new RegionList();
-		},
-		filterGte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
-			return horse.stamina >= threshold ? regions : new RegionList();
-		}
-	}),
-	base_wiz: immediate({
-		filterLt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
-			return horse.wisdom < threshold ? regions : new RegionList();
-		},
-		filterLte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
-			return horse.wisdom <= threshold ? regions : new RegionList();
-		},
-		filterGt(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
-			return horse.wisdom > threshold ? regions : new RegionList();
-		},
-		filterGte(regions: RegionList, threshold: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
-			return horse.wisdom >= threshold ? regions : new RegionList();
-		}
-	}),
+	// NB. since skill conditions are processed before any skill activations, stats here are base stats (i.e. greens are not included)
+	base_power: valueFilter((_: CourseData, horse: HorseParameters, extra: RaceParameters) => horse.power),
+	base_speed: valueFilter((_: CourseData, horse: HorseParameters, extra: RaceParameters) => horse.speed),
+	base_stamina: valueFilter((_: CourseData, horse: HorseParameters, extra: RaceParameters) => horse.stamina),
+	base_wiz: valueFilter((_: CourseData, horse: HorseParameters, extra: RaceParameters) => horse.wisdom),
 	bashin_diff_behind: noopErlangRandom(3, 2.0),
 	bashin_diff_infront: noopErlangRandom(3, 2.0),
 	behind_near_lane_time: noopErlangRandom(3, 2.0),
@@ -462,26 +433,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			}
 		}
 	}),
-	course_distance: immediate({
-		filterEq(regions: RegionList, distance: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
-			return course.distance == distance ? regions : new RegionList();
-		},
-		filterNeq(regions: RegionList, distance: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
-			return course.distance != distance ? regions : new RegionList();
-		},
-		filterLt(regions: RegionList, distance: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
-			return course.distance < distance ? regions : new RegionList();
-		},
-		filterLte(regions: RegionList, distance: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
-			return course.distance <= distance ? regions : new RegionList();
-		},
-		filterGt(regions: RegionList, distance: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
-			return course.distance > distance ? regions : new RegionList();
-		},
-		filterGte(regions: RegionList, distance: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
-			return course.distance >= distance ? regions : new RegionList();
-		}
-	}),
+	course_distance: valueFilter((course: CourseData, _: HorseParameters, extra: RaceParameters) => course.distance),
 	distance_diff_rate: noopImmediate,
 	distance_diff_top: noopImmediate,
 	distance_diff_top_float: noopImmediate,
@@ -526,22 +478,9 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => slopes.map(s => r.intersect(s)));
 		}
 	}),
-	grade: immediate({
-		filterEq(regions: RegionList, grade: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
-			return extra.grade == grade ? regions : new RegionList();
-		}
-	}),
-	ground_condition: immediate({
-		filterEq(regions: RegionList, groundCondition: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
-			return extra.groundCondition == groundCondition ? regions : new RegionList();
-		}
-	}),
-	ground_type: immediate({
-		filterEq(regions: RegionList, surface: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
-			CourseHelpers.assertIsSurface(surface);
-			return course.surface == surface ? regions : new RegionList();
-		}
-	}),
+	grade: valueFilter((_0: CourseData, _1: HorseParameters, extra: RaceParameters) => extra.grade),
+	ground_condition: valueFilter((_0: CourseData, _1: HorseParameters, extra: RaceParameters) => extra.groundCondition),
+	ground_type: valueFilter((course: CourseData, _: HorseParameters, extra: RaceParameters) => course.surface),
 	// TODO in order to properly simulate skills that depend on hp_per this condition should pass a dynamic condition on to the
 	// race solver. This is a bit more long-term since that would require simulating stamina, and therefore recoveries, and honestly
 	// would be kind of a pain in general, and probably impossible to do accurately due to things like 位置取り争い that depend on other
@@ -753,12 +692,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
-	rotation: immediate({
-		filterEq(regions: RegionList, rotation: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
-			CourseHelpers.assertIsOrientation(rotation);
-			return course.turn == rotation ? regions : new RegionList();
-		}
-	}),
+	rotation: valueFilter((course: CourseData, _: HorseParameters, extra: RaceParameters) => course.turn),
 	running_style: immediate({
 		filterEq(regions: RegionList, strategy: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
 			StrategyHelpers.assertIsStrategy(strategy);
@@ -773,11 +707,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	running_style_count_same_rate: noopImmediate,
 	running_style_equal_popularity_one: noopImmediate,
 	same_skill_horse_count: noopImmediate,
-	season: immediate({
-		filterEq(regions: RegionList, season: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
-			return extra.season == season ? regions : new RegionList();
-		}
-	}),
+	season: valueFilter((_0: CourseData, _1: HorseParameters, extra: RaceParameters) => extra.season),
 	slope: immediate({
 		filterEq(regions: RegionList, slopeType: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(slopeType == 0 || slopeType == 1 || slopeType == 2, 'slopeType');
@@ -817,11 +747,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		filterGte: notSupported
 	},
 	temptation_count: noopImmediate,
-	track_id: immediate({
-		filterEq(regions: RegionList, trackId: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
-			return trackId == course.raceTrackId ? regions : new RegionList();
-		}
-	}),
+	track_id: valueFilter((course: CourseData, _: HorseParameters, extra: RaceParameters) => course.raceTrackId),
 	up_slope_random: random({
 		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(one == 1, 'must be up_slope_random==1');
@@ -830,9 +756,5 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	visiblehorse: noopImmediate,
-	weather: immediate({
-		filterEq(regions: RegionList, weather: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
-			return extra.weather == weather ? regions : new RegionList();
-		}
-	})
+	weather: valueFilter((_0: CourseData, _1: HorseParameters, extra: RaceParameters) => extra.weather)
 });
