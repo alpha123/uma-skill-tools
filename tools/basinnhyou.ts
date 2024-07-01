@@ -190,6 +190,7 @@ function strategyMatches(groups: CmpOperator[][]) {
 const greens = [], pinks = [], golds = [], whites = [], uniques = [];
 
 const BLACKLIST_ALL = ['910071', '200333', '200343', '202303', '201081', '201561', '105601211'];
+const ALWAYS_WHITELIST = ['910151', '900771'];
 
 const { parse, tokenize } = getParser(mockConditions);
 
@@ -205,7 +206,7 @@ Object.keys(skills).forEach(id => {
 		return !(strategyMatches(pregroups) && strategyMatches(groups));
 	});
 
-	if (skip) return;
+	if (skip && ALWAYS_WHITELIST.indexOf(id) == -1) return;
 
 	// assume there are no skills with mixed green/non-green effects (this is true and would be very weird if it was violated)
 	if (skill.alternatives[0].effects.some(ef => ef.type <= SkillType.WisdomUp)) {
