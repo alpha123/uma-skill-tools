@@ -295,8 +295,9 @@ export const conditionsWithActivateCountsAsRandom = Object.freeze(Object.assign(
 		}
 	}),
 	activate_count_middle: random({
-		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters) {
-			const bounds = new Region(CourseHelpers.phaseStart(course.distance, 1), CourseHelpers.phaseEnd(course.distance, 1));
+		filterGte(regions: RegionList, n: number, course: CourseData, _1: HorseParameters) {
+			const start = CourseHelpers.phaseStart(course.distance, 1), end = CourseHelpers.phaseEnd(course.distance, 1);
+			const bounds = new Region(start, start + n / 10 * (end - start));
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
