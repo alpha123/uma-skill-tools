@@ -415,6 +415,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => corners.map(c => r.intersect(c)));
 		}
 	}),
+	corner_count: valueFilter((course: CourseData, _: HorseParameters, extra: RaceParameters) => course.corners.length),
 	// FIXME this shouldn't actually be random, since in cases like corner_random==1@corner_random==2 it should sample
 	// only from the first corner and not from the combined regions, so it needs its own sample policy
 	// actually, that's slightly annoying to handle since corners come in back-to-back pairs, so their regions will
