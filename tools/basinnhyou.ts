@@ -86,7 +86,7 @@ function getBuilder(strategy: string) {
 		builder.useDefaultPacer();
 	}
 
-	cmdef.presupposedSkills[strategy].forEach(id => builder.addSkill(id));
+	cmdef.presupposedSkills[strategy].forEach(id => builder.addSkill(id.toString()));
 	return builder;
 }
 
