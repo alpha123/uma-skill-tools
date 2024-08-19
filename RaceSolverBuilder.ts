@@ -281,28 +281,43 @@ export function buildSkillData(horse: HorseParameters, raceParams: PartialRacePa
 }
 
 export const conditionsWithActivateCountsAsRandom = Object.freeze(Object.assign({}, Conditions, {
+	activate_count_all: immediate({
+		filterGte(regions: RegionList, n: number, course: CourseData, _1: HorseParameters, extra: RaceParameters) {
+			// hard-code NY TM Opera O unique to pretend it's immediate while allowing randomness for other skills
+				return n == 6 ? new RegionList() : regions;
+			if (extra.skillId == '110151' || extra.skillId == '910151') {
+				return n == 7 ? regions : new RegionList();
+				//const rl = new RegionList();
+				//rl.push(new Region(course.distance - 401, course.distance - 399));
+				//return rl;
+			}
+			// somewhat arbitrarily decide you activate about 22 skills per race and then use a region n / 22 ± 15%
+			const bounds = new Region(Math.min(n / 22 - 0.15, 0.6) * course.distance, Math.min(n / 22 + 0.15, 1.0) * course.distance);
+			return regions.rmap(r => r.intersect(bounds));
+		}
+	}),
 	activate_count_end_after: random({
-		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters) {
+		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters, extra: RaceParameters) {
 			const bounds = new Region(CourseHelpers.phaseStart(course.distance, 2), CourseHelpers.phaseEnd(course.distance, 3));
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
 	activate_count_heal: noopRandom,
 	activate_count_later_half: random({
-		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters) {
+		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters, extra: RaceParameters) {
 			const bounds = new Region(course.distance / 2, course.distance);
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
 	activate_count_middle: random({
-		filterGte(regions: RegionList, n: number, course: CourseData, _1: HorseParameters) {
+		filterGte(regions: RegionList, n: number, course: CourseData, _1: HorseParameters, extra: RaceParameters) {
 			const start = CourseHelpers.phaseStart(course.distance, 1), end = CourseHelpers.phaseEnd(course.distance, 1);
 			const bounds = new Region(start, start + n / 10 * (end - start));
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
 	activate_count_start: immediate({  // for 地固め
-		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters) {
+		filterGte(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters, extra: RaceParameters) {
 			const bounds = new Region(CourseHelpers.phaseStart(course.distance, 0), CourseHelpers.phaseEnd(course.distance, 0));
 			return regions.rmap(r => r.intersect(bounds));
 		}
