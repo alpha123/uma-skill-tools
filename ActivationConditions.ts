@@ -610,7 +610,15 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		samplePolicy: ImmediatePolicy,
 		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			CourseHelpers.assertIsPhase(phase);
-			const bounds = new Region(CourseHelpers.phaseStart(course.distance, phase), CourseHelpers.phaseEnd(course.distance, phase));
+			// add a little bit to the end to account for the fact that phase check happens later than skill activations
+			// this is mainly relevant for skills with phase condition + a corner condition (e.g. kanata) because corner check
+			// occurs before skill activations so when the start of a corner exactly coincides with the end of a phase (e.g.,
+			// chuukyou 1800 dirt) these skills can activate on the first frame of what would be the next phase
+			// obviously hard coding the skills we want to fudge this for is not really ideal, but it's not clear that it's
+			// safe to do in all cases. technically to fix this `phase` should probably be a dynamic condition that actually
+			// checks the phase to match in-game mechanics
+			const fudge = ['100591', '900591', '110261', '910261', '110191', '910191', '120451', '920451', '101502121'].indexOf(extra.skillId) > -1 ? 10 : 0;
+			const bounds = new Region(CourseHelpers.phaseStart(course.distance, phase), CourseHelpers.phaseEnd(course.distance, phase) + fudge);
 			return regions.rmap(r => r.intersect(bounds));
 		},
 		filterNeq: notSupported,
