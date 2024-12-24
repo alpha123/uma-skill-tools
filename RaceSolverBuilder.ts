@@ -281,18 +281,24 @@ export function buildSkillData(horse: HorseParameters, raceParams: PartialRacePa
 }
 
 export const conditionsWithActivateCountsAsRandom = Object.freeze(Object.assign({}, Conditions, {
-	activate_count_all: immediate({
+	activate_count_all: random({
 		filterGte(regions: RegionList, n: number, course: CourseData, _1: HorseParameters, extra: RaceParameters) {
-			// hard-code NY TM Opera O unique to pretend it's immediate while allowing randomness for other skills
-				return n == 6 ? new RegionList() : regions;
-			if (extra.skillId == '110151' || extra.skillId == '910151') {
-				return n == 7 ? regions : new RegionList();
-				//const rl = new RegionList();
-				//rl.push(new Region(course.distance - 401, course.distance - 399));
-				//return rl;
+			// hard-code TM Opera O (NY) unique and Neo Universe unique to pretend they're immediate while allowing randomness for other skills
+			// (conveniently the only two with n == 7)
+			// ideally find a better solution
+			if (n == 7) {
+				const rl = new RegionList();
+				// note that RandomPolicy won't sample within 10m from the end so this has to be +11
+				rl.push(new Region(regions[0].start, regions[0].start + 11));
+				return rl;
 			}
-			// somewhat arbitrarily decide you activate about 22 skills per race and then use a region n / 22 ± 15%
-			const bounds = new Region(Math.min(n / 22 - 0.15, 0.6) * course.distance, Math.min(n / 22 + 0.15, 1.0) * course.distance);
+			/*if (extra.skillId == '110151' || extra.skillId == '910151') {
+				const rl = new RegionList();
+				rl.push(new Region(course.distance - 401, course.distance - 399));
+				return rl;
+			}*/
+			// somewhat arbitrarily decide you activate about 23 skills per race and then use a region n / 23 ± 20%
+			const bounds = new Region(Math.min(n / 23.0 - 0.2, 0.6) * course.distance, Math.min(n / 23.0 + 0.2, 1.0) * course.distance);
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
