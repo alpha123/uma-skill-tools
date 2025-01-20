@@ -271,7 +271,7 @@ function calcRows(builder, skillids, thresholds: number[]) {
 			max: gain[gain.length-1],
 			median,
 			mean,
-			thresholds: thresholds.map(n => gain.reduce((a,b) => a + +(b >= n), 0) / gain.length)
+			thresholds: thresholds.map(n => gain.reduce((a,b) => a + +(n > 0 ? b >= n : b < -n), 0) / gain.length)
 		};
 	}).filter(r => r != null && r.max > 0.0);
 	rows.sort((a,b) => b.mean - a.mean);
@@ -310,8 +310,8 @@ const SHEET_NAMES = Object.freeze({
 
 const COL_NAME_SETS = Object.freeze({
 	greens: [['バ身','スキル'], ['Bashin gain','Skill name']],
-	pinks_golds: [['平均','スキル','最小','最大','中央','≥1.00','≥2.00','≥3.00'], ['Mean','Skill name','Min','Max','Median','≥1.00','≥2.00','≥3.00']],
-	whites_uniques: [['平均','スキル','最小','最大','中央','≥0.50','≥1.00','≥1.50'], ['Mean','Skill name','Min','Max','Median','≥0.50','≥1.00','≥1.50']]
+	pinks_golds: [['平均','スキル','最小','最大','中央','<0.25','≥0.75','≥1.50'], ['Mean','Skill name','Min','Max','Median','<0.25','≥0.75','≥1.50']],
+	whites_uniques: [['平均','スキル','最小','最大','中央','<0.15','≥0.33','≥0.67'], ['Mean','Skill name','Min','Max','Median','<0.15','≥0.33','≥0.67']]
 });
 
 const STRINGS = Object.freeze({
@@ -353,13 +353,16 @@ function colorForSkill(id: string) {
 	}
 }
 
+const THRESHOLDS_PINK_GOLD = [-0.25,0.75,1.50];
+const THRESHOLDS_WHITE_UNIQUE = [-0.15,0.33,0.67];
+
 if (options.csv) {
 	const builder = getBuilder(options.strategy);
 	printGreens(calcRows(builder, greens, []));
-	printRows(calcRows(builder, pinks, [1.0,2.0,3.0]), '≥1.00,≥2.00,≥3.00');
-	printRows(calcRows(builder, golds, [1.0,2.0,3.0]), '≥1.00,≥2.00,≥3.00');
-	printRows(calcRows(builder, whites, [0.5,1.0,1.5]), '≥0.50,≥1.00,≥1.50');
-	printRows(calcRows(builder, uniques, [0.5,1.0,1.5]), '≥0.50,≥1.00,≥1.50');
+	printRows(calcRows(builder, pinks, THRESHOLDS_PINK_GOLD), '<0.25,≥0.75,≥1.50');
+	printRows(calcRows(builder, golds, THRESHOLDS_PINK_GOLD), '<0.25,≥0.75,≥1.50');
+	printRows(calcRows(builder, whites, THRESHOLDS_WHITE_UNIQUE), '<0.15,≥0.33,≥0.67');
+	printRows(calcRows(builder, uniques, THRESHOLDS_WHITE_UNIQUE), '<0.15,≥0.33,≥0.67');
 } else {
 	const apiKey = JSON.parse(fs.readFileSync(options.apiKey, 'utf8'));
 	const auth = new JWT({
@@ -374,10 +377,10 @@ if (options.csv) {
 	strategies.forEach(async strategy => {
 		const builder = getBuilder(strategy);
 		const greenRows = calcRows(builder, greens, [])
-		    , pinkRows = calcRows(builder, pinks, [1.0,2.0,3.0])
-		    , goldRows = calcRows(builder, golds, [1.0,2.0,3.0])
-		    , whiteRows = calcRows(builder, whites, [0.5,1.0,1.5])
-		    , uniqueRows = calcRows(builder, uniques, [0.5,1.0,1.5]);
+		    , pinkRows = calcRows(builder, pinks, THRESHOLDS_PINK_GOLD)
+		    , goldRows = calcRows(builder, golds, THRESHOLDS_PINK_GOLD)
+		    , whiteRows = calcRows(builder, whites, THRESHOLDS_WHITE_UNIQUE)
+		    , uniqueRows = calcRows(builder, uniques, THRESHOLDS_WHITE_UNIQUE);
 
 		const sheet = await doc.addSheet({'title': SHEET_NAMES[strategy][lang]});
 		await sheet.setHeaderRow(COL_NAME_SETS.greens[lang], 1);
@@ -421,7 +424,7 @@ if (options.csv) {
 		});
 
 		sectionOffsets.push(greenRows.length + pinkRows.length + goldRows.length + whiteRows.length + uniqueRows.length + 10);
-		const valueRanges = [], percentRanges = [];
+		const valueRanges = [], ltPercentRanges = [], gtePercentRanges = [];
 		for (let i = 0; i < sectionOffsets.length - 1; ++i) {
 			const rfirst = sectionOffsets[i] + 1, rlast = sectionOffsets[i + 1] - 2;
 			valueRanges.push({'sheetId': sheet.sheetId, 'startRowIndex': rfirst, 'endRowIndex': rlast + 1, 'startColumnIndex': 0, 'endColumnIndex': 1});
@@ -429,7 +432,8 @@ if (options.csv) {
 			const percentCols = i == 0 ? [] : [5, 6, 7];
 			if (i > 0) {
 				valueRanges.push({'sheetId': sheet.sheetId, 'startRowIndex': rfirst, 'endRowIndex': rlast + 1, 'startColumnIndex': 2, 'endColumnIndex': 5});
-				percentRanges.push({'sheetId': sheet.sheetId, 'startRowIndex': rfirst, 'endRowIndex': rlast + 1, 'startColumnIndex': 5, 'endColumnIndex': 8});
+				ltPercentRanges.push({'sheetId': sheet.sheetId, 'startRowIndex': rfirst, 'endRowIndex': rlast + 1, 'startColumnIndex': 5, 'endColumnIndex': 6})
+				gtePercentRanges.push({'sheetId': sheet.sheetId, 'startRowIndex': rfirst, 'endRowIndex': rlast + 1, 'startColumnIndex': 6, 'endColumnIndex': 8});
 			}
 			for (let r = rfirst; r <= rlast; ++r) {
 				sheet.getCell(r,1).backgroundColor = colorForSkill(sections[i][r - rfirst].id);
@@ -468,7 +472,7 @@ if (options.csv) {
 			}, {
 				'addConditionalFormatRule': {
 					'rule': {
-						'ranges': percentRanges,
+						'ranges': gtePercentRanges,
 						'gradientRule': {
 							'minpoint': {
 								'color': rgb(255,255,255),
@@ -477,6 +481,25 @@ if (options.csv) {
 							},
 							'maxpoint': {
 								'color': rgb(87,187,138),
+								'type': 'NUMBER',
+								'value': '1.0'
+							}
+						}
+					},
+					'index': 0
+				}
+			}, {
+				'addConditionalFormatRule': {
+					'rule': {
+						'ranges': ltPercentRanges,
+						'gradientRule': {
+							'minpoint': {
+								'color': rgb(255,255,255),
+								'type': 'NUMBER',
+								'value': '0.0'
+							},
+							'maxpoint': {
+								'color': rgb(230,124,115),
 								'type': 'NUMBER',
 								'value': '1.0'
 							}
