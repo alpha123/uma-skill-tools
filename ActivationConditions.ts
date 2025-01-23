@@ -690,6 +690,19 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
+	phase_straight_random: {
+		samplePolicy: StraightRandomPolicy,
+		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
+			CourseHelpers.assertIsPhase(phase);
+			const phaseBounds = new Region(CourseHelpers.phaseStart(course.distance, phase), CourseHelpers.phaseEnd(course.distance, phase));
+			return regions.rmap(r => course.straights.map(s => r.intersect(s))).rmap(r => r.intersect(phaseBounds));
+		},
+		filterNeq: notSupported,
+		filterLt: notSupported,
+		filterLte: notSupported,
+		filterGt: notSupported,
+		filterGte: notSupported
+	},
 	popularity: noopImmediate,
 	post_number: noopImmediate,
 	remain_distance: immediate({
