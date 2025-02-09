@@ -289,7 +289,7 @@ export const conditionsWithActivateCountsAsRandom = Object.freeze(Object.assign(
 			if (n == 7) {
 				const rl = new RegionList();
 				// note that RandomPolicy won't sample within 10m from the end so this has to be +11
-				rl.push(new Region(regions[0].start, regions[0].start + 11));
+				regions.forEach(r => rl.push(new Region(r.start, r.start + 11)));
 				return rl;
 			}
 			/*if (extra.skillId == '110151' || extra.skillId == '910151') {
