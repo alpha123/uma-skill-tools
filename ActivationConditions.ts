@@ -340,6 +340,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	base_power: valueFilter((_: CourseData, horse: HorseParameters, extra: RaceParameters) => horse.power),
 	base_speed: valueFilter((_: CourseData, horse: HorseParameters, extra: RaceParameters) => horse.speed),
 	base_stamina: valueFilter((_: CourseData, horse: HorseParameters, extra: RaceParameters) => horse.stamina),
+	base_guts: valueFilter((_: CourseData, horse: HorseParameters, extra: RaceParameters) => horse.guts),
 	base_wiz: valueFilter((_: CourseData, horse: HorseParameters, extra: RaceParameters) => horse.wisdom),
 	bashin_diff_behind: noopErlangRandom(3, 2.0),
 	bashin_diff_infront: noopErlangRandom(3, 2.0),
