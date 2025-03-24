@@ -343,6 +343,8 @@ export class RaceSolverBuilder {
 	_parser: {parse: any, tokenize: any}
 	_skills: string[]
 	_extraSkillHooks: ((skilldata: SkillData[], horse: HorseParameters, course: CourseData) => void)[]
+	_onSkillActivate: (state: RaceSolver, skillId: string) => void
+	_onSkillDeactivate: (state: RaceSolver, skillId: string) => void
 
 	constructor(readonly nsamples: number) {
 		this._course = null;
@@ -362,6 +364,8 @@ export class RaceSolverBuilder {
 		this._parser = defaultParser;
 		this._skills = [];
 		this._extraSkillHooks = [];
+		this._onSkillActivate = null;
+		this._onSkillDeactivate = null;
 	}
 
 	seed(seed: number) {
@@ -502,6 +506,16 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
+	onSkillActivate(cb: (state: RaceSolver, skillId: string) => void) {
+		this._onSkillActivate = cb;
+		return this;
+	}
+
+	onSkillDeactivate(cb: (state: RaceSolver, skillId: string) => void) {
+		this._onSkillDeactivate = cb;
+		return this;
+	}
+
 	fork() {
 		const clone = new RaceSolverBuilder(this.nsamples);
 		clone._course = this._course;
@@ -512,6 +526,8 @@ export class RaceSolverBuilder {
 		clone._rng = new Rule30CARng(this._rng.lo, this._rng.hi);
 		clone._parser = this._parser;
 		clone._skills = this._skills.slice();
+		clone._onSkillActivate = this._onSkillActivate;
+		clone._onSkillDeactivate = this._onSkillDeactivate;
 
 		// NB. GOTCHA: if asitame is enabled, it closes over *our* horse and mood data, and not the clone's
 		// this is assumed to be fine, since fork() is intended to be used after everything is added except skills,
@@ -557,7 +573,15 @@ export class RaceSolverBuilder {
 			// however if a way for a user to add to _pacerSkills is ever added, this probably needs to be updated to copy triggers
 			const pacer = pacerHorse ? new RaceSolver({horse: pacerHorse, course: this._course, skills: this._pacerSkills, rng: pacerRng}) : null;
 
-			yield new RaceSolver({horse, course: this._course, skills, pacer, rng: solverRng});
+			yield new RaceSolver({
+				horse,
+				course: this._course,
+				skills,
+				pacer,
+				rng: solverRng,
+				onSkillActivate: this._onSkillActivate,
+				onSkillDeactivate: this._onSkillDeactivate
+			});
 		}
 	}
 }
