@@ -2,6 +2,14 @@ import * as fs from 'fs';
 
 const failures = JSON.parse(fs.readFileSync(process.argv[2], 'utf-8'));
 
+if (process.argv.length > 3) {
+	const idxes = process.argv.slice(3).map(x => +x);
+	failures.forEach(f => {
+		if (idxes.indexOf(f.caseIdx) > -1) console.log(f);
+	});
+	process.exit(0);
+}
+
 const trackMinmaxHorse = ['speed', 'stamina', 'power', 'guts', 'wisdom'];
 const trackSameHorse = ['strategy', 'strategyAptitude', 'distanceAptitude', 'surfaceAptitude'];
 const trackSame = ['courseId', 'groundCondition', 'mood', 'paceEffectsEnabled'];

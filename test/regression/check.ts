@@ -14,6 +14,16 @@ function almostEqual(a: number, b: number) {
 	return Math.abs(a - b) < Math.max(Epsilon * (Math.abs(a) + Math.abs(b)), Number.EPSILON);
 }
 
+(test as any).Test.prototype.almostEqual = function (a: number, b: number, msg: string, extra: any) {
+	this._assert(almostEqual(a, b), {
+		message: msg || 'should be closer than ' + Math.max(Epsilon * (Math.abs(a) + Math.abs(b)), Number.EPSILON) + ' (actual difference: ' + Math.abs(a - b) + ')',
+		operator: 'almostEqual',
+		actual: a,
+		expected: b,
+		extra: extra
+	});
+}
+
 function getLatestCheckpoint() {
 	const dir = path.join(path.dirname(process.argv[1]), 'checkpoints');
 	// sort by the date contained in the filename; we can't sort by ctime/mtime since git does not preserve those when cloning
@@ -76,8 +86,8 @@ test('should give results similar to the checkpoint', t => {
 				if (almostEqual(s1.pos - s2.pos, testCase.result.gain[i])) {
 					t.ok(true);
 				} else {
-					t.ok(false);
-					failures.push({params: testCase.params, sampleIdx: i, expected: testCase.result.gain[i], actual: s1.pos - s2.pos});
+					(t as any).almostEqual(s1.pos - s2.pos, testCase.result.gain[i]);
+					failures.push({params: testCase.params, caseIdx: (t as any).assertCount - 1, sampleIdx: i, expected: testCase.result.gain[i], actual: s1.pos - s2.pos});
 				}
 			} catch (_) {
 				err = true;
