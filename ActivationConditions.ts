@@ -666,6 +666,15 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
+	phase_firstquarter: immediate({
+		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
+			CourseHelpers.assertIsPhase(phase);
+			const start = CourseHelpers.phaseStart(course.distance, phase);
+			const end = CourseHelpers.phaseEnd(course.distance, phase);
+			const bounds = new Region(start, start + (end - start) / 4);
+			return regions.rmap(r => r.intersect(bounds));
+		}
+	}),
 	phase_firstquarter_random: random({
 		filterEq(regions: RegionList, phase: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			CourseHelpers.assertIsPhase(phase);
