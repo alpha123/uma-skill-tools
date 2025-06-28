@@ -131,7 +131,8 @@ export const enum SkillType {
 	CurrentSpeedWithNaturalDeceleration = 22,
 	TargetSpeed = 27,
 	Accel = 31,
-	ActivateRandomGold = 37
+	ActivateRandomGold = 37,
+	ExtendUniqueAndEvolvedDuration = 42
 }
 
 export const enum SkillRarity { White = 1, Gold, Unique, Evolution = 6 }
@@ -206,6 +207,7 @@ export class RaceSolver {
 		currentSpeed: CompensatedAccumulator
 		accel: CompensatedAccumulator
 		oneFrameAccel: number
+		specialSkillDurationScaling: number
 	}
 
 	constructor(params: {
@@ -255,7 +257,8 @@ export class RaceSolver {
 			targetSpeed: new CompensatedAccumulator(0.0),
 			currentSpeed: new CompensatedAccumulator(0.0),
 			accel: new CompensatedAccumulator(0.0),
-			oneFrameAccel: 0.0
+			oneFrameAccel: 0.0,
+			specialSkillDurationScaling: 1.0
 		};
 
 		this.initHills();
@@ -474,8 +477,11 @@ export class RaceSolver {
 	}
 
 	activateSkill(s: PendingSkill) {
-		s.effects.forEach(ef => {
-			const scaledDuration = ef.baseDuration * this.course.distance / 1000;
+		// sort so that the ExtendUniqueAndEvolvedDuration effect always activates before other effects, since it extends the duration of other
+		// effects on the same skill
+		s.effects.sort((a,b) => +(b.type == 42) - +(a.type == 42)).forEach(ef => {
+			const scaledDuration = ef.baseDuration * (this.course.distance / 1000) *
+				(s.rarity == SkillRarity.Unique || s.rarity == SkillRarity.Evolution ? this.modifiers.specialSkillDurationScaling : 1);
 			switch (ef.type) {
 			case SkillType.SpeedUp:
 				this.horse.speed = Math.max(this.horse.speed + ef.modifier, 1);
@@ -514,6 +520,9 @@ export class RaceSolver {
 				break;
 			case SkillType.ActivateRandomGold:
 				this.doActivateRandomGold(ef.modifier);
+				break;
+			case SkillType.ExtendUniqueAndEvolvedDuration:
+				this.modifiers.specialSkillDurationScaling = ef.modifier;
 				break;
 			}
 		});
