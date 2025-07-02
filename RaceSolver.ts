@@ -547,7 +547,8 @@ export class RaceSolver {
 			[goldIndices[i], goldIndices[j]] = [goldIndices[j], goldIndices[i]];
 		}
 		for (let i = 0; i < Math.min(ngolds, goldIndices.length); ++i) {
-			this.activateSkill(this.pendingSkills[goldIndices[i]]);
+			const s = this.pendingSkills[goldIndices[i]];
+			this.activateSkill(s);
 			// important: we can't actually remove this from pendingSkills directly, since this function runs inside the loop in
 			// processSkillActivations. modifying the pendingSkills array here would mess up that loop. this function used to modify
 			// the trigger on the skill itself to ensure it was before this.pos and force it to be cleaned up, but mutating the skill
