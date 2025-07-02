@@ -183,6 +183,7 @@ export class RaceSolver {
 	activeAccelSkills: ActiveSkill[]
 	pendingSkills: PendingSkill[]
 	pendingRemoval: Set<string>
+	usedSkills: Set<string>
 	nHills: number
 	hillIdx: number
 	hillStart: number[]
@@ -227,6 +228,7 @@ export class RaceSolver {
 		this.rng = params.rng;
 		this.pendingSkills = params.skills.slice();  // copy since we remove from it
 		this.pendingRemoval = new Set();
+		this.usedSkills = new Set();
 		this.gorosiRng = new Rule30CARng(this.rng.int32());
 		this.paceEffectRng = new Rule30CARng(this.rng.int32());
 		this.timers = [];
@@ -530,6 +532,7 @@ export class RaceSolver {
 			}
 		});
 		++this.activateCount[this.phase];
+		this.usedSkills.add(s.skillId);
 		this.onSkillActivate(this, s.skillId);
 	}
 

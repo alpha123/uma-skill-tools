@@ -592,6 +592,11 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	is_move_lane: noopErlangRandom(5, 1.0),
 	is_overtake: noopErlangRandom(1, 2.0),
 	is_surrounded: noopErlangRandom(3, 2.0),
+	is_used_skill_id: immediate({
+		filterEq(regions: RegionList, skillId: number, _0: CourseData, _1: HorseParameters, extra: RaceParamters) {
+			return [regions, (s: RaceState) => s.usedSkills.has(skillId)] as [RegionList, DynamicCondition];
+		}
+	}),
 	lane_type: noopImmediate,
 	lastspurt: noopImmediate,
 	motivation: valueFilter((_0: CourseData, _1: HorseParameters, extra: RaceParameters) => extra.mood + 3),  // go from -2 to 2 to 1-5 scale
