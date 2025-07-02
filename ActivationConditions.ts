@@ -513,7 +513,12 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		});
 	})(),
 	infront_near_lane_time: noopErlangRandom(3, 2.0),
-	//is_activate_other_skill_detail: noopImmediate,  // TODO FIXME
+	is_activate_other_skill_detail: immediate({
+		filterEq(regions: RegionList, one: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
+			assert(one == 1, 'must be is_activate_other_skill_detail==1');
+			return [regions, (s: RaceState) => s.usedSkills.has(extra.skillId)] as [RegionList, DynamicCondition];
+		}
+	}),
 	is_basis_distance: immediate({
 		filterEq(regions: RegionList, flag: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(flag == 0 || flag == 1, 'must be is_basis_distance==0 or is_basis_distance==1');

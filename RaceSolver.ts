@@ -116,6 +116,7 @@ export interface RaceState {
 	readonly accumulatetime: Readonly<Timer>
 	readonly activateCount: readonly number[]
 	readonly activateCountHeal: number
+	readonly usedSkills: Set<string>
 }
 
 export type DynamicCondition = (state: RaceState) => boolean;
