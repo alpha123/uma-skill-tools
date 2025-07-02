@@ -223,6 +223,7 @@ export function buildSkillData(horse: HorseParameters, raceParams: PartialRacePa
 	}
 	const extra = Object.assign({skillId}, raceParams);
 	const alternatives = skills[skillId].alternatives;
+	const triggers = [];
 	for (let i = 0; i < alternatives.length; ++i) {
 		const skill = alternatives[i];
 		let full = new RegionList();
@@ -243,10 +244,21 @@ export function buildSkillData(horse: HorseParameters, raceParams: PartialRacePa
 		if (regions.length == 0) {
 			continue;
 		}
+		if (triggers.length > 0 && !/is_activate_other_skill_detail|is_used_skill_id/.test(skill.condition)) {
+			// i don't like this at all. the problem is some skills with two triggers (for example all the is_activate_other_skill_detail ones)
+			// need to place two triggers so the second effect can activate, however, some other skills with two triggers only ever activate one
+			// even if they have non-mutually-exclusive conditions (for example Jungle Pocket unique). i am not currently sure what distinguishes
+			// them in the game implementation. it's pretty inconsistent about whether double-trigger skills force the conditions to be mutually
+			// exclusive or not even if it only wants one of them to activate; for example Daitaku Helios unique ensures the distance conditions
+			// are mutually exclusive for both triggers but Jungle Pocket doesn't. for the time being we're only going to place the first trigger
+			// unless the second one is explicitly is_activate_other_skill_detail or is_used_skill_id (need this for NY Ace).
+			// !!! FIXME this is actually bugged for NY Ace unique since she'll get both effects if she uses oonige.
+			continue;
+		}
 		const effects = buildSkillEffects(skill);
 		if (effects.length > 0 || ignoreNullEffects) {
 			const rarity = skills[skillId].rarity;
-			return {
+			triggers.push({
 				skillId: skillId,
 				// for some reason 1*/2* uniques, 1*/2* upgraded to 3*, and naturally 3* uniques all have different rarity (3, 4, 5 respectively)
 				rarity: rarity >= 3 && rarity <= 5 ? 3 : rarity,
@@ -254,29 +266,28 @@ export function buildSkillData(horse: HorseParameters, raceParams: PartialRacePa
 				regions: regions,
 				extraCondition: extraCondition,
 				effects: effects
-			};
-		} else {
-			return null;
+			});
 		}
 	}
+	if (triggers.length > 0) return triggers;
 	// if we get here, it means that no alternatives have their conditions satisfied for this course/horse.
 	// however, for purposes of summer goldship unique (Adventure of 564), we still have to add something, since
 	// that could still cause them to activate. so just add the first alternative at a location after the course
 	// is over with a constantly false dynamic condition so that it never activates normally.
 	const effects = buildSkillEffects(alternatives[0]);
 	if (effects.length == 0 && !ignoreNullEffects) {
-		return null;
+		return [];
 	} else {
 		const afterEnd = new RegionList();
 		afterEnd.push(new Region(9999,9999));
-		return {
+		return [{
 			skillId: skillId,
 			rarity: Math.min(skills[skillId].rarity, 3),
 			samplePolicy: ImmediatePolicy,
 			regions: afterEnd,
 			extraCondition: (_) => false,
 			effects: effects
-		};
+		}];
 	}
 }
 
@@ -550,7 +561,7 @@ export class RaceSolverBuilder {
 		Object.freeze(wholeCourse);
 
 		const makeSkill = buildSkillData.bind(null, horse, this._raceParams, this._course, wholeCourse, this._parser) as (s: string) => SkillData | null;
-		const skilldata = this._skills.map(makeSkill).filter(s => s != null);
+		const skilldata = this._skills.flatMap(makeSkill);
 		this._extraSkillHooks.forEach(h => h(skilldata, horse, this._course));
 		const triggers = skilldata.map(sd => sd.samplePolicy.sample(sd.regions, this.nsamples, this._rng));
 
