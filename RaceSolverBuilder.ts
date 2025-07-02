@@ -539,9 +539,9 @@ export class RaceSolverBuilder {
 
 	*build() {
 		let horse = buildBaseStats(this._horse, this._raceParams.mood);
-		const solverRng = new Rule30CARng(this._rng.int32());
-		const pacerRng = new Rule30CARng(this._rng.int32());  // need this even if _pacer is null in case we forked from/to something with a pacer
-																													// (to keep the rngs in sync)
+		let solverRng = new Rule30CARng(this._rng.int32());
+		let pacerRng = new Rule30CARng(this._rng.int32());  // need this even if _pacer is null in case we forked from/to something with a pacer
+															// (to keep the rngs in sync)
 
 		const pacerHorse = this._pacer ? buildAdjustedStats(buildBaseStats(this._pacer, this._raceParams.mood), this._course, this._raceParams.groundCondition) : null;
 
@@ -566,14 +566,12 @@ export class RaceSolverBuilder {
 				effects: sd.effects
 			}));
 
-			// NOTE: it is highly important that summer goldship unique never gets added to a pacer
-			// that can cause triggers to be mutated, and we reuse the triggers every iteration of this loop
-			// this is currently safe because 1) we know for sure there is no summer goldship unique here and 2) we only have white skills,
-			// and it only mutates the trigger on gold skills.
-			// however if a way for a user to add to _pacerSkills is ever added, this probably needs to be updated to copy triggers
+			const backupPacerRng = new Rule30CARng(pacerRng.lo, pacerRng.hi);
+			const backupSolverRng = new Rule30CARng(solverRng.lo, solverRng.hi);
+
 			const pacer = pacerHorse ? new RaceSolver({horse: pacerHorse, course: this._course, skills: this._pacerSkills, rng: pacerRng}) : null;
 
-			yield new RaceSolver({
+			const redo: boolean = yield new RaceSolver({
 				horse,
 				course: this._course,
 				skills,
@@ -582,6 +580,12 @@ export class RaceSolverBuilder {
 				onSkillActivate: this._onSkillActivate,
 				onSkillDeactivate: this._onSkillDeactivate
 			});
+
+			if (redo) {
+				--i;
+				pacerRng = backupPacerRng;
+				solverRng = backupSolverRng;
+			}
 		}
 	}
 }
