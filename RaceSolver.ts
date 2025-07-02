@@ -182,6 +182,7 @@ export class RaceSolver {
 	activeCurrentSpeedSkills: (ActiveSkill & {naturalDeceleration: boolean})[]
 	activeAccelSkills: ActiveSkill[]
 	pendingSkills: PendingSkill[]
+	pendingRemoval: Set<string>
 	nHills: number
 	hillIdx: number
 	hillStart: number[]
@@ -225,6 +226,7 @@ export class RaceSolver {
 		this.pacer = params.pacer || null;
 		this.rng = params.rng;
 		this.pendingSkills = params.skills.slice();  // copy since we remove from it
+		this.pendingRemoval = new Set();
 		this.gorosiRng = new Rule30CARng(this.rng.int32());
 		this.paceEffectRng = new Rule30CARng(this.rng.int32());
 		this.timers = [];
@@ -466,9 +468,10 @@ export class RaceSolver {
 		}
 		for (let i = this.pendingSkills.length; --i >= 0;) {
 			const s = this.pendingSkills[i];
-			if (this.pos >= s.trigger.end) {  // NB. `Region`s are half-open [start,end) intervals. If pos == end we are out of the trigger.
+			if (this.pos >= s.trigger.end || this.pendingRemoval.has(s.skillId)) {  // NB. `Region`s are half-open [start,end) intervals. If pos == end we are out of the trigger.
 				// skill failed to activate
 				this.pendingSkills.splice(i,1);
+				this.pendingRemoval.delete(s.skillId);
 			} else if (this.pos >= s.trigger.start && s.extraCondition(this)) {
 				this.activateSkill(s);
 				this.pendingSkills.splice(i,1);
@@ -542,18 +545,12 @@ export class RaceSolver {
 		for (let i = 0; i < Math.min(ngolds, goldIndices.length); ++i) {
 			this.activateSkill(this.pendingSkills[goldIndices[i]]);
 			// important: we can't actually remove this from pendingSkills directly, since this function runs inside the loop in
-			// processSkillActivations. modifying the pendingSkills array here would mess up that loop. instead, by setting its
-			// trigger to 0, we ensure that the skill won't activate again and will be cleaned up either later in the loop or
-			// the next time processSkillActivations is called.
-			// this is a bit of a hack and i don't like it very much
-			// NB. this mutation could be visible outside of RaceSolver, since the caller constructs the initial PendingSkill
-			// objects and sets their triggers. currently, that doesn't matter since nothing uses them after the solver runs,
-			// but it should be assumed by callers that once added to pendingSkills RaceSolver owns the skill object and the
-			// caller shouldn't rely on it being the same.
-			// this means, for example, the same PendingSkill object can't be added to two different RaceSolvers
-			// frankly this seems exceptionally error-prone and i'm sure it's going to bite me with some hard-to-diagnose bug
-			// at some point. TODO find a better way to deal with this
-			this.pendingSkills[goldIndices[i]].trigger = new Region(0,0);
+			// processSkillActivations. modifying the pendingSkills array here would mess up that loop. this function used to modify
+			// the trigger on the skill itself to ensure it was before this.pos and force it to be cleaned up, but mutating the skill
+			// is error-prone and undesirable since it means the same PendingSkill instance can't be used with multiple RaceSolvers.
+			// instead, flag the skill later to be removed in processSkillActivations (either later in the loop that called us, or
+			// the next time processSkillActivations is called).
+			this.pendingRemoval.add(s.skillId);
 		}
 	}
 }
