@@ -7,6 +7,7 @@ import { Rule30CARng } from './Random';
 export interface HpPolicy {
 	tick(state: RaceState, dt: number): void
 	hasRemainingHp(): boolean
+	hpRatioRemaining(): number  // separate methods as the former can be much cheaper to check
 	recover(modifier: number): void
 	getLastSpurtPair(state: RaceState, maxSpeed: number, baseTargetSpeed2: number): [number, number]
 }
@@ -14,6 +15,7 @@ export interface HpPolicy {
 export const NoopHpPolicy: HpPolicy = {
 	tick(_0: RaceState, _1: number) {},
 	hasRemainingHp() { return true; },
+	hpRatioRemaining() { return 1.0; },
 	recover(_: number) {},
 	getLastSpurtPair(_0: RaceState, maxSpeed: number, _1: number) { return [-1, maxSpeed] as [number, number]; }
 }
@@ -69,6 +71,10 @@ export class GameHpPolicy {
 
 	hasRemainingHp() {
 		return this.hp > 0.0;
+	}
+
+	hpRatioRemaining() {
+		return Math.max(0.0, this.hp / this.maxHp);
 	}
 
 	recover(modifier: number) {

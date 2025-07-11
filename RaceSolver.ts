@@ -123,6 +123,7 @@ export interface RaceState {
 	readonly isPaceDown: boolean
 	readonly phase: Phase
 	readonly pos: number
+	readonly hp: Readonly<HpPolicy>
 	readonly usedSkills: ReadonlySet<string>
 }
 
