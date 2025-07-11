@@ -11,16 +11,11 @@ export interface HpPolicy {
 	getLastSpurtPair(state: RaceState, maxSpeed: number, baseTargetSpeed2: number): [number, number]
 }
 
-export class NoopHpPolicy {
-	phase2Start: number
-	constructor(course: CourseData) {
-		this.phase2Start = CourseHelpers.phaseStart(course.distance, 2);
-	}
-
-	tick(_0: RaceState, _1: number) {}
-	hasRemainingHp() { return true; }
-	recover(_: number) {}
-	getLastSpurtPair(_0: RaceState, maxSpeed: number, _1: number) { return [this.phase2Start, maxSpeed] as [number, number]; }
+export const NoopHpPolicy: HpPolicy = {
+	tick(_0: RaceState, _1: number) {},
+	hasRemainingHp() { return true; },
+	recover(_: number) {},
+	getLastSpurtPair(_0: RaceState, maxSpeed: number, _1: number) { return [-1, maxSpeed] as [number, number]; }
 }
 
 const HpStrategyCoefficient = Object.freeze([0, 0.95, 0.89, 1.0, 0.995, 0.86]);
@@ -85,7 +80,7 @@ export class GameHpPolicy {
 		const s = (maxDist - 60) / maxSpeed;
 		const lastleg = {phase: 2 as Phase, isPaceDown: false};
 		if (this.hp >= this.hpPerSecond(lastleg, maxSpeed) * s) {
-			return [maxDist, maxSpeed] as [number, number];
+			return [-1, maxSpeed] as [number, number];
 		}
 		const candidates: [number, number][] = [];
 		const remainDistance = this.distance - 60 - state.pos;

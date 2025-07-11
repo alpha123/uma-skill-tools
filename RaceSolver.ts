@@ -119,6 +119,7 @@ export interface RaceState {
 	readonly activateCountHeal: number
 	readonly currentSpeed: number
 	readonly isLastSpurt: boolean
+	readonly lastSpurtTransition: number
 	readonly isPaceDown: boolean
 	readonly phase: Phase
 	readonly pos: number

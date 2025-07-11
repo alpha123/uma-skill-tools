@@ -233,7 +233,7 @@ export class ToolCLI {
 		function getPacer(rng: PRNG) {
 			let pacer: RaceSolver | null = null;
 			if (horse.strategy != Strategy.Nige && horse.strategy != Strategy.Oonige && opts.positionKeep !== false) {
-				pacer = new RaceSolver({horse: pacerHorseParams, course, rng, hp: new NoopHpPolicy(course), skills: []});
+				pacer = new RaceSolver({horse: pacerHorseParams, course, rng, hp: NoopHpPolicy, skills: []});
 				// top is jiga and bottom is white sente
 				// arguably it's more realistic to include these, but also a lot of the time they prevent the exact pace down effects
 				// that we're trying to investigate

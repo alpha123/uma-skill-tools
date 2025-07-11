@@ -69,7 +69,7 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 
 	const s = new RaceSolver({
 		horse, course, skills,
-		hp: new NoopHpPolicy(course),
+		hp: NoopHpPolicy,
 		pacer: getPacer(pacerRng),
 		rng: solverRng,
 		onSkillActivate: (s,skillId) => {

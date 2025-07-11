@@ -573,7 +573,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(one == 1, 'must be is_lastspurt==1');
 			const bounds = new Region(CourseHelpers.phaseStart(course.distance, 2), course.distance);
-			return regions.rmap(r => r.intersect(bounds));
+			return [regions.rmap(r => r.intersect(bounds)), (s: RaceState) => s.isLastSpurt] as [RegionList, DynamicCondition];
 		}
 	}),
 	is_last_straight: immediate({
@@ -603,7 +603,27 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	lane_type: noopImmediate,
-	lastspurt: noopImmediate,
+	lastspurt: immediate({
+		filterEq(regions: RegionList, case_: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
+			// NB. not entirely sure these are correct, based on some vague remarks made by kuromi once
+			let f;
+			switch (case_) {
+			case 1:
+				f = (s: RaceState) => s.isLastSpurt && s.lastSpurtTransition != -1;
+				break;
+			case 2:
+				f = (s: RaceState) => s.isLastSpurt && s.lastSpurtTransition == -1;
+				break;
+			case 3:
+				f = (s: RaceState) => !s.isLastSpurt;
+				break;
+			default:
+				assert(1 <= case_ && case_ <= 3, 'lastspurt case must be 1-3');
+			}
+			const bounds = new Region(CourseHelpers.phaseStart(course.distance, 2), course.distance);
+			return [regions.rmap(r => r.intersect(bounds)), f] as [RegionList, DynamicCondition];
+		}
+	}),
 	motivation: valueFilter((_0: CourseData, _1: HorseParameters, extra: RaceParameters) => extra.mood + 3),  // go from -2 to 2 to 1-5 scale
 	near_count: noopErlangRandom(3, 2.0),
 	order: noopImmediate,

@@ -584,7 +584,7 @@ export class RaceSolverBuilder {
 			const pacer = pacerHorse ? new RaceSolver({
 				horse: pacerHorse,
 				course: this._course,
-				hp: new NoopHpPolicy(this._course),
+				hp: NoopHpPolicy,
 				skills: this._pacerSkills,
 				rng: pacerRng
 			}) : null;
