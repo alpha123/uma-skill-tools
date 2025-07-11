@@ -3,6 +3,7 @@ import { HorseParameters } from '../HorseTypes';
 import { CourseData } from '../CourseData';
 import { RaceSolver } from '../RaceSolver';
 import { Rule30CARng } from '../Random';
+import { NoopHpPolicy } from '../HpPolicy';
 import { SkillData, ToolCLI, PacerProvider } from './ToolCLI';
 
 // for some reason (NodeJS bug?) new Int32Array(buf.buffer)[offset] doesn't actually work and the Int32Array is garbage
@@ -68,6 +69,7 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 
 	const s = new RaceSolver({
 		horse, course, skills,
+		hp: new NoopHpPolicy(course),
 		pacer: getPacer(pacerRng),
 		rng: solverRng,
 		onSkillActivate: (s,skillId) => {

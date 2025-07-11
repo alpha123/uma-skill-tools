@@ -54,12 +54,6 @@ Obviously since no other umas exist conditions like order, order_rate, etc are m
 
 It's kind of pointless to try to simulate lane changing because it's both too random and too dependent on other umas. The difference in distance traveled between inner and outer lanes can be quite significant, but probably doesn't affect the efficiency of skills that much.
 
-## Does not simulate HP consumption
-
-That is, it assumes you will always have a max duration last spurt. Given the intended purpose of testing skills, this isn't really relevant except for the hp_per skill condition. This will probably be implemented in the future at some point.
-
-This also means is_lastspurt is effectively synonymous with phase>=2, since your last spurt is assumed to start immediately.
-
 ## Skills that combine accumulatetime with a condition modeled by a probability distribution activate too early a lot of the time
 
 This is a bug but somewhat hard to fix with the current architecture. Basically, they activate immediately after the accumulatetime condition is satisfied more than would be predicted by the distribution used to model them. Fixing this is kind of non-trivial and in practice I think it's not really that important.
@@ -99,12 +93,6 @@ If it is implemented would probably have the effect of increasing int decreasing
 ### Some skill conditions are not implemented yet
 
 This probably includes some common ones.
-
-### Weather/season/ground condition is ignored
-
-Green skills with these always activate no matter what the actual weather/season/ground condition is (actually, there's no way to specify weather or season currently).
-
-This is easy to fix but somewhat tedious since I didn't think of those when writing the skill conditions and probably the easiest way to implement it would involve passing a new parameter to every condition, which would be slightly annoying.
 
 ### Scaling effects are not implemented yet
 

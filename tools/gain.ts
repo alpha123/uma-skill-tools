@@ -4,6 +4,7 @@ import { CourseData } from '../CourseData';
 import { Region } from '../Region';
 import { Rule30CARng } from '../Random';
 import { SkillRarity, PendingSkill, RaceSolver } from '../RaceSolver';
+import { NoopHpPolicy } from '../HpPolicy';
 import { ImmediatePolicy, RandomPolicy } from '../ActivationSamplePolicy';
 import { SkillData, ToolCLI, PacerProvider, parseAptitude } from './ToolCLI';
 
@@ -119,7 +120,7 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		cliSkills
 			.filter((sd,sdi) => wisdomCheck(sd, sdi + defSkills.length))
 			.forEach((sd,sdi) => addSkill(skills1, sd, triggers[sdi + defSkills.length], i));
-		const s = new RaceSolver({horse: testHorse, course, skills: skills1, pacer: getPacer(pacerRng1), rng: solverRng1});
+		const s = new RaceSolver({horse: testHorse, course, hp: new NoopHpPolicy(course), skills: skills1, pacer: getPacer(pacerRng1), rng: solverRng1});
 
 		while (s.pos < course.distance) {
 			s.step(dt);
@@ -130,7 +131,7 @@ cli.run((horse: HorseParameters, course: CourseData, defSkills: SkillData[], cli
 		debuffs
 			.filter((sd,sdi) => wisdomCheck(sd, sdi + defSkills.length + cliSkills.length))
 			.forEach((sd,sdi) => addSkill(skills2, sd, triggers[sdi + defSkills.length + cliSkills.length], i));
-		const s2 = new RaceSolver({horse, course, skills: skills2, pacer: getPacer(pacerRng2), rng: solverRng2});
+		const s2 = new RaceSolver({horse, course, hp: new NoopHpPolicy(course), skills: skills2, pacer: getPacer(pacerRng2), rng: solverRng2});
 		while (s2.accumulatetime.t < s.accumulatetime.t) {
 			s2.step(dt);
 		}

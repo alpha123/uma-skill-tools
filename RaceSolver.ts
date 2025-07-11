@@ -4,6 +4,7 @@ import { Strategy, Aptitude, HorseParameters, StrategyHelpers } from './HorseTyp
 import { CourseData, CourseHelpers, Phase } from './CourseData';
 import { Region } from './Region';
 import { PRNG, Rule30CARng } from './Random';
+import type { HpPolicy } from './HpPolicy';
 
 namespace Speed {
 	export const StrategyPhaseCoefficient = Object.freeze([
@@ -116,7 +117,12 @@ export interface RaceState {
 	readonly accumulatetime: Readonly<Timer>
 	readonly activateCount: readonly number[]
 	readonly activateCountHeal: number
-	readonly usedSkills: Set<string>
+	readonly currentSpeed: number
+	readonly isLastSpurt: boolean
+	readonly isPaceDown: boolean
+	readonly phase: Phase
+	readonly pos: number
+	readonly usedSkills: ReadonlySet<string>
 }
 
 export type DynamicCondition = (state: RaceState) => boolean;
@@ -169,14 +175,17 @@ export class RaceSolver {
 	accel: number
 	baseTargetSpeed: number[]
 	lastSpurtSpeed: number
+	lastSpurtTransition: number
 	baseAccel: number[]
 	horse: { -readonly[P in keyof HorseParameters]: HorseParameters[P] }
 	course: CourseData
+	hp: HpPolicy
 	rng: PRNG
 	gorosiRng: PRNG
 	paceEffectRng: PRNG
 	timers: Timer[]
 	startDash: boolean
+	isLastSpurt: boolean
 	phase: Phase
 	nextPhaseTransition: number
 	activeTargetSpeedSkills: ActiveSkill[]
@@ -218,6 +227,7 @@ export class RaceSolver {
 		course: CourseData,
 		rng: PRNG,
 		skills: PendingSkill[],
+		hp: HpPolicy,
 		pacer?: RaceSolver,
 		onSkillActivate?: (s: RaceSolver, skillId: string) => void,
 		onSkillDeactivate?: (s: RaceSolver, skillId: string) => void
@@ -225,6 +235,7 @@ export class RaceSolver {
 		// clone since green skills may modify the stat values
 		this.horse = Object.assign({}, params.horse);
 		this.course = params.course;
+		this.hp = params.hp;
 		this.pacer = params.pacer || null;
 		this.rng = params.rng;
 		this.pendingSkills = params.skills.slice();  // copy since we remove from it
@@ -280,6 +291,13 @@ export class RaceSolver {
 		// similarly this must also come after the first round of skill activations
 		this.baseTargetSpeed = ([0,1,2] as Phase[]).map(phase => baseTargetSpeed(this.horse, this.course, phase));
 		this.lastSpurtSpeed = lastSpurtSpeed(this.horse, this.course);
+		this.lastSpurtTransition = -1;
+		// TODO this should be added later, since it only procs when the uma reaches max last spurt speed
+		// this is relevant in some niche cases, e.g. when last spurt starts on a hill and you're below last spurt speed due to the hill penalty,
+		// a speed skill proccing can push your target speed above the last spurt speed which will cause stamina syoubu to proc earlier than it
+		// would for an uma without a speed skill proccing there.
+		// also, because we pass this.lastSpurtSpeed to the HpPolicy, adding it here causes that to overestimate the stamina required for max
+		// speed last spurt (technically, correctly estimate it, but that isn't the way it's implemented afaik)
 		if (this.horse.rawStamina > 1200) {
 			this.lastSpurtSpeed += staminaSyoubuBonus(this.horse, this.course);
 		}
@@ -345,11 +363,13 @@ export class RaceSolver {
 		const halfv = Math.min(this.currentSpeed + 0.5 * dt * this.accel, this.getMaxSpeed());
 		const displacement = halfv + this.modifiers.currentSpeed.acc + this.modifiers.currentSpeed.err;
 		this.pos += displacement * dt;
+		this.hp.tick(this, dt);
 		this.timers.forEach(tm => tm.t += dt);
 		this.updateHills();
 		this.updatePhase();
 		this.processSkillActivations();
 		this.updatePositionKeep();
+		this.updateLastSpurtState();
 		this.updateTargetSpeed();
 		this.applyForces();
 		this.currentSpeed = Math.min(halfv + 0.5 * dt * this.accel + this.modifiers.oneFrameAccel, this.getMaxSpeed());
@@ -393,8 +413,22 @@ export class RaceSolver {
 		}
 	}
 
+	updateLastSpurtState() {
+		if (this.isLastSpurt || this.phase < 2) return;
+		if (this.lastSpurtTransition == -1) {
+			const v = this.hp.getLastSpurtPair(this, this.lastSpurtSpeed, this.baseTargetSpeed[2]);
+			this.lastSpurtTransition = v[0];
+			this.lastSpurtSpeed = v[1];
+		}
+		if (this.pos >= this.lastSpurtTransition) {
+			this.isLastSpurt = true;
+		}
+	}
+
 	updateTargetSpeed() {
-		if (this.phase == 2) {
+		if (!this.hp.hasRemainingHp()) {
+			this.targetSpeed = this.minSpeed;
+		} else if (this.isLastSpurt) {
 			this.targetSpeed = this.lastSpurtSpeed;
 		} else {
 			this.targetSpeed = this.baseTargetSpeed[this.phase] * this.posKeepSpeedCoef;
@@ -409,6 +443,10 @@ export class RaceSolver {
 	}
 
 	applyForces() {
+		if (!this.hp.hasRemainingHp()) {
+			this.accel = -1.2;
+			return;
+		}
 		if (this.currentSpeed > this.targetSpeed) {
 			this.accel = this.isPaceDown ? -0.5 : PhaseDeceleration[this.phase];
 			return;
@@ -524,6 +562,10 @@ export class RaceSolver {
 				break;
 			case SkillType.Recovery:
 				++this.activateCountHeal;
+				this.hp.recover(ef.modifier);
+				if (this.phase >= 2 && !this.isLastSpurt) {
+					this.updateLastSpurtState();
+				}
 				break;
 			case SkillType.ActivateRandomGold:
 				this.doActivateRandomGold(ef.modifier);

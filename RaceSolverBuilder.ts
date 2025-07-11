@@ -7,6 +7,7 @@ import { ActivationSamplePolicy, ImmediatePolicy } from './ActivationSamplePolic
 import { getParser } from './ConditionParser';
 import { RaceSolver, PendingSkill, DynamicCondition, SkillType, SkillRarity, SkillEffect } from './RaceSolver';
 import { Mood, GroundCondition, Weather, Season, Time, Grade, RaceParameters } from './RaceParameters';
+import { GameHpPolicy, NoopHpPolicy } from './HpPolicy';
 
 import skills from './data/skill_data.json';
 
@@ -580,13 +581,20 @@ export class RaceSolverBuilder {
 			const backupPacerRng = new Rule30CARng(pacerRng.lo, pacerRng.hi);
 			const backupSolverRng = new Rule30CARng(solverRng.lo, solverRng.hi);
 
-			const pacer = pacerHorse ? new RaceSolver({horse: pacerHorse, course: this._course, skills: this._pacerSkills, rng: pacerRng}) : null;
+			const pacer = pacerHorse ? new RaceSolver({
+				horse: pacerHorse,
+				course: this._course,
+				hp: new NoopHpPolicy(this._course),
+				skills: this._pacerSkills,
+				rng: pacerRng
+			}) : null;
 
 			const redo: boolean = yield new RaceSolver({
 				horse,
 				course: this._course,
 				skills,
 				pacer,
+				hp: new GameHpPolicy(horse, this._course, this._raceParams.groundCondition, solverRng.int32()),
 				rng: solverRng,
 				onSkillActivate: this._onSkillActivate,
 				onSkillDeactivate: this._onSkillDeactivate
