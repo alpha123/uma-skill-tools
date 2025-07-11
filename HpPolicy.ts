@@ -91,15 +91,19 @@ export class GameHpPolicy {
 		const remainDistance = this.distance - 60 - state.pos;
 		const statusModifier = this.getStatusModifier(lastleg);
 		for (let speed = maxSpeed - 0.1; speed >= baseTargetSpeed2; speed -= 0.1) {
-			// solve `hpForDistance(d, speed) + hpForDistance(remainDistance - d, baseTargetSpeed2) == this.hp` for `d`
-			const spurtDist = Math.min(remainDistance, Math.max(0, 0.2 * speed *
-				(36.0 * baseTargetSpeed2 * this.hp - 720.0 * this.groundModifier * this.gutsModifier * remainDistance * statusModifier *
-   					Math.pow((-this.baseSpeed + baseTargetSpeed2) / 12.0 + 1, 2))
-   				/
-   				(this.groundModifier * this.gutsModifier * statusModifier *
-   					(144.0 * baseTargetSpeed2 * Math.pow((-this.baseSpeed + speed) / 12.0 + 1, 2) -
-   						144.0 * speed * Math.pow((-this.baseSpeed + baseTargetSpeed2) / 12.0 + 1, 2)))));
-   			candidates.push([this.distance - spurtDist, speed]);
+			// solve:
+			//   s1 * speed + s2 * baseTargetSpeed2 = remainDistance
+			//   s2 = (remainDistance - s1 * speed) / baseTargetSpeed2
+			// for s1
+			const spurtDuration = Math.min(
+				remainDistance / speed,
+				Math.max(0,
+					(baseTargetSpeed2 * this.hp - this.hpPerSecond(lastleg, baseTargetSpeed2) * remainDistance) /
+					(baseTargetSpeed2 * this.hpPerSecond(lastleg, speed) - this.hpPerSecond(lastleg, baseTargetSpeed2) * speed)
+				)
+			);
+			const spurtDistance = spurtDuration * speed;
+			candidates.push([this.distance - spurtDistance, speed]);
 		}
 		candidates.sort((a,b) =>
 			((a[0] - state.pos) / baseTargetSpeed2 + (this.distance - a[0]) / a[1]) -
