@@ -506,7 +506,13 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return Math.min(course.distance % 400, 1) != flag ? regions : new RegionList();
 		}
 	}),
-	is_badstart: noopImmediate,
+	is_badstart: immediate({
+		filterEq(regions: RegionList, flag: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
+			assert(flag == 0 || flag == 1, 'must be is_badstart==0 or is_badstart==1');
+			const f = flag ? ((s: RaceState) => s.startDelay > 0.08) : ((s: RaceState) => s.startDelay <= 0.08);
+			return [regions, f] as [RegionList, DynamicCondition];
+		}
+	}),
 	is_behind_in: noopImmediate,
 	is_dirtgrade: immediate({
 		filterEq(regions: RegionList, flag: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
