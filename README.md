@@ -68,13 +68,9 @@ List of skills affected:
 - 砂浴び○ / 優雅な砂浴び
 - possibly others
 
-## Debuffs that should target yourself act as if they target other umas
+## Debuffs are not implemented
 
-The way debuffs are implemented is that the effects are just applied on the simulation that the skills-under-test are being compared to. However, this is not fully implemented and instead of tracking skill target information any skill with a negative modifier is simply applied to the base simulation, including ones that should target the uma being tested instead.
-
-Only affects purple skills and a handful of other skills like マイペース / 泰然自若.
-
-Fixing this requires figuring out and tracking skill target information (probably not hard).
+Technically it is easy to use the simulator to calculate debuffs and they were implemented (with some caveats) in a prior version of the simulator but the current version does not implement debuffs. Doing this properly requires figuring out and tracking skill target information (probably not hard).
 
 ## Not yet implemented
 
@@ -90,13 +86,13 @@ Easily doable but no real point without tracking hp consumption since both simul
 
 If it is implemented would probably have the effect of increasing int decreasing average バ身 gain due to less kakari, since position keep effects aren't simulated which would otherwise counteract it.
 
-### Some skill conditions are not implemented yet
-
-This probably includes some common ones.
-
 ### Scaling effects are not implemented yet
 
 Some of these are going to be a real pain.
+
+### Skill cooldowns
+
+At the moment skills can only activate once and skills with a cooldown (like 弧線のプロフェッサー or ハヤテ一文字) only activate once. This is hard to implement without some relatively major organizational changes (currently pending).
 
 # Credit
 
