@@ -124,6 +124,7 @@ export interface RaceState {
 	readonly phase: Phase
 	readonly pos: number
 	readonly hp: Readonly<HpPolicy>
+	readonly startDelay: number
 	readonly usedSkills: ReadonlySet<string>
 }
 
@@ -136,6 +137,8 @@ export const enum SkillType {
 	GutsUp = 4,
 	WisdomUp = 5,
 	Recovery = 9,
+	MultiplyStartDelay = 10,
+	SetStartDelay = 14,
 	CurrentSpeed = 21,
 	CurrentSpeedWithNaturalDeceleration = 22,
 	TargetSpeed = 27,
@@ -187,6 +190,7 @@ export class RaceSolver {
 	paceEffectRng: PRNG
 	timers: Timer[]
 	startDash: boolean
+	startDelay: number
 	isLastSpurt: boolean
 	phase: Phase
 	nextPhaseTransition: number
@@ -281,6 +285,15 @@ export class RaceSolver {
 
 		this.initHills();
 
+		// must come before the first round of skill activations so concen etc can modify it
+		this.startDelay = 0.1 * this.rng.random();
+		if (this.pacer) {
+			this.pacer.startDelay = 0.0;
+			// NB. we skip updating the pacer in step() below if accumulatetime < dt so this effectively just synchronizes start times.
+			// not entirely sure this is the correct thing to do, but i consider it somewhat logical to minimize rng-start-delay introduced
+			// differences that we're not particularly interested in.
+		}
+
 		this.pos = 0.0;
 		this.accel = 0.0;
 		this.currentSpeed = 3.0;
@@ -357,6 +370,18 @@ export class RaceSolver {
 		//               ⎩ baseAccel(horse) + accelSkillModifier		if x′(t) ≥ 0.85 * baseSpeed(course)
 		//
 		// i dont actually know anything about numerical analysis but i saw this on the internet
+
+		if (this.accumulatetime.t < this.startDelay) {
+			const partialFrame = this.startDelay - this.accumulatetime.t;
+			if (partialFrame < dt) {
+				this.timers.forEach(tm => tm.t += partialFrame);
+				dt -= partialFrame;
+			} else {
+				// still must progress timers
+				this.timers.forEach(tm => tm.t += dt);
+				return;
+			}
+		}
 
 		if (this.pos < this.posKeepEnd && this.pacer != null) {
 			this.pacer.step(dt);
@@ -545,6 +570,12 @@ export class RaceSolver {
 				break;
 			case SkillType.WisdomUp:
 				this.horse.wisdom = Math.max(this.horse.wisdom + ef.modifier, 1);
+				break;
+			case SkillType.MultiplyStartDelay:
+				this.startDelay *= ef.modifier;
+				break;
+			case SkillType.SetStartDelay:
+				this.startDelay = ef.modifier;
 				break;
 			case SkillType.TargetSpeed:
 				this.modifiers.targetSpeed.add(ef.modifier);

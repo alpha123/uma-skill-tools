@@ -24,12 +24,14 @@ prop('race should always progress forward', forAll(arb.Race(), params => {
 	for (let i = 0; i < params.nsamples; ++i) {
 		const s = g.next().value as RaceSolver;
 		let lastPos = 0;
+		let lastT = 0;
 		while (s.pos < builder._course.distance) {
 			s.step(options.timestep);
-			if (s.pos <= lastPos) {
+			if (s.accumulatetime.t <= lastT || (s.pos <= lastPos && !(s.accumulatetime.t < s.startDelay))) {
 				return false;
 			}
 			lastPos = s.pos;
+			lastT = s.accumulatetime.t;
 		}
 	}
 
