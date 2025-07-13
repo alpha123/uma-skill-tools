@@ -737,6 +737,10 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	popularity: noopImmediate,
 	post_number: noopImmediate,
 	remain_distance: immediate({
+		filterEq(regions: RegionList, remain: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
+			const bounds = new Region(course.distance - remain, course.distance - remain + 1);
+			return regions.rmap(r => r.intersect(bounds));
+		},
 		filterLte(regions: RegionList, remain: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			const bounds = new Region(course.distance - remain, course.distance);
 			return regions.rmap(r => r.intersect(bounds));
