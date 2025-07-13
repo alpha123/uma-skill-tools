@@ -327,6 +327,9 @@ export const conditionsWithActivateCountsAsRandom = Object.freeze(Object.assign(
 			// somewhat arbitrarily decide you activate about 23 skills per race and then use a region n / 23 ± 20%
 			const bounds = new Region(Math.min(n / 23.0 - 0.2, 0.6) * course.distance, Math.min(n / 23.0 + 0.2, 1.0) * course.distance);
 			return regions.rmap(r => r.intersect(bounds));
+		},
+		filterLte(regions: RegionList, n: number, course: CourseData, _1: HorseParameters, extra: RaceParameters) {
+			return new RegionList();  // tentatively, we're not really interested in the <= branch of these conditions
 		}
 	}),
 	activate_count_end_after: random({
