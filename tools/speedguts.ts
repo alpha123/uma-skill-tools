@@ -43,7 +43,8 @@ function buildSolver(speed: number, guts: number) {
 		.ground(opts.ground)
 		.mood(opts.mood)
 		.horse(Object.assign({}, desc, {speed: speed, guts: guts}))
-		.withAsiwotameru();
+		.withAsiwotameru()
+		.withStaminaSyoubu();
 	desc.skills.forEach(id => b.addSkill(id));
 	return b.build().next().value as RaceSolver;
 }

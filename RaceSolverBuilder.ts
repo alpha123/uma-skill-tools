@@ -5,7 +5,7 @@ import { Rule30CARng } from './Random';
 import { Conditions, random, immediate, noopRandom } from './ActivationConditions';
 import { ActivationSamplePolicy, ImmediatePolicy } from './ActivationSamplePolicy';
 import { getParser } from './ConditionParser';
-import { RaceSolver, PendingSkill, DynamicCondition, SkillType, SkillRarity, SkillEffect } from './RaceSolver';
+import { RaceSolver, RaceState, PendingSkill, DynamicCondition, SkillType, SkillRarity, SkillEffect } from './RaceSolver';
 import { Mood, GroundCondition, Weather, Season, Time, Grade, RaceParameters } from './RaceParameters';
 import { GameHpPolicy, NoopHpPolicy } from './HpPolicy';
 
@@ -52,6 +52,21 @@ namespace Asitame {
 
 	export function calcApproximateModifier(power: number, strategy: Strategy, distance: DistanceType) {
 		return BaseModifier * Math.sqrt(power - 1200) * StrategyDistanceCoefficient[distance][strategy];
+	}
+}
+
+namespace StaminaSyoubu {
+	export function distanceFactor(distance: number) {
+		if (distance < 2101) return 0.0;
+		else if (distance < 2201) return 0.5;
+		else if (distance < 2401) return 1.0;
+		else if (distance < 2601) return 1.2;
+		else return 1.5;
+	}
+
+	export function calcApproximateModifier(stamina: number, distance: number) {
+		const randomFactor = 1.0;  // TODO implement random factor scaling based on power (unclear how this works currently)
+		return Math.sqrt(stamina - 1200) * 0.0085 * distanceFactor(distance) * randomFactor;
 	}
 }
 
@@ -506,6 +521,40 @@ export class RaceSolverBuilder {
 						type: SkillType.Accel,
 						baseDuration: 3.0 / (course.distance / 1000.0),
 						modifier: Asitame.calcApproximateModifier(power, horse.strategy, course.distanceType)
+					}]
+				});
+			}
+		});
+		return this;
+	}
+
+	withStaminaSyoubu() {
+		this._extraSkillHooks.push((skilldata, horse, course) => {
+			// unfortunately the simulator doesnt (yet) support dynamic modifiers, so we have to account for greens here
+			// even though they are later added normally during execution
+			const stamina = skilldata.reduce((acc,sd) => {
+				const staminaUp = sd.effects.find(ef => ef.type == SkillType.StaminaUp);
+				if (staminaUp && sd.regions.length > 0 && sd.regions[0].start < 9999) {
+					return acc + staminaUp.modifier;
+				} else {
+					return acc;
+				}
+			}, horse.rawStamina);
+
+			if (stamina > 1200) {
+				const spurtStart = new RegionList();
+				spurtStart.push(new Region(CourseHelpers.phaseStart(course.distance, 2), course.distance));
+				skilldata.push({
+					skillId: 'staminasyoubu',
+					rarity: SkillRarity.White,
+					regions: spurtStart,
+					samplePolicy: ImmediatePolicy,
+					// TODO do current speed skills count toward reaching max speed or not?
+					extraCondition: (s: RaceState) => s.currentSpeed >= s.lastSpurtSpeed,
+					effects: [{
+						type: SkillType.TargetSpeed,
+						baseDuration: 9999.0,
+						modifier: StaminaSyoubu.calcApproximateModifier(stamina, course.distance)
 					}]
 				});
 			}

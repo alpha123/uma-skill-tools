@@ -80,7 +80,8 @@ function getBuilder(strategy: string) {
 		.time(cmdef.time || 'Midday')
 		.popularity(!('popularity' in cmdef) ? 1 : cmdef.popularity < 0 ? cmdef.totalUmas + 1 + cmdef.popularity : cmdef.popularity)
 		.withActivateCountsAsRandom()
-		.withAsiwotameru();
+		.withAsiwotameru()
+		.withStaminaSyoubu();
 
 	if (options.positionKeep) {
 		builder.useDefaultPacer();

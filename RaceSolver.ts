@@ -35,19 +35,6 @@ function lastSpurtSpeed(horse: HorseParameters, course: CourseData) {
 		Math.pow(450.0 * horse.guts, 0.597) * 0.0001;
 }
 
-function staminaSyoubuDistanceFactor(distance: number) {
-	if (distance < 2101) return 0.0;
-	else if (distance < 2201) return 0.5;
-	else if (distance < 2401) return 1.0;
-	else if (distance < 2601) return 1.2;
-	else return 1.5;
-}
-
-function staminaSyoubuBonus(horse: HorseParameters, course: CourseData) {
-	const randomFactor = 1.0;  // TODO implement random factor scaling based on power (unclear how this works currently)
-	return Math.sqrt(horse.rawStamina - 1200) * 0.0085 * staminaSyoubuDistanceFactor(course.distance) * randomFactor;
-}
-
 namespace Acceleration {
 	export const StrategyPhaseCoefficient = Object.freeze([
 		[],
@@ -119,6 +106,7 @@ export interface RaceState {
 	readonly activateCountHeal: number
 	readonly currentSpeed: number
 	readonly isLastSpurt: boolean
+	readonly lastSpurtSpeed: number
 	readonly lastSpurtTransition: number
 	readonly isPaceDown: boolean
 	readonly phase: Phase
@@ -307,15 +295,6 @@ export class RaceSolver {
 		this.baseTargetSpeed = ([0,1,2] as Phase[]).map(phase => baseTargetSpeed(this.horse, this.course, phase));
 		this.lastSpurtSpeed = lastSpurtSpeed(this.horse, this.course);
 		this.lastSpurtTransition = -1;
-		// TODO this should be added later, since it only procs when the uma reaches max last spurt speed
-		// this is relevant in some niche cases, e.g. when last spurt starts on a hill and you're below last spurt speed due to the hill penalty,
-		// a speed skill proccing can push your target speed above the last spurt speed which will cause stamina syoubu to proc earlier than it
-		// would for an uma without a speed skill proccing there.
-		// also, because we pass this.lastSpurtSpeed to the HpPolicy, adding it here causes that to overestimate the stamina required for max
-		// speed last spurt (technically, correctly estimate it, but that isn't the way it's implemented afaik)
-		if (this.horse.rawStamina > 1200) {
-			this.lastSpurtSpeed += staminaSyoubuBonus(this.horse, this.course);
-		}
 
 		this.baseAccel = ([0,1,2,0,1,2] as Phase[]).map((phase,i) => baseAccel(i > 2 ? UphillBaseAccel : BaseAccel, this.horse, phase));
 	}
