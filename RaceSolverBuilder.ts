@@ -646,7 +646,7 @@ export class RaceSolverBuilder {
 				course: this._course,
 				skills,
 				pacer,
-				hp: new GameHpPolicy(horse, this._course, this._raceParams.groundCondition, solverRng.int32()),
+				hp: new GameHpPolicy(this._course, this._raceParams.groundCondition, new Rule30CARng(solverRng.int32())),
 				rng: solverRng,
 				onSkillActivate: this._onSkillActivate,
 				onSkillDeactivate: this._onSkillDeactivate

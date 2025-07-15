@@ -2,9 +2,10 @@ import type { RaceState } from './RaceSolver';
 import { HorseParameters } from './HorseTypes';
 import { CourseData, CourseHelpers, Phase } from './CourseData';
 import { GroundCondition } from './RaceParameters';
-import { Rule30CARng } from './Random';
+import { PRNG } from './Random';
 
 export interface HpPolicy {
+	init(horse: HorseParameters): void
 	tick(state: RaceState, dt: number): void
 	hasRemainingHp(): boolean
 	hpRatioRemaining(): number  // separate methods as the former can be much cheaper to check
@@ -13,6 +14,7 @@ export interface HpPolicy {
 }
 
 export const NoopHpPolicy: HpPolicy = {
+	init(_: HorseParameters) {},
 	tick(_0: RaceState, _1: number) {},
 	hasRemainingHp() { return true; },
 	hpRatioRemaining() { return 1.0; },
@@ -35,17 +37,20 @@ export class GameHpPolicy {
 	groundModifier: number
 	gutsModifier: number
 	subparAcceptChance: number
-	rng: Rule30CARng
+	rng: PRNG
 
-	constructor(horse: HorseParameters, course: CourseData, ground: GroundCondition, seed: number) {
+	constructor(course: CourseData, ground: GroundCondition, rng: PRNG) {
 		this.distance = course.distance;
 		this.baseSpeed = 20.0 - (course.distance - 2000) / 1000.0;
-		this.maxHp = 0.8 * HpStrategyCoefficient[horse.strategy] * horse.stamina + course.distance;
-		this.hp = this.maxHp;
 		this.groundModifier = HpConsumptionGroundModifier[course.surface][ground];
+		this.rng = rng;
+	}
+
+	init(horse: HorseParameters) {
+		this.maxHp = 0.8 * HpStrategyCoefficient[horse.strategy] * horse.stamina + this.distance;
+		this.hp = this.maxHp;
 		this.gutsModifier = 1.0 + 200.0 / Math.sqrt(600.0 * horse.guts);
 		this.subparAcceptChance = Math.round((15.0 + 0.05 * horse.wisdom) * 1000);
-		this.rng = new Rule30CARng(seed);
 	}
 
 	getStatusModifier(state: {isPaceDown: boolean}) {

@@ -308,6 +308,8 @@ export class RaceSolver {
 		this.lastSpurtSpeed = lastSpurtSpeed(this.horse, this.course);
 		this.lastSpurtTransition = -1;
 
+		this.hp.init(this.horse);
+
 		this.baseAccel = ([0,1,2,0,1,2] as Phase[]).map((phase,i) => baseAccel(i > 2 ? UphillBaseAccel : BaseAccel, this.horse, phase));
 	}
 
