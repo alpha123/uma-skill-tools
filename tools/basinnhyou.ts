@@ -79,6 +79,8 @@ function getBuilder(strategy: string) {
 		.season(cmdef.season)
 		.time(cmdef.time || 'Midday')
 		.popularity(!('popularity' in cmdef) ? 1 : cmdef.popularity < 0 ? cmdef.totalUmas + 1 + cmdef.popularity : cmdef.popularity)
+		.order(cmdef.strategyPositions[strategy][0], cmdef.strategyPositions[strategy][cmdef.strategyPositions[strategy].length-1])
+		.numUmas(cmdef.totalUmas)
 		.withActivateCountsAsRandom()
 		.withAsiwotameru()
 		.withStaminaSyoubu();
@@ -91,123 +93,15 @@ function getBuilder(strategy: string) {
 	return builder;
 }
 
-function isCmpOperator(tree: Operator): tree is CmpOperator {
-	return 'condition' in tree;
-}
-
-function assertIsCmpOperator(tree: Operator): asserts tree is CmpOperator {
-	assert(isCmpOperator(tree));
-}
-
-function doFlatten(node: Operator, condGroups: CmpOperator[][]) {
-	if (node instanceof OrOperator) {
-		doFlatten(node.left, condGroups);
-		condGroups.push([]);
-		doFlatten(node.right, condGroups);
-	} else if (node instanceof AndOperator) {
-		doFlatten(node.left, condGroups);
-		doFlatten(node.right, condGroups);
-	} else {
-		assertIsCmpOperator(node);
-		condGroups[condGroups.length-1].push(node);
-	}
-}
-
-function flattenConditions(tree: Operator) {
-	const groups = [[]];
-	doFlatten(tree, groups);
-	return groups;
-}
-
-function intersect(a: Set<number>, b: Set<number>) {
-	const i = new Set();
-	a.forEach(n => {
-		if (b.has(n)) i.add(n);
-	});
-	return i;
-}
-
-function rangeForCondition(c: CmpOperator, scaledArgument: number) {
-	const r = new Set();
-	if (c instanceof EqOperator) {
-		r.add(scaledArgument);
-	} else if (c instanceof GtOperator) {
-		for (let i = scaledArgument + 1; i <= cmdef.totalUmas; ++i) {
-			r.add(i);
-		}
-	} else if (c instanceof LtOperator) {
-		for (let i = 1; i < scaledArgument; ++i) {
-			r.add(i);
-		}
-	} else if (c instanceof GteOperator) {
-		for (let i = scaledArgument; i <= cmdef.totalUmas; ++i) {
-			r.add(i);
-		}
-	} else if (c instanceof LteOperator) {
-		for (let i = 1; i <= scaledArgument; ++i) {
-			r.add(i);
-		}
-	} else {
-		throw new Error('unexpected operator');
-	}
-	return r;
-}
-
-function extractOrderRange(conds: CmpOperator[]) {
-	const all = new Set<number>();
-	for (let i = 1; i <= cmdef.totalUmas; ++i) {
-		all.add(i);
-	}
-	return conds.reduce((range,c) => {
-		let r = null, m;
-		if (c.condition == mockConditions['order']) {
-			r = rangeForCondition(c, c.argument);
-		} else if (c.condition == mockConditions['order_rate']) {
-			r = rangeForCondition(c, Math.round(cmdef.totalUmas * (c.argument / 100.0)));
-		} else if ((m = /order_rate_in(\d+)_continue/.exec((c.condition as any).name))) {
-			r = new Set();
-			const bound = Math.round(cmdef.totalUmas * (m[1] / 100.0));
-			for (let i = 1; i <= bound; ++i) {
-				r.add(i);
-			}
-		} else if ((m = /order_rate_out(\d+)_continue/.exec((c.condition as any).name))) {
-			r = new Set();
-			for (let i = Math.round(cmdef.totalUmas * (m[1] / 100.0)); i <= cmdef.totalUmas; ++i) {
-				r.add(i);
-			}
-		}
-		return r != null ? intersect(r, range) : range;
-	}, all);
-}
-
-function strategyMatches(groups: CmpOperator[][]) {
-	if (groups.length == 0) return true;
-	return groups.some(conds => {
-		const range = extractOrderRange(conds);
-		return cmdef.strategyPositions[options.strategy].some(i => range.has(i));
-	});
-}
-
 const greens = [], pinks = [], golds = [], whites = [], uniques = [];
 
 const BLACKLIST_ALL = ['910071', '200333', '200343', '202303', '201081', '201561', '105601211'];
-const ALWAYS_WHITELIST = ['910151', '900771'];
-
-const { parse, tokenize } = getParser(mockConditions);
 
 Object.keys(skills).forEach(id => {
 	if (BLACKLIST_ALL.indexOf(id) > -1) return;
 	if (cmdef.presupposedSkills[options.strategy].indexOf(id) > -1) return;
 
 	const skill = skills[id];
-	let skip = skill.alternatives.every(alt => {
-		const pregroups = alt.precondition.length > 0 ? flattenConditions(parse(tokenize(alt.precondition))) : [];
-		const groups = flattenConditions(parse(tokenize(alt.condition)));
-
-		return !(strategyMatches(pregroups) && strategyMatches(groups));
-	});
-
-	if (skip && ALWAYS_WHITELIST.indexOf(id) == -1) return;
 
 	// assume there are no skills with mixed green/non-green effects (this is true and would be very weird if it was violated)
 	if (skill.alternatives[0].effects.some(ef => ef.type <= SkillType.WisdomUp)) {

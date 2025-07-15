@@ -447,6 +447,16 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
+	order(start: number, end: number) {
+		this._raceParams.orderRange = [start,end];
+		return this;
+	}
+
+	numUmas(n: number) {
+		this._raceParams.numUmas = n;
+		return this;
+	}
+
 	horse(horse: HorseDesc) {
 		this._horse = horse;
 		return this;

@@ -270,6 +270,88 @@ function valueFilter(getValue: (c: CourseData, h: HorseParameters, e: RaceParame
 	});
 }
 
+function orderFilter(getPos: (arg: number, n: number) => number) {
+	return immediate({
+		filterEq(regions: RegionList, arg: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
+			if (extra.orderRange != null) {
+				const pos = getPos(arg, extra.numUmas);
+				return pos >= extra.orderRange[0] && pos <= extra.orderRange[1] ? regions : new RegionList();
+			}
+			return regions;
+		},
+		filterNeq(regions: RegionList, arg: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
+			if (extra.orderRange != null) {
+				const pos = getPos(arg, extra.numUmas);
+				return pos < extra.orderRange[0] || pos > extra.orderRange[1] ? regions : new RegionList();
+			}
+			return regions;
+		},
+		filterLt(regions: RegionList, arg: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
+			if (extra.orderRange != null) {
+				assert(1 <= extra.orderRange[0] && extra.orderRange[0] <= extra.orderRange[1]);
+				// ignore forward order conditions in the last leg (important for e.g. NY Opera unique)
+				// however, add some room after the start of last leg so that forward order skills that proc at the
+				// beginning of last leg won't proc on backlines
+				const end = new Region(CourseHelpers.phaseStart(course.distance, 2) + 100, course.distance);
+				const pos = getPos(arg, extra.numUmas);
+				return extra.orderRange[0] < pos ? regions : regions.rmap(r => r.intersect(end));
+			}
+			return regions;
+		},
+		filterLte(regions: RegionList, arg: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
+			if (extra.orderRange != null) {
+				assert(1 <= extra.orderRange[0] && extra.orderRange[0] <= extra.orderRange[1]);
+				const end = new Region(CourseHelpers.phaseStart(course.distance, 2) + 100, course.distance);
+				const pos = getPos(arg, extra.numUmas);
+				return extra.orderRange[0] <= pos ? regions : regions.rmap(r => r.intersect(end));
+			}
+			return regions;
+		},
+		filterGt(regions: RegionList, arg: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
+			if (extra.orderRange != null) {
+				assert(extra.orderRange[0] <= extra.orderRange[1] && extra.orderRange[1] <= extra.numUmas);
+				const pos = getPos(arg, extra.numUmas);
+				return pos < extra.orderRange[1] ? regions : new RegionList();
+			}
+			return regions;
+		},
+		filterGte(regions: RegionList, arg: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
+			if (extra.orderRange != null) {
+				assert(extra.orderRange[0] <= extra.orderRange[1] && extra.orderRange[1] <= extra.numUmas);
+				const pos = getPos(arg, extra.numUmas);
+				return pos <= extra.orderRange[1] ? regions : new RegionList();
+			}
+			return regions;
+		}
+	});
+}
+
+function orderInFilter(rate: number) {
+	return immediate({
+		filterEq(regions: RegionList, one: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
+			assert(one == 1, 'must be order_rate_inXX_continue==1');
+			if (extra.orderRange != null) {
+				assert(1 <= extra.orderRange[0] && extra.orderRange[0] <= extra.orderRange[1]);
+				return extra.orderRange[0] <= Math.round(rate * extra.numUmas) ? regions : new RegionList();
+			}
+			return regions;
+		}
+	});
+}
+
+function orderOutFilter(rate: number) {
+	return immediate({
+		filterEq(regions: RegionList, one: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
+			assert(one == 1, 'must be order_rate_outXX_continue==1');
+			if (extra.orderRange != null) {
+				assert(extra.orderRange[0] <= extra.orderRange[1] && extra.orderRange[1] <= extra.numUmas);
+				return Math.round(rate * extra.numUmas) <= extra.orderRange[1] ? regions : new RegionList();
+			}
+			return regions;
+		}
+	});
+}
+
 /*
 	accumulatetime, activate_count_all, activate_count_end_after, activate_count_heal, activate_count_middle, activate_count_start,
 	all_corner_random, always, bashin_diff_behind, bashin_diff_infront, behind_near_lane_time, behind_near_lane_time_set1, blocked_all_continuetime,
@@ -617,15 +699,15 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	}),
 	motivation: valueFilter((_0: CourseData, _1: HorseParameters, extra: RaceParameters) => extra.mood + 3),  // go from -2 to 2 to 1-5 scale
 	near_count: noopErlangRandom(3, 2.0),
-	order: noopImmediate,
-	order_rate: noopImmediate,
-	order_rate_in20_continue: noopImmediate,
-	order_rate_in40_continue: noopImmediate,
-	order_rate_in80_continue: noopImmediate,
-	order_rate_out20_continue: noopImmediate,
-	order_rate_out40_continue: noopImmediate,
-	order_rate_out50_continue: noopImmediate,
-	order_rate_out70_continue: noopImmediate,
+	order: orderFilter((pos: number, _: number) => pos),
+	order_rate: orderFilter((rate: number, numUmas: number) => Math.round(numUmas * (rate / 100.0))),
+	order_rate_in20_continue: orderInFilter(0.2),
+	order_rate_in40_continue: orderInFilter(0.4),
+	order_rate_in80_continue: orderInFilter(0.8),
+	order_rate_out20_continue: orderOutFilter(0.2),
+	order_rate_out40_continue: orderOutFilter(0.4),
+	order_rate_out50_continue: orderOutFilter(0.5),
+	order_rate_out70_continue: orderOutFilter(0.7),
 	overtake_target_no_order_up_time: noopErlangRandom(3, 2.0),
 	overtake_target_time: noopErlangRandom(3, 2.0),
 	phase: {
