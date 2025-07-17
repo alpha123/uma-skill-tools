@@ -247,6 +247,21 @@ export function noopErlangRandom(k: number, lambda: number) {
 
 export const noopUniformRandom = uniformRandom(noopAll);
 
+function noopSectionRandom(start: number, end: number) {
+	function sectionRandom(regions: RegionList, _0: number, course: CourseData, _1: HorseParameters, extra: RaceParameters) {
+		const bounds = new Region(start * (course.distance / 24), end * (course.distance / 24));
+		return regions.rmap(r => r.intersect(bounds));
+	}
+	return random({
+		filterEq: sectionRandom,
+		filterNeq: sectionRandom,
+		filterLt: sectionRandom,
+		filterLte: sectionRandom,
+		filterGt: sectionRandom,
+		filterGte: sectionRandom
+	});
+}
+
 function valueFilter(getValue: (c: CourseData, h: HorseParameters, e: RaceParameters) => number) {
 	return immediate({
 		filterEq(regions: RegionList, value: number, course: CourseData, horse: HorseParameters, extra: RaceParameters) {
@@ -670,6 +685,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	is_move_lane: noopErlangRandom(5, 1.0),
 	is_overtake: noopErlangRandom(1, 2.0),
 	is_surrounded: noopErlangRandom(3, 2.0),
+	is_temptation: noopImmediate,
 	is_used_skill_id: immediate({
 		filterEq(regions: RegionList, skillId: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
 			return [regions, (s: RaceState) => s.usedSkills.has('' + skillId)] as [RegionList, DynamicCondition];
@@ -845,7 +861,15 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	}),
 	running_style_count_same: noopImmediate,
 	running_style_count_same_rate: noopImmediate,
+	running_style_count_nige_otherself: noopImmediate,
+	running_style_count_senko_otherself: noopImmediate,
+	running_style_count_sashi_otherself: noopImmediate,
+	running_style_count_oikomi_otherself: noopImmediate,
 	running_style_equal_popularity_one: noopImmediate,
+	running_style_temptation_count_nige: noopSectionRandom(2,9),
+	running_style_temptation_count_senko: noopSectionRandom(2,9),
+	running_style_temptation_count_sashi: noopSectionRandom(2,9),
+	running_style_temptation_count_oikomi: noopSectionRandom(2,9),
 	same_skill_horse_count: noopImmediate,
 	season: valueFilter((_0: CourseData, _1: HorseParameters, extra: RaceParameters) => extra.season),
 	slope: immediate({
@@ -887,6 +911,8 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		filterGte: notSupported
 	},
 	temptation_count: noopImmediate,
+	temptation_count_behind: noopSectionRandom(2,9),
+	temptation_count_infront: noopSectionRandom(2,9),
 	time: valueFilter((_0: CourseData, _1: HorseParameters, extra: RaceParameters) => extra.time),
 	track_id: valueFilter((course: CourseData, _: HorseParameters, extra: RaceParameters) => course.raceTrackId),
 	up_slope_random: random({
