@@ -639,7 +639,7 @@ export class RaceSolver {
 	// deactivate any skills that haven't finished their durations yet (intended to be called at the end of a simulation, when a skill
 	// might have activated towards the end of the race and the race finished before the skill's duration)
 	cleanup() {
-		const callDeactivateHook = (s: {skillId: string, perspective: Perspective}) => { this.onSkillDeactivate(this, s.skillId, s.perspective); }
+		const callDeactivateHook = (s: {skillId: string, perspective?: Perspective}) => { this.onSkillDeactivate(this, s.skillId, s.perspective); }
 		this.activeTargetSpeedSkills.forEach(callDeactivateHook);
 		this.activeCurrentSpeedSkills.forEach(callDeactivateHook);
 		this.activeAccelSkills.forEach(callDeactivateHook);
