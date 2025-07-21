@@ -523,6 +523,22 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	corner_random: random({
 		filterEq(regions: RegionList, cornerNum: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(CourseHelpers.isSortedByStart(course.corners), 'course corners must be sorted by start');
+			// FIXME annoying hack for the corner skills. TEMPORARY. see the note above for why we do this. this condition is
+			// considerably more important in global than in jp (since early global does not have all_corner_random)
+			// these are all the corner_random==1@corner_random==2@corner_random==3@corner_random==4 skills
+			if ([
+				'200331', '200332', '200333', '200341', '200342', '200343', '200351', '200352', '200353',
+				'200971', '200972', '201041', '201042', '201111', '201112', '201181', '201182',
+				'201251', '201252', '201321', '201322', '201391', '201392', '201461', '201462'
+			].indexOf(extra.skillId) > -1) {
+				if (cornerNum == 1) {
+					const corner = course.corners[course.corners.length - 4];
+					const cornerBounds = new Region(corner.start, corner.start + corner.length);
+					return regions.rmap(r => r.intersect(cornerBounds));
+				} else {
+					return new RegionList();
+				}
+			}
 			if (course.corners.length + cornerNum >= 5) {
 				const corner = course.corners[course.corners.length + cornerNum - 5];
 				const cornerBounds = new Region(corner.start, corner.start + corner.length);
