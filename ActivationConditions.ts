@@ -856,6 +856,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	},
 	popularity: noopImmediate,
 	post_number: noopImmediate,
+	random_lot: noopImmediate,
 	remain_distance: immediate({
 		filterEq(regions: RegionList, remain: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			const bounds = new Region(course.distance - remain, course.distance - remain + 1);
