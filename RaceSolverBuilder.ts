@@ -5,7 +5,7 @@ import { Rule30CARng } from './Random';
 import { Conditions, random, immediate, noopRandom } from './ActivationConditions';
 import { ActivationSamplePolicy, ImmediatePolicy } from './ActivationSamplePolicy';
 import { getParser } from './ConditionParser';
-import { RaceSolver, RaceState, PendingSkill, DynamicCondition, SkillType, SkillRarity, SkillEffect } from './RaceSolver';
+import { RaceSolver, RaceState, PendingSkill, DynamicCondition, SkillType, SkillRarity, SkillEffect, Perspective } from './RaceSolver';
 import { Mood, GroundCondition, Weather, Season, Time, Grade, RaceParameters } from './RaceParameters';
 import { GameHpPolicy, NoopHpPolicy } from './HpPolicy';
 
@@ -211,15 +211,6 @@ export function buildAdjustedStats(baseStats: HorseParameters, course: CourseDat
 	});
 }
 
-export interface SkillData {
-	skillId: string
-	rarity: SkillRarity
-	samplePolicy: ActivationSamplePolicy,
-	regions: RegionList,
-	extraCondition: DynamicCondition,
-	effects: SkillEffect[]
-}
-
 export const enum SkillTarget {
 	Self = 1,
 	All = 2,
@@ -236,10 +227,16 @@ export const enum SkillTarget {
 	UsedRecovery = 23
 }
 
-export const enum Perspective {
-	Self = 1,
-	Other = 2,
-	Any = 3
+export { Perspective } from './RaceSolver';
+
+export interface SkillData {
+	skillId: string
+	perspective?: Perspective
+	rarity: SkillRarity
+	samplePolicy: ActivationSamplePolicy,
+	regions: RegionList,
+	extraCondition: DynamicCondition,
+	effects: SkillEffect[]
 }
 
 function isTarget(self: Perspective, targetType: SkillTarget) {
@@ -299,6 +296,7 @@ export function buildSkillData(horse: HorseParameters, raceParams: PartialRacePa
 			const rarity = skills[skillId].rarity;
 			triggers.push({
 				skillId: skillId,
+				perspective: perspective,
 				// for some reason 1*/2* uniques, 1*/2* upgraded to 3*, and naturally 3* uniques all have different rarity (3, 4, 5 respectively)
 				rarity: rarity >= 3 && rarity <= 5 ? 3 : rarity,
 				samplePolicy: op.samplePolicy,
@@ -317,11 +315,13 @@ export function buildSkillData(horse: HorseParameters, raceParams: PartialRacePa
 	if (effects.length == 0 && !ignoreNullEffects) {
 		return [];
 	} else {
+		const rarity = skills[skillId].rarity;
 		const afterEnd = new RegionList();
 		afterEnd.push(new Region(9999,9999));
 		return [{
 			skillId: skillId,
-			rarity: Math.min(skills[skillId].rarity, 3),
+			perspective: perspective,
+			rarity: rarity >= 3 && rarity <= 5 ? 3 : rarity,
 			samplePolicy: ImmediatePolicy,
 			regions: afterEnd,
 			extraCondition: (_) => false,
@@ -510,12 +510,14 @@ export class RaceSolverBuilder {
 			// that we're trying to investigate
 			this._pacerSkills = [{
 				skillId: '201601',
+				perspective: Perspective.Self,
 				rarity: SkillRarity.White,
 				trigger: new Region(0, 100),
 				extraCondition: (_) => true,
 				effects: [{type: SkillType.Accel, baseDuration: 3.0, modifier: 0.2}]
 			}, {
 				skillId: '200532',
+				perspective: Perspective.Self,
 				rarity: SkillRarity.White,
 				trigger: new Region(0, 100),
 				extraCondition: (_) => true,
@@ -549,6 +551,7 @@ export class RaceSolverBuilder {
 				spurtStart.push(new Region(CourseHelpers.phaseStart(course.distance, 2), course.distance));
 				skilldata.push({
 					skillId: 'asitame',
+					perspective: Perspective.Self,
 					rarity: SkillRarity.White,
 					regions: spurtStart,
 					samplePolicy: ImmediatePolicy,
@@ -582,6 +585,7 @@ export class RaceSolverBuilder {
 				spurtStart.push(new Region(CourseHelpers.phaseStart(course.distance, 2), course.distance));
 				skilldata.push({
 					skillId: 'staminasyoubu',
+					perspective: Perspective.Self,
 					rarity: SkillRarity.White,
 					regions: spurtStart,
 					samplePolicy: ImmediatePolicy,
@@ -657,6 +661,7 @@ export class RaceSolverBuilder {
 		for (let i = 0; i < this.nsamples; ++i) {
 			const skills = skilldata.map((sd,sdi) => ({
 				skillId: sd.skillId,
+				perspective: sd.perspective,
 				rarity: sd.rarity,
 				trigger: triggers[sdi][i % triggers[sdi].length],
 				extraCondition: sd.extraCondition,

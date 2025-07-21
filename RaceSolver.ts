@@ -130,6 +130,12 @@ export interface RaceState {
 
 export type DynamicCondition = (state: RaceState) => boolean;
 
+export const enum Perspective {
+	Self = 1,
+	Other = 2,
+	Any = 3
+}
+
 export const enum SkillType {
 	SpeedUp = 1,
 	StaminaUp = 2,
@@ -157,6 +163,7 @@ export interface SkillEffect {
 
 export interface PendingSkill {
 	skillId: string
+	perspective?: Perspective
 	rarity: SkillRarity
 	trigger: Region
 	extraCondition: DynamicCondition
@@ -165,6 +172,7 @@ export interface PendingSkill {
 
 interface ActiveSkill {
 	skillId: string
+	perspective?: Perspective
 	durationTimer: Timer
 	modifier: number
 }
@@ -206,8 +214,8 @@ export class RaceSolver {
 	hillEnd: number[]
 	activateCount: number[]
 	activateCountHeal: number
-	onSkillActivate: (s: RaceSolver, skillId: string) => void
-	onSkillDeactivate: (s: RaceSolver, skillId: string) => void
+	onSkillActivate: (s: RaceSolver, skillId: string, perspective: Perspective) => void
+	onSkillDeactivate: (s: RaceSolver, skillId: string, perspective: Perspective) => void
 	sectionLength: number
 	pacer: RaceSolver | null
 	isPaceDown: boolean
@@ -505,7 +513,7 @@ export class RaceSolver {
 			if (s.durationTimer.t >= 0) {
 				this.activeTargetSpeedSkills.splice(i,1);
 				this.modifiers.targetSpeed.add(-s.modifier);
-				this.onSkillDeactivate(this, s.skillId);
+				this.onSkillDeactivate(this, s.skillId, s.perspective);
 			}
 		}
 		for (let i = this.activeCurrentSpeedSkills.length; --i >= 0;) {
@@ -516,7 +524,7 @@ export class RaceSolver {
 				if (s.naturalDeceleration) {
 					this.modifiers.oneFrameAccel += s.modifier;
 				}
-				this.onSkillDeactivate(this, s.skillId);
+				this.onSkillDeactivate(this, s.skillId, s.perspective);
 			}
 		}
 		for (let i = this.activeAccelSkills.length; --i >= 0;) {
@@ -524,7 +532,7 @@ export class RaceSolver {
 			if (s.durationTimer.t >= 0) {
 				this.activeAccelSkills.splice(i,1);
 				this.modifiers.accel.add(-s.modifier);
-				this.onSkillDeactivate(this, s.skillId);
+				this.onSkillDeactivate(this, s.skillId, s.perspective);
 			}
 		}
 		for (let i = this.pendingSkills.length; --i >= 0;) {
@@ -572,17 +580,17 @@ export class RaceSolver {
 				break;
 			case SkillType.TargetSpeed:
 				this.modifiers.targetSpeed.add(ef.modifier);
-				this.activeTargetSpeedSkills.push({skillId: s.skillId, durationTimer: this.getNewTimer(-scaledDuration), modifier: ef.modifier});
+				this.activeTargetSpeedSkills.push({skillId: s.skillId, perspective: s.perspective, durationTimer: this.getNewTimer(-scaledDuration), modifier: ef.modifier});
 				break;
 			case SkillType.Accel:
 				this.modifiers.accel.add(ef.modifier);
-				this.activeAccelSkills.push({skillId: s.skillId, durationTimer: this.getNewTimer(-scaledDuration), modifier: ef.modifier});
+				this.activeAccelSkills.push({skillId: s.skillId, perspective: s.perspective, durationTimer: this.getNewTimer(-scaledDuration), modifier: ef.modifier});
 				break;
 			case SkillType.CurrentSpeed:
 			case SkillType.CurrentSpeedWithNaturalDeceleration:
 				this.modifiers.currentSpeed.add(ef.modifier);
 				this.activeCurrentSpeedSkills.push({
-					skillId: s.skillId, durationTimer: this.getNewTimer(-scaledDuration), modifier: ef.modifier,
+					skillId: s.skillId, perspective: s.perspective, durationTimer: this.getNewTimer(-scaledDuration), modifier: ef.modifier,
 					naturalDeceleration: ef.type == SkillType.CurrentSpeedWithNaturalDeceleration
 				});
 				break;
@@ -603,7 +611,7 @@ export class RaceSolver {
 		});
 		++this.activateCount[this.phase];
 		this.usedSkills.add(s.skillId);
-		this.onSkillActivate(this, s.skillId);
+		this.onSkillActivate(this, s.skillId, s.perspective);
 	}
 
 	doActivateRandomGold(ngolds: number) {
