@@ -220,20 +220,43 @@ export interface SkillData {
 	effects: SkillEffect[]
 }
 
-function buildSkillEffects(skill) {
+export const enum SkillTarget {
+	Self = 1,
+	All = 2,
+	InFov = 4,
+	AheadOfPosition = 7,
+	AheadOfSelf = 9,
+	BehindSelf = 10,
+	AllAllies = 11,
+	EnemyStrategy = 18,
+	KakariAhead = 19,
+	KakariBehind = 20,
+	KakariStrategy = 21,
+	UmaId = 22,
+	UsedRecovery = 23
+}
+
+export const enum Perspective {
+	Self = 1,
+	Other = 2,
+	Any = 3
+}
+
+function isTarget(self: Perspective, targetType: SkillTarget) {
+	return targetType == SkillTarget.All || self == Perspective.Any || ((self == Perspective.Self) == (targetType == SkillTarget.Self));
+}
+
+function buildSkillEffects(skill, perspective: Perspective) {
 	// im on a really old version of node and cant use flatMap
 	return skill.effects.reduce((acc,ef) => {
-		// TODO implement debuffs
-		// a little bit hard since some skills have both buff and debuff effects, and those should go on different solver instances
-		// (there is probably no good way to do this with the current RaceSolverBuilder architecture)
-		if (SkillType.hasOwnProperty(ef.type) && ef.modifier > 0) {
+		if (isTarget(perspective, ef.target) && SkillType.hasOwnProperty(ef.type)) {
 			acc.push({type: ef.type, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
 		}
 		return acc;
 	}, []);
 }
 
-export function buildSkillData(horse: HorseParameters, raceParams: PartialRaceParameters, course: CourseData, wholeCourse: RegionList, parser: {parse: any, tokenize: any}, skillId: string, ignoreNullEffects: boolean = false) {
+export function buildSkillData(horse: HorseParameters, raceParams: PartialRaceParameters, course: CourseData, wholeCourse: RegionList, parser: {parse: any, tokenize: any}, skillId: string, perspective: Perspective, ignoreNullEffects: boolean = false) {
 	if (!(skillId in skills)) {
 		throw new Error('bad skill ID ' + skillId);
 	}
@@ -271,7 +294,7 @@ export function buildSkillData(horse: HorseParameters, raceParams: PartialRacePa
 			// !!! FIXME this is actually bugged for NY Ace unique since she'll get both effects if she uses oonige.
 			continue;
 		}
-		const effects = buildSkillEffects(skill);
+		const effects = buildSkillEffects(skill, perspective);
 		if (effects.length > 0 || ignoreNullEffects) {
 			const rarity = skills[skillId].rarity;
 			triggers.push({
@@ -290,7 +313,7 @@ export function buildSkillData(horse: HorseParameters, raceParams: PartialRacePa
 	// however, for purposes of summer goldship unique (Adventure of 564), we still have to add something, since
 	// that could still cause them to activate. so just add the first alternative at a location after the course
 	// is over with a constantly false dynamic condition so that it never activates normally.
-	const effects = buildSkillEffects(alternatives[0]);
+	const effects = buildSkillEffects(alternatives[0], perspective);
 	if (effects.length == 0 && !ignoreNullEffects) {
 		return [];
 	} else {
@@ -371,7 +394,7 @@ export class RaceSolverBuilder {
 	_pacerSkills: PendingSkill[]
 	_rng: Rule30CARng
 	_parser: {parse: any, tokenize: any}
-	_skills: string[]
+	_skills: {id: string, p: Perspective}[]
 	_extraSkillHooks: ((skilldata: SkillData[], horse: HorseParameters, course: CourseData) => void)[]
 	_onSkillActivate: (state: RaceSolver, skillId: string) => void
 	_onSkillDeactivate: (state: RaceSolver, skillId: string) => void
@@ -575,8 +598,8 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
-	addSkill(skillId: string) {
-		this._skills.push(skillId);
+	addSkill(skillId: string, perspective: Perspective = Perspective.Self) {
+		this._skills.push({id: skillId, p: perspective});
 		return this;
 	}
 
@@ -623,8 +646,8 @@ export class RaceSolverBuilder {
 		wholeCourse.push(new Region(0, this._course.distance));
 		Object.freeze(wholeCourse);
 
-		const makeSkill = buildSkillData.bind(null, horse, this._raceParams, this._course, wholeCourse, this._parser) as (s: string) => SkillData | null;
-		const skilldata = this._skills.flatMap(makeSkill);
+		const makeSkill = buildSkillData.bind(null, horse, this._raceParams, this._course, wholeCourse, this._parser);
+		const skilldata = this._skills.flatMap(({id,p}) => makeSkill(id, p));
 		this._extraSkillHooks.forEach(h => h(skilldata, horse, this._course));
 		const triggers = skilldata.map(sd => sd.samplePolicy.sample(sd.regions, this.nsamples, this._rng));
 

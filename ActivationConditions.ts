@@ -1,7 +1,7 @@
 const assert = require('assert').strict;
 
 import { CourseData, CourseHelpers, Phase } from './CourseData';
-import { HorseParameters, StrategyHelpers } from './HorseTypes';
+import { HorseParameters, Strategy, StrategyHelpers } from './HorseTypes';
 import { Region, RegionList } from './Region';
 import { RaceState, DynamicCondition } from './RaceSolver';
 import { RaceParameters } from './RaceParameters';
@@ -861,10 +861,22 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	}),
 	running_style_count_same: noopImmediate,
 	running_style_count_same_rate: noopImmediate,
-	running_style_count_nige_otherself: noopImmediate,
-	running_style_count_senko_otherself: noopImmediate,
-	running_style_count_sashi_otherself: noopImmediate,
-	running_style_count_oikomi_otherself: noopImmediate,
+	// these are used exclusively on debuffs, in which case they only get added to /us/ from the "other" perspective, in which case
+	// we actually want them to active if /our/ strategy matches the condition
+	// NB. this seems kind of questionable in general. perhaps a perspective member should be added to RaceParameters.
+	// also, abusing valueFilter like this only works because these conditions are used like running_style_count_nige_otherself>=1
+	running_style_count_nige_otherself: valueFilter(
+		(_: CourseData, horse: HorseParameters, extra: RaceParameters) => +StrategyHelpers.strategyMatches(horse.strategy, Strategy.Nige)
+	),
+	running_style_count_senko_otherself: valueFilter(
+		(_: CourseData, horse: HorseParameters, extra: RaceParameters) => +StrategyHelpers.strategyMatches(horse.strategy, Strategy.Senkou)
+	),
+	running_style_count_sashi_otherself: valueFilter(
+		(_: CourseData, horse: HorseParameters, extra: RaceParameters) => +StrategyHelpers.strategyMatches(horse.strategy, Strategy.Sasi)
+	),
+	running_style_count_oikomi_otherself: valueFilter(
+		(_: CourseData, horse: HorseParameters, extra: RaceParameters) => +StrategyHelpers.strategyMatches(horse.strategy, Strategy.Oikomi)
+	),
 	running_style_equal_popularity_one: noopImmediate,
 	running_style_temptation_count_nige: noopSectionRandom(2,9),
 	running_style_temptation_count_senko: noopSectionRandom(2,9),

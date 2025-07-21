@@ -68,10 +68,6 @@ List of skills affected:
 - 砂浴び○ / 優雅な砂浴び
 - possibly others
 
-## Debuffs are not implemented
-
-Technically it is easy to use the simulator to calculate debuffs and they were implemented (with some caveats) in a prior version of the simulator but the current version does not implement debuffs. Doing this properly requires figuring out and tracking skill target information (probably not hard).
-
 ## Not yet implemented
 
 All of these things should be doable with the current architecture and are planned for the near future.

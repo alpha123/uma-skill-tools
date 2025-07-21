@@ -8,7 +8,7 @@ import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
 
 import { RaceSolver, SkillType, SkillRarity } from '../RaceSolver';
-import { RaceSolverBuilder, buildBaseStats, buildSkillData } from '../RaceSolverBuilder';
+import { RaceSolverBuilder, buildBaseStats, buildSkillData, Perspective } from '../RaceSolverBuilder';
 import { Region, RegionList } from '../Region';
 import { getParser } from '../ConditionParser';
 import {
@@ -125,17 +125,18 @@ function calcRows(builder, skillids, thresholds: number[]) {
 	const rows = skillids.map(id => {
 		const b1 = builder.fork();
 		const b2 = b1.fork();
-		b2.addSkill(id);
+		b1.addSkill(id, Perspective.Other);
+		b2.addSkill(id, Perspective.Self);
 
 		const wholeCourse = new RegionList();
 		wholeCourse.push(new Region(0, b2._course.distance));
 		let sd;
 		try {
-			sd = buildSkillData(horse, b2._raceParams, b2._course, wholeCourse, normalParser, id);
+			sd = buildSkillData(horse, b2._raceParams, b2._course, wholeCourse, normalParser, id, Perspective.Any);
 		} catch (e) {
 			return null;
 		}
-		if (sd == null) return null;
+		if (sd.length == 0 || sd.every(d => d.regions.length == 0 || d.regions[0].start >= 9999)) return null;
 		const modeled = sd.samplePolicy instanceof ErlangRandomPolicy;
 
 		const g1 = b1.build();
