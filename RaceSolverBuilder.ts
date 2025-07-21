@@ -395,6 +395,7 @@ export class RaceSolverBuilder {
 	_rng: Rule30CARng
 	_parser: {parse: any, tokenize: any}
 	_skills: {id: string, p: Perspective}[]
+	_samplePolicyOverride: Map<string, ActivationSamplePolicy>
 	_extraSkillHooks: ((skilldata: SkillData[], horse: HorseParameters, course: CourseData) => void)[]
 	_onSkillActivate: (state: RaceSolver, skillId: string) => void
 	_onSkillDeactivate: (state: RaceSolver, skillId: string) => void
@@ -416,6 +417,7 @@ export class RaceSolverBuilder {
 		this._rng = new Rule30CARng(Math.floor(Math.random() * (-1 >>> 0)) >>> 0);
 		this._parser = defaultParser;
 		this._skills = [];
+		this._samplePolicyOverride = new Map();
 		this._extraSkillHooks = [];
 		this._onSkillActivate = null;
 		this._onSkillDeactivate = null;
@@ -602,8 +604,11 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
-	addSkill(skillId: string, perspective: Perspective = Perspective.Self) {
+	addSkill(skillId: string, perspective: Perspective = Perspective.Self, samplePolicy?: ActivationSamplePolicy) {
 		this._skills.push({id: skillId, p: perspective});
+		if (samplePolicy != null) {
+			this._samplePolicyOverride.set(skillId, samplePolicy);
+		}
 		return this;
 	}
 
@@ -653,7 +658,10 @@ export class RaceSolverBuilder {
 		const makeSkill = buildSkillData.bind(null, horse, this._raceParams, this._course, wholeCourse, this._parser);
 		const skilldata = this._skills.flatMap(({id,p}) => makeSkill(id, p));
 		this._extraSkillHooks.forEach(h => h(skilldata, horse, this._course));
-		const triggers = skilldata.map(sd => sd.samplePolicy.sample(sd.regions, this.nsamples, this._rng));
+		const triggers = skilldata.map(sd => {
+			const sp = this._samplePolicyOverride.get(sd.skillId) || sd.samplePolicy;
+			return sp.sample(sd.regions, this.nsamples, this._rng)
+		});
 
 		// must come after skill activations are decided because conditions like base_power depend on base stats
 		horse = buildAdjustedStats(horse, this._course, this._raceParams.groundCondition);
