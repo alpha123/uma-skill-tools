@@ -673,6 +673,12 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return regions.rmap(r => r.intersect(bounds));
 		}
 	}),
+	is_hp_empty_onetime: immediate({
+		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
+			assert(one == 1, 'must be is_hp_empty_onetime==1');
+			return [regions, (s: RaceState) => !s.hp.hasRemainingHp()] as [RegionList, DynamicCondition];
+		}
+	}),
 	is_lastspurt: immediate({
 		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(one == 1, 'must be is_lastspurt==1');

@@ -44,6 +44,9 @@ export class GameHpPolicy {
 		this.baseSpeed = 20.0 - (course.distance - 2000) / 1000.0;
 		this.groundModifier = HpConsumptionGroundModifier[course.surface][ground];
 		this.rng = rng;
+		this.maxHp = 1.0;  // the first round of skill activations happens before init() is called (so we can get the correct stamina after greens)
+		this.hp = 1.0;     // but there are some conditions that access HpPolicy methods which can run in the first round (e.g. is_hp_empty_onetime)
+		                   // so we have to be "initialized enough" for them
 	}
 
 	init(horse: HorseParameters) {
