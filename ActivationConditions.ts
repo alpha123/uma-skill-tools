@@ -532,7 +532,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 				'201251', '201252', '201321', '201322', '201391', '201392', '201461', '201462'
 			].indexOf(extra.skillId) > -1) {
 				if (cornerNum == 1) {
-					const corner = course.corners[course.corners.length - 4];
+					const corner = course.corners[Math.max(course.corners.length - 4, 0)];
 					const cornerBounds = new Region(corner.start, corner.start + corner.length);
 					return regions.rmap(r => r.intersect(cornerBounds));
 				} else {
