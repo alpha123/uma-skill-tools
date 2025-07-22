@@ -124,7 +124,9 @@ export interface RaceState {
 	readonly phase: Phase
 	readonly pos: number
 	readonly hp: Readonly<HpPolicy>
+	readonly randomLot: number
 	readonly startDelay: number
+	readonly gateRoll: number
 	readonly usedSkills: ReadonlySet<string>
 }
 
@@ -199,6 +201,8 @@ export class RaceSolver {
 	timers: Timer[]
 	startDash: boolean
 	startDelay: number
+	gateRoll: number
+	randomLot: number
 	isLastSpurt: boolean
 	phase: Phase
 	nextPhaseTransition: number
@@ -259,6 +263,16 @@ export class RaceSolver {
 		this.paceEffectRng = new Rule30CARng(this.rng.int32());
 		this.timers = [];
 		this.accumulatetime = this.getNewTimer();
+		// bit of a hack because implementing post_number is surprisingly annoying, since we don't have RaceParameters.numUmas available here
+		// and can't draw random numbers in the conditions. instead what we do is draw a random number here that decides the gate, and then
+		// in the post_number dynamic condition we mod that by the number of umas to figure out our starting position, and then figure out
+		// which gate block that is in. however, n%k is not in general uniformly distributed for a random n, and we can't/don't want to instantiate
+		// a new rng instance in the dynamic condition for rejection sampling. fortunately n%k IS uniformly distributed when n_max ≡ k - 1 (mod k)
+		// the smallest n_max where that is true for every k in [1,18] is lcm(1, 2, … 18) - 1 (n_max ≡ k-1 (mod k) means k divides n_max+1. the
+		// smallest n_max where this is true for every k = 1, 2, … 18 is lcm(1, 2, … 18) - 1), which is 12252239. since PRNG#uniform excludes its
+		// upper bound, just generate up to lcm(1, 2, … 18) = 12252240
+		this.gateRoll = this.rng.uniform(12252240);
+		this.randomLot = this.rng.uniform(100);
 		this.phase = 0;
 		this.nextPhaseTransition = CourseHelpers.phaseStart(this.course.distance, 1);
 		this.activeTargetSpeedSkills = [];

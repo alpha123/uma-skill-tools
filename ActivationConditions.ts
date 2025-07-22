@@ -855,8 +855,30 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		filterGte: notSupported
 	},
 	popularity: noopImmediate,
-	post_number: noopImmediate,
-	random_lot: noopImmediate,
+	post_number: (function () {
+		function gateBlock(s: RaceState, numUmas: number) {
+			const gateNumber = s.gateRoll % numUmas;  // modulo result guaranteed to be uniformly distributed due to the properties of s.gateRoll
+			                                          // see comment in RaceSolver.ts where gateRoll is initialized
+			if (gateNumber < 9) return gateNumber;
+			else return 1 + (24 - gateNumber) % 8;
+		}
+		return immediate({
+			filterEq(regions: RegionList, post: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
+				return [regions, (s: RaceState) => gateBlock(s, extra.numUmas || 9) == post] as [RegionList, DynamicCondition];
+			},
+			filterLte(regions: RegionList, post: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
+				return [regions, (s: RaceState) => gateBlock(s, extra.numUmas || 9) <= post] as [RegionList, DynamicCondition];
+			},
+			filterGte(regions: RegionList, post: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
+				return [regions, (s: RaceState) => gateBlock(s, extra.numUmas || 9) >= post] as [RegionList, DynamicCondition];
+			}
+		});
+	})(),
+	random_lot: immediate({
+		filterEq(regions: RegionList, lot: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
+			return [regions, (s: RaceState) => s.randomLot < lot] as [RegionList, DynamicCondition];
+		}
+	}),
 	remain_distance: immediate({
 		filterEq(regions: RegionList, remain: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			const bounds = new Region(course.distance - remain, course.distance - remain + 1);
