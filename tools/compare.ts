@@ -5,6 +5,7 @@ import { CourseHelpers } from '../CourseData';
 import { Region, RegionList } from '../Region';
 import { Rule30CARng } from '../Random';
 import { RaceSolver, PendingSkill } from '../RaceSolver';
+import { NoopHpPolicy } from '../HpPolicy';
 
 // this shares considerable overlap with gain.ts but it's not too clear what a nice way to share code between them would be
 // either way it's (currently) only two like this, i'm not sure it's worth abstracting anything into a framework sufficiently
@@ -79,7 +80,7 @@ const gain = [];
 for (let i = 0; i < opts.nsamples; ++i) {
 	const skills1 = [];
 	skillDefs1.forEach((sd,sdi) => addSkill(skills1, sd, triggers1[sdi], i));
-	const s = new RaceSolver({horse: horse1, course, skills: skills1, rng: solverRng1});
+	const s = new RaceSolver({horse: horse1, course, skills: skills1, hp: NoopHpPolicy, rng: solverRng1});
 
 	while (s.pos < course.distance) {
 		s.step(1/60);
@@ -87,7 +88,7 @@ for (let i = 0; i < opts.nsamples; ++i) {
 
 	const skills2 = [];
 	skillDefs2.forEach((sd,sdi) => addSkill(skills2, sd, triggers2[sdi], i));
-	const s2 = new RaceSolver({horse: horse2, course, skills: skills2, rng: solverRng2});
+	const s2 = new RaceSolver({horse: horse2, course, skills: skills2, hp: NoopHpPolicy, rng: solverRng2});
 	// NB. if horse2 is faster then this ends up going past the course distance
 	// this is not in itself a problem, but it would overestimate the difference if for example a skill continues past the end of the
 	// course. i feel like there are probably some other situations where it would be inaccurate also. the right thing to do is also
