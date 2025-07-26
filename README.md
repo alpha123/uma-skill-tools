@@ -72,7 +72,7 @@ List of skills affected:
 
 All of these things should be doable with the current architecture and are planned for the near future.
 
-### Does not simulate int effects (int rolls or downhill speedup mode)
+### Does not simulate downhill speedup mode
 
 The architecture now allows it to be doable in a way to usefully allow comparisons even though the effects are random.
 

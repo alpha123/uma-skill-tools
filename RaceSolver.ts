@@ -191,6 +191,7 @@ export class RaceSolver {
 	baseTargetSpeed: number[]
 	lastSpurtSpeed: number
 	lastSpurtTransition: number
+	sectionModifier: number[]
 	baseAccel: number[]
 	horse: { -readonly[P in keyof HorseParameters]: HorseParameters[P] }
 	course: CourseData
@@ -329,6 +330,13 @@ export class RaceSolver {
 		this.baseTargetSpeed = ([0,1,2] as Phase[]).map(phase => baseTargetSpeed(this.horse, this.course, phase));
 		this.lastSpurtSpeed = lastSpurtSpeed(this.horse, this.course);
 		this.lastSpurtTransition = -1;
+
+		this.sectionModifier = Array.from({length: 24}, () => {
+			const max = this.horse.wisdom / 5500.0 * Math.log10(this.horse.wisdom * 0.1);
+			const factor = (max - 0.65 + this.rng.random() * 0.65) / 100.0;
+			return baseSpeed(this.course) * factor;
+		});
+		this.sectionModifier.push(0.0);  // last tick after the race is done, or in a comparison in case one uma runs off the end of the track
 
 		this.hp.init(this.horse);
 
@@ -475,6 +483,7 @@ export class RaceSolver {
 		} else {
 			this.targetSpeed = this.baseTargetSpeed[this.phase] * this.posKeepSpeedCoef;
 		}
+		this.targetSpeed += this.sectionModifier[Math.floor(this.pos / this.sectionLength)];
 		this.targetSpeed += this.modifiers.targetSpeed.acc + this.modifiers.targetSpeed.err;
 
 		if (this.hillIdx != -1) {
