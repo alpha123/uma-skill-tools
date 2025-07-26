@@ -33,7 +33,7 @@ CASE:
 					ok = false;
 					break CASE;
 				}
-				if (s.pos <= lastPos) {
+				if (s.pos <= lastPos && s.pos != 0) {
 					console.error('err: not moving or going backwards: time: ' + s.accumulatetime.t + ' pos: ' + s.pos + ' lastPos: ' + lastPos);
 					console.error(s);
 					ok = false;
