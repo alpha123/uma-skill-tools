@@ -1,4 +1,4 @@
-const assert = require('assert').strict;
+import { strict as assert } from 'node:assert';
 
 export type Phase = 0 | 1 | 2 | 3;
 export const enum Surface { Turf = 1, Dirt }

@@ -1,4 +1,4 @@
-const assert = require('assert').strict;
+import { strict as assert } from 'node:assert';
 
 import { Strategy, Aptitude, HorseParameters, StrategyHelpers } from './HorseTypes';
 import { CourseData, CourseHelpers, Phase } from './CourseData';

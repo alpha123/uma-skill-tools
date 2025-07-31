@@ -1,4 +1,4 @@
-const assert = require('assert').strict;
+import { strict as assert } from 'node:assert';
 
 import { Node, NodeType } from '../ConditionParser';
 import {

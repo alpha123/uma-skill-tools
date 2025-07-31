@@ -1,4 +1,4 @@
-const assert = require('assert').strict;
+import { strict as assert } from 'node:assert';
 
 import * as fs from 'fs';
 import { format } from 'util';
