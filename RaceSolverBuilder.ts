@@ -392,6 +392,7 @@ export class RaceSolverBuilder {
 	_horse: HorseDesc | null
 	_pacer: HorseDesc | null
 	_pacerSkills: PendingSkill[]
+	_guaranteeSkillActivation = true
 	_rng: Rule30CARng
 	_parser: {parse: any, tokenize: any}
 	_skills: {id: string, p: Perspective}[]
@@ -439,6 +440,11 @@ export class RaceSolverBuilder {
 
 	mood(mood: Mood) {
 		this._raceParams.mood = mood;
+		return this;
+	}
+
+	guaranteeSkillActivation(guaranteeSkillActivation: boolean) {
+		this._guaranteeSkillActivation = guaranteeSkillActivation;
 		return this;
 	}
 
@@ -645,9 +651,11 @@ export class RaceSolverBuilder {
 
 	*build() {
 		let horse = buildBaseStats(this._horse, this._raceParams.mood);
+		const horseBaseWisdom = horse.wisdom;
 		let solverRng = new Rule30CARng(this._rng.int32());
 		let pacerRng = new Rule30CARng(this._rng.int32());  // need this even if _pacer is null in case we forked from/to something with a pacer
 															// (to keep the rngs in sync)
+		let solverSkillActivationRng = new Rule30CARng(this._rng.int32());
 
 		const pacerHorse = this._pacer ? buildAdjustedStats(buildBaseStats(this._pacer, this._raceParams.mood), this._course, this._raceParams.groundCondition) : null;
 
@@ -667,7 +675,18 @@ export class RaceSolverBuilder {
 		horse = buildAdjustedStats(horse, this._course, this._raceParams.groundCondition);
 
 		for (let i = 0; i < this.nsamples; ++i) {
-			const skills = skilldata.map((sd,sdi) => ({
+			const backupSolverSkillActivationRng = new Rule30CARng(solverSkillActivationRng.lo, solverSkillActivationRng.hi);
+
+			// Works since skills only activate once in the simulator. Probably would need to change this if that gets implemented
+			// without putting duplicate skills in the skill array
+			const skills = (
+				this._guaranteeSkillActivation ? skilldata :
+					skilldata.filter(
+						(sd) => sd.skillId < 200000 || // Check if it's a guaranteed unique skill
+						(sd.effects[0].baseDuration < 0 && sd.skillId != 201561 && sd.skillId != 201562) || // Check if it's a green skill with no duration and not lucky seven
+						solverSkillActivationRng.random() < Math.max(0.2, 1 - 90 / horseBaseWisdom) // Check if it passes the skill activation chance
+					)
+			).map((sd,sdi) => ({
 				skillId: sd.skillId,
 				perspective: sd.perspective,
 				rarity: sd.rarity,
@@ -702,6 +721,7 @@ export class RaceSolverBuilder {
 				--i;
 				pacerRng = backupPacerRng;
 				solverRng = backupSolverRng;
+				solverSkillActivationRng = backupSolverSkillActivationRng;
 			}
 		}
 	}
