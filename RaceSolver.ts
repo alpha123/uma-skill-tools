@@ -6,15 +6,6 @@ import { Region } from './Region';
 import { PRNG, Rule30CARng } from './Random';
 import type { HpPolicy } from './HpPolicy';
 
-declare var CC_GLOBAL: boolean
-
-// for the browser builds, CC_GLOBAL is defined by esbuild as true/false
-// for node however we have to manually define it as false
-// annoyingly we can't use `var` here to define it locally because esbuild rewrites all uses of that to not be
-// replaced by the define
-// not entirely happy with this solution
-if (typeof CC_GLOBAL == "undefined") global.CC_GLOBAL = false;
-
 namespace Speed {
 	export const StrategyPhaseCoefficient = Object.freeze([
 		[], // strategies start numbered at 1
@@ -40,10 +31,8 @@ function baseTargetSpeed(horse: HorseParameters, course: CourseData, phase: Phas
 
 function lastSpurtSpeed(horse: HorseParameters, course: CourseData) {
 	let v = (baseTargetSpeed(horse, course, 2) + 0.01 * baseSpeed(course)) * 1.05 +
-		Math.sqrt(500.0 * horse.speed) * Speed.DistanceProficiencyModifier[horse.distanceAptitude] * 0.002;
-	if (!CC_GLOBAL) {
-		v += Math.pow(450.0 * horse.guts, 0.597) * 0.0001;
-	}
+		Math.sqrt(500.0 * horse.speed) * Speed.DistanceProficiencyModifier[horse.distanceAptitude] * 0.002 +
+		Math.pow(450.0 * horse.guts, 0.597) * 0.0001;
 	return v;
 }
 
@@ -620,7 +609,7 @@ export class RaceSolver {
 			case SkillType.Recovery:
 				++this.activateCountHeal;
 				this.hp.recover(ef.modifier);
-				if (!CC_GLOBAL && this.phase >= 2 && !this.isLastSpurt) {
+				if (this.phase >= 2 && !this.isLastSpurt) {
 					this.updateLastSpurtState();
 				}
 				break;
