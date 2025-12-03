@@ -41,13 +41,6 @@ while ($select->fetch) {
 	my $jpname = Encode::decode('utf8', $utf8name);
 	my $enname = $ennames{$id} || '';
 
-	if ($id eq '100701') {  # Seirios
-		$skills->{'100701-1'} = [$jpname . '（人気4番以下）', $enname . ' (popularity 4 or lower)'];
-		$skills->{'900701-1'} = [$jpname . '（人気4番以下）（継承）', $enname . ' (popularity 4 or lower) (inherited)'];
-		$jpname .= '（人気1～3番）';
-		$enname .= ' (popularity 1-3)';
-	}
-
 	$skills->{$id} = [$jpname,$enname];
 	if ($id =~ /^1(\d+)/) {  # add inherited versions of uniques
 		$skills->{'9' . $1} = [$jpname . '（継承）',$enname . ' (inherited)'];
