@@ -109,6 +109,7 @@ export interface RaceState {
 	readonly isLastSpurt: boolean
 	readonly lastSpurtSpeed: number
 	readonly lastSpurtTransition: number
+	readonly isDownhillMode: boolean
 	readonly isPaceDown: boolean
 	readonly phase: Phase
 	readonly pos: number
@@ -189,6 +190,7 @@ export class RaceSolver {
 	rng: PRNG
 	gorosiRng: PRNG
 	paceEffectRng: PRNG
+	hillRng: PRNG[]
 	timers: Timer[]
 	startDash: boolean
 	startDelay: number
@@ -205,8 +207,11 @@ export class RaceSolver {
 	usedSkills: Set<string>
 	nHills: number
 	hillIdx: number
+	slopePer: number
 	hillStart: number[]
 	hillEnd: number[]
+	isDownhillMode: boolean
+	downhillTimer: Timer
 	activateCount: number[]
 	activateCountHeal: number
 	onSkillActivate: (s: RaceSolver, skillId: string, perspective: Perspective) => void
@@ -296,8 +301,6 @@ export class RaceSolver {
 			specialSkillDurationScaling: 1.0
 		};
 
-		this.initHills();
-
 		// must come before the first round of skill activations so concen etc can modify it
 		this.startDelay = 0.1 * this.rng.random();
 		if (this.pacer) {
@@ -315,6 +318,9 @@ export class RaceSolver {
 		this.minSpeed = 0.85 * baseSpeed(this.course) + Math.sqrt(200.0 * this.horse.guts) * 0.001;
 		this.startDash = true;
 		this.modifiers.accel.add(24.0);  // start dash accel
+
+		// comes after skill activations because if we start on a hill int greens affect our downhill mode check
+		this.initHills();
 
 		// similarly this must also come after the first round of skill activations
 		this.baseTargetSpeed = ([0,1,2] as Phase[]).map(phase => baseTargetSpeed(this.horse, this.course, phase));
@@ -343,13 +349,22 @@ export class RaceSolver {
 		this.hillStart = this.course.slopes.map(s => s.start).reverse();
 		this.hillEnd = this.course.slopes.map(s => s.start + s.length).reverse();
 		this.hillIdx = -1;
+
+		// keep separate rng instances for each hill so that they don't affect each others' downhill procs
+		// e.g. consider the case of having a single hillRng instance and a downhill speed skill procs. you'll spend less time on that hill and
+		// therefore roll the hill rng fewer times, which will then affect the next hill, and this could cause the bashin gain for the downhill
+		// speed skill to look larger or smaller than it actually is.
+		this.hillRng = this.course.slopes.map(_ => new Rule30CARng(this.rng.int32(), this.rng.int32()));
+		this.downhillTimer = this.getNewTimer();
+
 		if (this.hillStart.length > 0 && this.hillStart[this.hillStart.length - 1] == 0) {
-			if (this.course.slopes[0].slope > 0) {
-				this.hillIdx = 0;
-			} else {
-				this.hillEnd.pop();
-			}
+			this.hillIdx = 0;
+			this.slopePer = this.course.slopes[0].slope;
+			this.downhillTimer.t = 0;
+			this.downhillCheck(this.hillRng[0].random());
 			this.hillStart.pop();
+		} else {
+			this.slopePer = 0;
 		}
 	}
 
@@ -476,9 +491,11 @@ export class RaceSolver {
 		this.targetSpeed += this.sectionModifier[Math.floor(this.pos / this.sectionLength)];
 		this.targetSpeed += this.modifiers.targetSpeed.acc + this.modifiers.targetSpeed.err;
 
-		if (this.hillIdx != -1) {
+		if (this.isDownhillMode) {
+			this.targetSpeed += 0.3 + this.slopePer / 100000.0;
+		} else if (this.hillIdx != -1 && this.slopePer > 0) {
 			// recalculating this every frame is actually measurably faster than calculating the penalty for each slope ahead of time, somehow
-			this.targetSpeed -= this.course.slopes[this.hillIdx].slope / 10000.0 * 200.0 / this.horse.power;
+			this.targetSpeed -= this.slopePer / 10000.0 * 200.0 / this.horse.power;
 			this.targetSpeed = Math.max(this.targetSpeed, this.minSpeed);
 		}
 	}
@@ -492,21 +509,40 @@ export class RaceSolver {
 			this.accel = this.isPaceDown ? -0.5 : PhaseDeceleration[this.phase];
 			return;
 		}
-		this.accel = this.baseAccel[+(this.hillIdx != -1) * 3 + this.phase];
+		this.accel = this.baseAccel[+(this.slopePer > 0) * 3 + this.phase];
 		this.accel += this.modifiers.accel.acc + this.modifiers.accel.err;
+	}
+
+	downhillCheck(roll: number) {
+		if (this.slopePer < 0 && roll < this.horse.wisdom * 0.0004) {
+			this.onSkillActivate(this, 'downhill', Perspective.Self);
+			this.isDownhillMode = true;
+		}
 	}
 
 	updateHills() {
 		if (this.hillIdx == -1 && this.hillStart.length > 0 && this.pos >= this.hillStart[this.hillStart.length - 1]) {
-			if (this.course.slopes[this.nHills - this.hillStart.length].slope > 0) {
-				this.hillIdx = this.nHills - this.hillStart.length;
-			} else {
-				this.hillEnd.pop();
-			}
+			this.hillIdx = this.nHills - this.hillStart.length;
+			this.slopePer = this.course.slopes[this.hillIdx].slope;
+			this.downhillTimer.t = 0;
+			this.downhillCheck(this.hillRng[this.hillIdx].random());
 			this.hillStart.pop();
 		} else if (this.hillIdx != -1 && this.hillEnd.length > 0 && this.pos > this.hillEnd[this.hillEnd.length - 1]) {
 			this.hillIdx = -1;
+			this.slopePer = 0;
 			this.hillEnd.pop();
+			if (this.isDownhillMode) this.onSkillDeactivate(this, 'downhill', Perspective.Self);
+			this.isDownhillMode = false;
+		}
+		if (this.downhillTimer.t >= 1.0 && this.hillIdx != -1) {
+			const roll = this.hillRng[this.hillIdx].random();
+			if (this.isDownhillMode && roll > 0.8) {
+				this.onSkillDeactivate(this, 'downhill', Perspective.Self);
+				this.isDownhillMode = false;
+			} else if (!this.isDownhillMode) {
+				this.downhillCheck(roll);
+			}
+			this.downhillTimer.t = 0.0;
 		}
 	}
 
@@ -658,5 +694,6 @@ export class RaceSolver {
 		this.activeTargetSpeedSkills.forEach(callDeactivateHook);
 		this.activeCurrentSpeedSkills.forEach(callDeactivateHook);
 		this.activeAccelSkills.forEach(callDeactivateHook);
+		if (this.isDownhillMode) this.onSkillDeactivate(this, 'downhill', Perspective.Self);
 	}
 }

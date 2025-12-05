@@ -72,10 +72,6 @@ List of skills affected:
 
 All of these things should be doable with the current architecture and are planned for the near future.
 
-### Does not simulate downhill speedup mode
-
-The architecture now allows it to be doable in a way to usefully allow comparisons even though the effects are random.
-
 ### Does not simulate kakari
 
 Easily doable but no real point without tracking hp consumption since both simulations would always kakari at the same point during a comparison.

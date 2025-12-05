@@ -61,7 +61,9 @@ export class GameHpPolicy {
 		if (state.isPaceDown) {
 			modifier *= 0.6;
 		}
-		// TODO downhill mode
+		if (state.isDownhillMode) {
+			modifier *= 0.4;
+		}
 		return modifier;
 	}
 
