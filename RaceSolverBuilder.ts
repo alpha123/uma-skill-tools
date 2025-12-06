@@ -251,7 +251,7 @@ function buildSkillEffects(skill, perspective: Perspective) {
 	}));
 }
 
-export function buildSkillData(horse: HorseParameters, raceParams: PartialRaceParameters, course: CourseData, wholeCourse: RegionList, parser: {parse: any, tokenize: any}, skillId: string, perspective: Perspective, ignoreNullEffects: boolean = false) {
+export function buildSkillData(horse: HorseParameters, raceParams: PartialRaceParameters, course: CourseData, wholeCourse: RegionList, parser: {parse: any, tokenize: any}, skillId: string, perspective: Perspective, chance: number, ignoreNullEffects: boolean = false) {
 	if (!(skillId in skills)) {
 		throw new Error('bad skill ID ' + skillId);
 	}
@@ -295,6 +295,7 @@ export function buildSkillData(horse: HorseParameters, raceParams: PartialRacePa
 			triggers.push({
 				skillId: skillId,
 				perspective: perspective,
+				chance: chance,
 				// for some reason 1*/2* uniques, 1*/2* upgraded to 3*, and naturally 3* uniques all have different rarity (3, 4, 5 respectively)
 				rarity: rarity >= 3 && rarity <= 5 ? 3 : rarity,
 				samplePolicy: op.samplePolicy,
@@ -319,6 +320,7 @@ export function buildSkillData(horse: HorseParameters, raceParams: PartialRacePa
 		return [{
 			skillId: skillId,
 			perspective: perspective,
+			chance: chance,
 			rarity: rarity >= 3 && rarity <= 5 ? 3 : rarity,
 			samplePolicy: ImmediatePolicy,
 			regions: afterEnd,
@@ -390,9 +392,10 @@ export class RaceSolverBuilder {
 	_horse: HorseDesc | null
 	_pacer: HorseDesc | null
 	_pacerSkills: PendingSkill[]
+	_guaranteeSkillActivation = true
 	_rng: Rule30CARng
 	_parser: {parse: any, tokenize: any}
-	_skills: {id: string, p: Perspective}[]
+	_skills: {id: string, p: Perspective, chance: number}[]
 	_samplePolicyOverride: Map<string, ActivationSamplePolicy>
 	_extraSkillHooks: ((skilldata: SkillData[], horse: HorseParameters, course: CourseData) => void)[]
 	_onSkillActivate: (state: RaceSolver, skillId: string) => void
@@ -437,6 +440,11 @@ export class RaceSolverBuilder {
 
 	mood(mood: Mood) {
 		this._raceParams.mood = mood;
+		return this;
+	}
+
+	guaranteeSkillActivation(guaranteeSkillActivation: boolean) {
+		this._guaranteeSkillActivation = guaranteeSkillActivation;
 		return this;
 	}
 
@@ -602,8 +610,8 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
-	addSkill(skillId: string, perspective: Perspective = Perspective.Self, samplePolicy?: ActivationSamplePolicy) {
-		this._skills.push({id: skillId, p: perspective});
+	addSkill(skillId: string, perspective: Perspective = Perspective.Self, samplePolicy?: ActivationSamplePolicy, activationChance: number = 1) {
+		this._skills.push({id: skillId, p: perspective, chance: activationChance});
 		if (samplePolicy != null) {
 			this._samplePolicyOverride.set(skillId, samplePolicy);
 		}
@@ -632,6 +640,7 @@ export class RaceSolverBuilder {
 		clone._skills = this._skills.slice();
 		clone._onSkillActivate = this._onSkillActivate;
 		clone._onSkillDeactivate = this._onSkillDeactivate;
+		clone._guaranteeSkillActivation = this._guaranteeSkillActivation;
 
 		// NB. GOTCHA: if asitame is enabled, it closes over *our* horse and mood data, and not the clone's
 		// this is assumed to be fine, since fork() is intended to be used after everything is added except skills,
@@ -643,9 +652,11 @@ export class RaceSolverBuilder {
 
 	*build() {
 		let horse = buildBaseStats(this._horse, this._raceParams.mood);
+		const horseBaseWisdom = Math.max(1, horse.wisdom);
 		let solverRng = new Rule30CARng(this._rng.int32());
 		let pacerRng = new Rule30CARng(this._rng.int32());  // need this even if _pacer is null in case we forked from/to something with a pacer
 															// (to keep the rngs in sync)
+		let solverSkillActivationRng = new Rule30CARng(this._rng.int32());
 
 		const pacerHorse = this._pacer ? buildAdjustedStats(buildBaseStats(this._pacer, this._raceParams.mood), this._course, this._raceParams.groundCondition) : null;
 
@@ -654,7 +665,7 @@ export class RaceSolverBuilder {
 		Object.freeze(wholeCourse);
 
 		const makeSkill = buildSkillData.bind(null, horse, this._raceParams, this._course, wholeCourse, this._parser);
-		const skilldata = this._skills.flatMap(({id,p}) => makeSkill(id, p));
+		const skilldata = this._skills.flatMap(({id,p,chance}) => makeSkill(id, p, chance));
 		this._extraSkillHooks.forEach(h => h(skilldata, horse, this._course));
 		const triggers = skilldata.map(sd => {
 			const sp = this._samplePolicyOverride.get(sd.skillId) || sd.samplePolicy;
@@ -665,14 +676,34 @@ export class RaceSolverBuilder {
 		horse = buildAdjustedStats(horse, this._course, this._raceParams.groundCondition);
 
 		for (let i = 0; i < this.nsamples; ++i) {
-			const skills = skilldata.map((sd,sdi) => ({
+			const backupSolverSkillActivationRng = new Rule30CARng(solverSkillActivationRng.lo, solverSkillActivationRng.hi);
+			let skillActivationRng = new Rule30CARng(solverSkillActivationRng.int32(), solverSkillActivationRng.int32());
+			let otherSkillActivationRng = new Rule30CARng(solverSkillActivationRng.int32(), solverSkillActivationRng.int32());
+			// Works since skills only activate once in the simulator. Probably would need to change this if that gets implemented
+			// without putting duplicate skills in the skill array
+			let allSkills = skilldata.map((sd,sdi) => ({
 				skillId: sd.skillId,
 				perspective: sd.perspective,
 				rarity: sd.rarity,
 				trigger: triggers[sdi][i % triggers[sdi].length],
 				extraCondition: sd.extraCondition,
-				effects: sd.effects
+				effects: sd.effects,
+				chance: sd.chance
 			}));
+			const skills = this._guaranteeSkillActivation ? allSkills: allSkills.filter(
+				(sd) =>
+				sd.skillId < 200000 || // Check if it's a guaranteed unique skill
+				sd.perspective == Perspective.Any || // Don't run any skill activation check if the target is any
+				(
+				sd.perspective == Perspective.Other && // Check if the skill came from the other uma
+				otherSkillActivationRng.random() < sd.chance // and run an independent skill activation check if it did
+				) ||
+				(
+				sd.perspective == Perspective.Self && // Check if the skill came from the current uma
+				((sd.effects[0].baseDuration < 0 && sd.skillId != 201561 && sd.skillId != 201562) || // Check if it's a green skill with no duration and not lucky seven
+				skillActivationRng.random() < Math.max(0.2, 1 - 90.0 / horseBaseWisdom)) // Check if it passes the skill activation chance
+				)
+			);
 
 			const backupPacerRng = new Rule30CARng(pacerRng.lo, pacerRng.hi);
 			const backupSolverRng = new Rule30CARng(solverRng.lo, solverRng.hi);
@@ -700,6 +731,7 @@ export class RaceSolverBuilder {
 				--i;
 				pacerRng = backupPacerRng;
 				solverRng = backupSolverRng;
+				solverSkillActivationRng = backupSolverSkillActivationRng;
 			}
 		}
 	}
