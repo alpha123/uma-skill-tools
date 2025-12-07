@@ -233,9 +233,10 @@ export interface SkillData {
 	skillId: string
 	perspective?: Perspective
 	rarity: SkillRarity
-	samplePolicy: ActivationSamplePolicy,
-	regions: RegionList,
-	extraCondition: DynamicCondition,
+	wisdomCheck: boolean
+	samplePolicy: ActivationSamplePolicy
+	regions: RegionList
+	extraCondition: DynamicCondition
 	effects: SkillEffect[]
 }
 
@@ -299,6 +300,7 @@ export function buildSkillData(horse: HorseParameters, raceParams: PartialRacePa
 				perspective: perspective,
 				// for some reason 1*/2* uniques, 1*/2* upgraded to 3*, and naturally 3* uniques all have different rarity (3, 4, 5 respectively)
 				rarity: rarity >= 3 && rarity <= 5 ? 3 : rarity,
+				wisdomCheck: skills[skillId].wisdomCheck,
 				samplePolicy: op.samplePolicy,
 				regions: regions,
 				extraCondition: extraCondition,
@@ -322,6 +324,7 @@ export function buildSkillData(horse: HorseParameters, raceParams: PartialRacePa
 			skillId: skillId,
 			perspective: perspective,
 			rarity: rarity >= 3 && rarity <= 5 ? 3 : rarity,
+			wisdomCheck: skills[skillId].wisdomCheck,
 			samplePolicy: ImmediatePolicy,
 			regions: afterEnd,
 			extraCondition: (_) => false,
@@ -395,6 +398,8 @@ export class RaceSolverBuilder {
 	_rng: Rule30CARng
 	_parser: {parse: any, tokenize: any}
 	_skills: {id: string, p: Perspective}[]
+	_wisdomRolls: ReadonlyMap<string,number>
+	_useWisdomChecks: boolean
 	_samplePolicyOverride: Map<string, ActivationSamplePolicy>
 	_extraSkillHooks: ((skilldata: SkillData[], horse: HorseParameters, course: CourseData) => void)[]
 	_onSkillActivate: (state: RaceSolver, skillId: string) => void
@@ -417,6 +422,8 @@ export class RaceSolverBuilder {
 		this._rng = new Rule30CARng(Math.floor(Math.random() * (-1 >>> 0)) >>> 0);
 		this._parser = defaultParser;
 		this._skills = [];
+		this._wisdomRolls = new Map();
+		this._useWisdomChecks = false;
 		this._samplePolicyOverride = new Map();
 		this._extraSkillHooks = [];
 		this._onSkillActivate = null;
@@ -604,6 +611,12 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
+	withWisdomChecks(rolls: ReadonlyMap<string,number>) {
+		this._useWisdomChecks = true;
+		rolls.forEach((p,id) => this._wisdomRolls.set(id,p));
+		return this;
+	}
+
 	addSkill(skillId: string, perspective: Perspective = Perspective.Self, samplePolicy?: ActivationSamplePolicy) {
 		this._skills.push({id: skillId, p: perspective});
 		if (samplePolicy != null) {
@@ -632,6 +645,9 @@ export class RaceSolverBuilder {
 		clone._rng = new Rule30CARng(this._rng.lo, this._rng.hi);
 		clone._parser = this._parser;
 		clone._skills = this._skills.slice();
+		clone._useWisdomChecks = this._useWisdomChecks;
+		clone._wisdomRolls = new Map(this._wisdomRolls.entries());
+		clone._samplePolicyOverride = new Map(this._samplePolicyOverride.entries());
 		clone._onSkillActivate = this._onSkillActivate;
 		clone._onSkillDeactivate = this._onSkillDeactivate;
 
@@ -655,6 +671,8 @@ export class RaceSolverBuilder {
 		wholeCourse.push(new Region(0, this._course.distance));
 		Object.freeze(wholeCourse);
 
+		const skillActivationChance = Math.max(1 - 90 / horse.wisdom, 0.2);
+
 		const makeSkill = buildSkillData.bind(null, horse, this._raceParams, this._course, wholeCourse, this._parser);
 		const skilldata = this._skills.flatMap(({id,p}) => makeSkill(id, p));
 		this._extraSkillHooks.forEach(h => h(skilldata, horse, this._course));
@@ -667,7 +685,7 @@ export class RaceSolverBuilder {
 		horse = buildAdjustedStats(horse, this._course, this._raceParams.groundCondition);
 
 		for (let i = 0; i < this.nsamples; ++i) {
-			const skills = skilldata.map((sd,sdi) => ({
+			const skills = skilldata.filter(sd => !this._useWisdomChecks || !sd.wisdomCheck || this._wisdomRolls.get(sd.skillId) < skillActivationChance).map((sd,sdi) => ({
 				skillId: sd.skillId,
 				perspective: sd.perspective,
 				rarity: sd.rarity,

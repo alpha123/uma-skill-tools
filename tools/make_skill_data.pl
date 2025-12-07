@@ -35,7 +35,7 @@ sub patch_modifier {
 }
 
 my $select = $db->prepare(<<SQL
-SELECT id, rarity,
+SELECT id, rarity, activate_lot,
        precondition_1, condition_1,
        float_ability_time_1,
        ability_type_1_1, float_ability_value_1_1, target_type_1_1,
@@ -55,7 +55,7 @@ SQL
 $select->execute;
 
 my (
-	$id, $rarity,
+	$id, $rarity, $activate_lot,
 	$precondition_1, $condition_1,
 	$float_ability_time_1,
 	$ability_type_1_1, $float_ability_value_1_1, $target_type_1_1,
@@ -70,7 +70,7 @@ my (
 );
 
 $select->bind_columns(\(
-	$id, $rarity,
+	$id, $rarity, $activate_lot,
 	$precondition_1, $condition_1,
 	$float_ability_time_1,
 	$ability_type_1_1, $float_ability_value_1_1, $target_type_1_1,
@@ -114,7 +114,7 @@ while ($select->fetch) {
 			effects => \@effects_2
 		};
 	}
-	$skills->{$id} = {rarity => $rarity, alternatives => \@triggers};
+	$skills->{$id} = {rarity => $rarity, wisdomCheck => $activate_lot, alternatives => \@triggers};
 }
 
 my $json = JSON::PP->new;
