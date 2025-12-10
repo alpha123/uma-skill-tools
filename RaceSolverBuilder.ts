@@ -674,7 +674,7 @@ export class RaceSolverBuilder {
 		const skillActivationChance = Math.max(1 - 90 / horse.wisdom, 0.2);
 
 		const makeSkill = buildSkillData.bind(null, horse, this._raceParams, this._course, wholeCourse, this._parser);
-		const skilldata = this._skills.flatMap(({id,p}) => makeSkill(id, p));
+		const skilldata = this._skills.flatMap(({id,p}) => makeSkill(id, p)).filter(sd => !this._useWisdomChecks || !sd.wisdomCheck || this._wisdomRolls.get(sd.skillId) < skillActivationChance);
 		this._extraSkillHooks.forEach(h => h(skilldata, horse, this._course));
 		const triggers = skilldata.map(sd => {
 			const sp = this._samplePolicyOverride.get(sd.skillId) || sd.samplePolicy;
@@ -685,7 +685,7 @@ export class RaceSolverBuilder {
 		horse = buildAdjustedStats(horse, this._course, this._raceParams.groundCondition);
 
 		for (let i = 0; i < this.nsamples; ++i) {
-			const skills = skilldata.filter(sd => !this._useWisdomChecks || !sd.wisdomCheck || this._wisdomRolls.get(sd.skillId) < skillActivationChance).map((sd,sdi) => ({
+			const skills = skilldata.map((sd,sdi) => ({
 				skillId: sd.skillId,
 				perspective: sd.perspective,
 				rarity: sd.rarity,
