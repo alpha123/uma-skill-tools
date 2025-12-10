@@ -398,7 +398,7 @@ export class RaceSolverBuilder {
 	_rng: Rule30CARng
 	_parser: {parse: any, tokenize: any}
 	_skills: {id: string, p: Perspective}[]
-	_wisdomRolls: ReadonlyMap<string,number>
+	_wisdomSeeds: Map<string,[number,number]>
 	_useWisdomChecks: boolean
 	_samplePolicyOverride: Map<string, ActivationSamplePolicy>
 	_extraSkillHooks: ((skilldata: SkillData[], horse: HorseParameters, course: CourseData) => void)[]
@@ -422,7 +422,7 @@ export class RaceSolverBuilder {
 		this._rng = new Rule30CARng(Math.floor(Math.random() * (-1 >>> 0)) >>> 0);
 		this._parser = defaultParser;
 		this._skills = [];
-		this._wisdomRolls = new Map();
+		this._wisdomSeeds = new Map();
 		this._useWisdomChecks = false;
 		this._samplePolicyOverride = new Map();
 		this._extraSkillHooks = [];
@@ -611,9 +611,9 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
-	withWisdomChecks(rolls: ReadonlyMap<string,number>) {
+	withWisdomChecks(seeds: ReadonlyMap<string,[number,number]>) {
 		this._useWisdomChecks = true;
-		rolls.forEach((p,id) => this._wisdomRolls.set(id,p));
+		seeds.forEach((seed,id) => this._wisdomSeeds.set(id,seed));
 		return this;
 	}
 
@@ -646,7 +646,7 @@ export class RaceSolverBuilder {
 		clone._parser = this._parser;
 		clone._skills = this._skills.slice();
 		clone._useWisdomChecks = this._useWisdomChecks;
-		clone._wisdomRolls = new Map(this._wisdomRolls.entries());
+		clone._wisdomSeeds = new Map(this._wisdomSeeds.entries());
 		clone._samplePolicyOverride = new Map(this._samplePolicyOverride.entries());
 		clone._onSkillActivate = this._onSkillActivate;
 		clone._onSkillDeactivate = this._onSkillDeactivate;
@@ -674,12 +674,13 @@ export class RaceSolverBuilder {
 		const skillActivationChance = Math.max(1 - 90 / horse.wisdom, 0.2);
 
 		const makeSkill = buildSkillData.bind(null, horse, this._raceParams, this._course, wholeCourse, this._parser);
-		const skilldata = this._skills.flatMap(({id,p}) => makeSkill(id, p)).filter(sd => !this._useWisdomChecks || !sd.wisdomCheck || this._wisdomRolls.get(sd.skillId) < skillActivationChance);
+		const skilldata = this._skills.flatMap(({id,p}) => makeSkill(id, p));
 		this._extraSkillHooks.forEach(h => h(skilldata, horse, this._course));
 		const triggers = skilldata.map(sd => {
 			const sp = this._samplePolicyOverride.get(sd.skillId) || sd.samplePolicy;
 			return sp.sample(sd.regions, this.nsamples, this._rng)
 		});
+		const wisdomRngs = new Map(Array.from(this._wisdomSeeds.entries()).map(([id,seed]) => [id,new Rule30CARng(...seed)]));
 
 		// must come after skill activations are decided because conditions like base_power depend on base stats
 		horse = buildAdjustedStats(horse, this._course, this._raceParams.groundCondition);
@@ -689,10 +690,11 @@ export class RaceSolverBuilder {
 				skillId: sd.skillId,
 				perspective: sd.perspective,
 				rarity: sd.rarity,
+				wisdomCheck: sd.wisdomCheck,
 				trigger: triggers[sdi][i % triggers[sdi].length],
 				extraCondition: sd.extraCondition,
 				effects: sd.effects
-			}));
+			})).filter(sd => !this._useWisdomChecks || !sd.wisdomCheck || wisdomRngs.get(sd.skillId).random() < skillActivationChance);
 
 			const backupPacerRng = new Rule30CARng(pacerRng.lo, pacerRng.hi);
 			const backupSolverRng = new Rule30CARng(solverRng.lo, solverRng.hi);
