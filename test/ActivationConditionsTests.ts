@@ -37,12 +37,13 @@ prop('ensure same args produce same samplePolicy instance', forAll(policyClasses
     return Object.is(c1.samplePolicy, c2.samplePolicy);
 }));
 
-prop('ensure different args produce same samplePolicy instance', forAll(fc.tuple(policyClassesArb, policyClassesArb), ([arb1, arb2]) => {
+prop('ensure different args produce different samplePolicy instance', forAll(fc.tuple(policyClassesArb, policyClassesArb), ([arb1, arb2]) => {
     fc.pre(arb1.cls === arb2.cls);
     const conditionFactory: (...args: [...ConstructorParameters<typeof arb1.cls>, Partial<Condition>]) => Condition = distributionRandomFactory(arb1.cls);
     const c1: Condition = conditionFactory(...arb1.args, {});
     const c2: Condition = conditionFactory(...arb2.args, {});
     
+    // Deep equality check for args.
     if (JSON.stringify(arb1.args) !== JSON.stringify(arb2.args)) {
       return !Object.is(c1.samplePolicy, c2.samplePolicy);
     }
