@@ -214,7 +214,7 @@ export function random(o: Partial<Condition>) {
 // ive tried various things to make this return a [xRandom,noopXRandom] pair but seem to run into some typescript bugs
 // or something
 // it doesnt really make sense to me
-function distributionRandomFactory<Ts extends unknown[]>(cls: new (...args: Ts) => DistributionRandomPolicy) {
+export function distributionRandomFactory<Ts extends unknown[]>(cls: new (...args: Ts) => DistributionRandomPolicy) {
 	// Cache is maintained via closure of the returned function.
 	const cache: Record<string, DistributionRandomPolicy> = Object.create(null);
 	return function (...args: [...Ts, Partial<Condition>]) {
