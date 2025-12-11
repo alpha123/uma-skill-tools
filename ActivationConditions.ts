@@ -215,12 +215,12 @@ export function random(o: Partial<Condition>) {
 // or something
 // it doesnt really make sense to me
 function distributionRandomFactory<Ts extends unknown[]>(cls: new (...args: Ts) => DistributionRandomPolicy) {
-	const cache = Object.create(null);
-	return function (...args: [...clsArgs: Ts, o: Partial<Condition>]) {
-		const o = args.pop();
-		const key = args.join(',');
-		// we know that after pop() args is just Ts but typescript doesn't, hence the cast
-		const policy = key in cache ? cache[key] : (cache[key] = Object.freeze(new cls(...args as unknown as Ts)));
+	// Cache is maintained via closure of the returned function.
+	const cache: Record<string, DistributionRandomPolicy> = Object.create(null);
+	return function (...args: [...Ts, Partial<Condition>]) {
+		const ctorArgs = args.slice(0, -1) as Ts;
+		const key = ctorArgs.join(',');
+		const policy = key in cache ? cache[key] : (cache[key] = Object.freeze(new cls(...ctorArgs)));
 		return Object.assign({
 			samplePolicy: policy,
 			filterEq: notSupported,
@@ -229,7 +229,7 @@ function distributionRandomFactory<Ts extends unknown[]>(cls: new (...args: Ts) 
 			filterLte: notSupported,
 			filterGt: notSupported,
 			filterGte: notSupported
-		}, o);
+		}, args[args.length - 1]);
 	};
 }
 
