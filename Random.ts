@@ -21,7 +21,6 @@ export interface PRNG {
 export class Rule30CARng {
 	hi: number
 	lo: number
-	next: number
 
 	constructor(seedLo: number, seedHi: number = 0) {
 		this.hi = seedHi >>> 0;
@@ -77,18 +76,10 @@ export class Rule30CARng {
 	// (obviously, would also have to also change random() to use int32())
 	// this is about 3× slower
 
-	int32 = this.int32_first
-
-	int32_first() {
+	int32() {
 		let [x,y] = this.pair();
-		this.next = y;
-		this.int32 = this.int32_second;
+		// just throw away y because keeping that state around increases the size of rng instances and makes them harder to clone
 		return x;
-	}
-
-	int32_second() {
-		this.int32 = this.int32_first;
-		return this.next;
 	}
 
 	random() {
