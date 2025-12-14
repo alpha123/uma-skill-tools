@@ -37,15 +37,18 @@ export namespace CourseHelpers {
 		assert(Orientation.hasOwnProperty(orientation));
 	}
 
-	export function isSortedByStart(arr: readonly {readonly start: number}[]) {
-		// typescript seems to have some trouble inferring tuple types, presumably because it doesn't really
-		// sufficiently distinguish tuples from arrays
-		// so dance around a little bit to make it work
-		const init: [boolean, number] = [true, -1];
-		function isSorted(a: [boolean, number], b: {start: number}): [boolean,number] {
-			return [a[0] && b.start > a[1], b.start];
+	export function isSortedByStart<T extends { readonly start: number}>(arr: readonly T[]): boolean {
+		let last = -Infinity;
+
+		for (const item of arr) {
+			if (item.start <= last) {
+				return false;
+			}
+
+			last = item.start;
 		}
-		return arr.reduce(isSorted, init)[0];
+
+		return true;
 	}
 
 	export function phaseStart(distance: number, phase: Phase) {
