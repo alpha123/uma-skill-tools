@@ -245,13 +245,11 @@ function isTarget(self: Perspective, targetType: SkillTarget) {
 }
 
 function buildSkillEffects(skill, perspective: Perspective) {
-	// im on a really old version of node and cant use flatMap
-	return skill.effects.reduce((acc,ef) => {
-		if (isTarget(perspective, ef.target) && SkillType.hasOwnProperty(ef.type)) {
-			acc.push({type: ef.type, baseDuration: skill.baseDuration / 10000, modifier: ef.modifier / 10000});
-		}
-		return acc;
-	}, []);
+	return skill.effects.map(ef => ({
+		type: SkillType.hasOwnProperty(ef.type) && isTarget(perspective, ef.target) ? ef.type : SkillType.Noop,
+		baseDuration: skill.baseDuration / 10000,
+		modifier: ef.modifier / 10000
+	}));
 }
 
 export function buildSkillData(horse: HorseParameters, raceParams: PartialRaceParameters, course: CourseData, wholeCourse: RegionList, parser: {parse: any, tokenize: any}, skillId: string, perspective: Perspective, ignoreNullEffects: boolean = false) {

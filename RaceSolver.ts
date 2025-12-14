@@ -129,6 +129,7 @@ export const enum Perspective {
 }
 
 export const enum SkillType {
+	Noop = 0,
 	SpeedUp = 1,
 	StaminaUp = 2,
 	PowerUp = 3,
@@ -604,6 +605,8 @@ export class RaceSolver {
 				(s.rarity == SkillRarity.Evolution ? this.modifiers.specialSkillDurationScaling : 1);  // TODO should probably be awakened skills
 				                                                                                       // and not just pinks
 			switch (ef.type) {
+			case SkillType.Noop:
+				break;
 			case SkillType.SpeedUp:
 				this.horse.speed = Math.max(this.horse.speed + ef.modifier, 1);
 				break;
@@ -643,7 +646,7 @@ export class RaceSolver {
 				});
 				break;
 			case SkillType.Recovery:
-				++this.activateCountHeal;
+				if (s.perspective == Perspective.Self) ++this.activateCountHeal;
 				this.hp.recover(ef.modifier);
 				if (this.phase >= 2 && !this.isLastSpurt) {
 					this.updateLastSpurtState();
@@ -657,7 +660,7 @@ export class RaceSolver {
 				break;
 			}
 		});
-		++this.activateCount[this.phase];
+		if (s.perspective == Perspective.Self) ++this.activateCount[this.phase];
 		this.usedSkills.add(s.skillId);
 		this.onSkillActivate(this, s.skillId, s.perspective);
 	}
