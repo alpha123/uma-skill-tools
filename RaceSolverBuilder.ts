@@ -567,6 +567,7 @@ export class RaceSolverBuilder {
 					skillId: 'asitame',
 					perspective: Perspective.Self,
 					rarity: SkillRarity.White,
+					wisdomCheck: false,
 					regions: spurtStart,
 					samplePolicy: ImmediatePolicy,
 					extraCondition: (_) => true,
@@ -601,6 +602,7 @@ export class RaceSolverBuilder {
 					skillId: 'staminasyoubu',
 					perspective: Perspective.Self,
 					rarity: SkillRarity.White,
+					wisdomCheck: false,
 					regions: spurtStart,
 					samplePolicy: ImmediatePolicy,
 					// TODO do current speed skills count toward reaching max speed or not?
