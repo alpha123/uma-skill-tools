@@ -607,6 +607,12 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	infront_near_lane_time: noopErlangRandom(3, 2.0),
+	is_activate_any_skill: immediate({
+		filterEq(regions: RegionList, one: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
+			assert(one == 1, 'must be is_activate_any_skill==1');
+			return [regions, (s: RaceState) => s.activateCountLastFrame > 0] as [RegionList, DynamicCondition];
+		}
+	}),
 	is_activate_other_skill_detail: immediate({
 		filterEq(regions: RegionList, one: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
 			assert(one == 1, 'must be is_activate_other_skill_detail==1');

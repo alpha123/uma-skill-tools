@@ -108,6 +108,7 @@ export interface RaceState {
 	readonly accumulatetime: Readonly<Timer>
 	readonly activateCount: readonly number[]
 	readonly activateCountHeal: number
+	readonly activateCountLastFrame: number
 	readonly currentSpeed: number
 	readonly isLastSpurt: boolean
 	readonly lastSpurtSpeed: number
@@ -217,6 +218,7 @@ export class RaceSolver {
 	downhillTimer: Timer
 	activateCount: number[]
 	activateCountHeal: number
+	activateCountLastFrame: number
 	onSkillActivate: (s: RaceSolver, skillId: string, perspective: Perspective) => void
 	onSkillDeactivate: (s: RaceSolver, skillId: string, perspective: Perspective) => void
 	sectionLength: number
@@ -279,6 +281,7 @@ export class RaceSolver {
 		this.activeAccelSkills = [];
 		this.activateCount = [0,0,0];
 		this.activateCountHeal = 0;
+		this.activateCountLastFrame = 0;
 		this.onSkillActivate = params.onSkillActivate || noop;
 		this.onSkillDeactivate = params.onSkillDeactivate || noop;
 		this.sectionLength = this.course.distance / 24.0;
@@ -587,6 +590,7 @@ export class RaceSolver {
 				this.onSkillDeactivate(this, s.skillId, s.perspective);
 			}
 		}
+		let activateCountThisFrame = 0;
 		for (let i = this.pendingSkills.length; --i >= 0;) {
 			const s = this.pendingSkills[i];
 			if (this.pos >= s.trigger.end || this.pendingRemoval.has(s.skillId)) {  // NB. `Region`s are half-open [start,end) intervals. If pos == end we are out of the trigger.
@@ -596,8 +600,12 @@ export class RaceSolver {
 			} else if (this.pos >= s.trigger.start && s.extraCondition(this)) {
 				this.activateSkill(s);
 				this.pendingSkills.splice(i,1);
+				// TODO i don't exactly like hardcoding these; perhaps need some isRealSkill property on `PendingSkill` or move these mechanics out
+				// of RaceSolverBuilder and into RaceSolver
+				if (s.skillId != 'asitame' && s.skillId != 'staminasyoubu') ++activateCountThisFrame;
 			}
 		}
+		this.activateCountLastFrame = activateCountThisFrame;
 	}
 
 	activateSkill(s: PendingSkill) {
