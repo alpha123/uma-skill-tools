@@ -87,6 +87,9 @@ export class Timer {
 	constructor(public t: number) {}
 }
 
+// kahan-babuška-neumaier sum since we are specifically interested in the property that for any sequence
+// a₀…aₙ adding aᵢ in any order interleaved with -aᵢ in any other order always results in acc+err == 0.0
+// strictly speaking, i'm not sure this guarantees that, but in practice it does very well
 export class CompensatedAccumulator {
 	constructor(public acc: number, public err: number = 0.0) {}
 
