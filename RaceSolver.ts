@@ -660,6 +660,7 @@ export class RaceSolver {
 				if (s.perspective == Perspective.Self) ++this.activateCountHeal;
 				this.hp.recover(ef.modifier);
 				if (this.phase >= 2 && !this.isLastSpurt) {
+					this.lastSpurtTransition = -1;  // reset
 					this.updateLastSpurtState();
 				}
 				break;
