@@ -1,17 +1,17 @@
 import { HorseParameters, Strategy, Aptitude } from './HorseTypes';
 import { CourseData, CourseHelpers, DistanceType } from './CourseData';
 import { Region, RegionList } from './Region';
-import { Rule30CARng } from './Random';
+import { PRNG, Rule30CARng } from './Random';
 import { Conditions, random, immediate, noopRandom } from './ActivationConditions';
 import { ActivationSamplePolicy, ImmediatePolicy } from './ActivationSamplePolicy';
 import { getParser } from './ConditionParser';
 import { RaceSolver, RaceState, PendingSkill, DynamicCondition, SkillType, SkillRarity, SkillEffect, Perspective } from './RaceSolver';
 import { Mood, GroundCondition, Weather, Season, Time, Grade, RaceParameters } from './RaceParameters';
-import { GameHpPolicy, NoopHpPolicy } from './HpPolicy';
+import { HpPolicy, GameHpPolicy, NoopHpPolicy } from './HpPolicy';
 
 import skills from './data/skill_data.json';
 
-type PartialRaceParameters = Omit<{ -readonly [K in keyof RaceParameters]: RaceParameters[K] }, 'skillId'>;
+export type PartialRaceParameters = Omit<{ -readonly [K in keyof RaceParameters]: RaceParameters[K] }, 'skillId'>;
 
 export interface HorseDesc {
 	speed: number
@@ -398,6 +398,7 @@ export class RaceSolverBuilder {
 	_skills: {id: string, p: Perspective}[]
 	_wisdomSeeds: Map<string,[number,number]>
 	_useWisdomChecks: boolean
+	_hpPolicyFactory: (course: CourseData, params: PartialRaceParameters, rng: PRNG) => HpPolicy
 	_samplePolicyOverride: Map<string, ActivationSamplePolicy>
 	_extraSkillHooks: ((skilldata: SkillData[], horse: HorseParameters, course: CourseData) => void)[]
 	_onSkillActivate: (state: RaceSolver, skillId: string) => void
@@ -422,6 +423,7 @@ export class RaceSolverBuilder {
 		this._skills = [];
 		this._wisdomSeeds = new Map();
 		this._useWisdomChecks = false;
+		this._hpPolicyFactory = (course, params, rng) => new GameHpPolicy(course, params.groundCondition, rng);
 		this._samplePolicyOverride = new Map();
 		this._extraSkillHooks = [];
 		this._onSkillActivate = null;
@@ -531,6 +533,11 @@ export class RaceSolverBuilder {
 				effects: [{type: SkillType.Accel, baseDuration: 1.2, modifier: 0.2}]
 			}];
 		}
+		return this;
+	}
+
+	hpPolicyFactory(fn: (course: CourseData, params: PartialRaceParameters, rng: PRNG) => HpPolicy) {
+		this._hpPolicyFactory = fn;
 		return this;
 	}
 
@@ -645,6 +652,7 @@ export class RaceSolverBuilder {
 		clone._skills = this._skills.slice();
 		clone._useWisdomChecks = this._useWisdomChecks;
 		clone._wisdomSeeds = new Map(this._wisdomSeeds.entries());
+		clone._hpPolicyFactory = this._hpPolicyFactory;
 		clone._samplePolicyOverride = new Map(this._samplePolicyOverride.entries());
 		clone._onSkillActivate = this._onSkillActivate;
 		clone._onSkillDeactivate = this._onSkillDeactivate;
@@ -710,7 +718,7 @@ export class RaceSolverBuilder {
 				course: this._course,
 				skills,
 				pacer,
-				hp: new GameHpPolicy(this._course, this._raceParams.groundCondition, new Rule30CARng(solverRng.int32())),
+				hp: this._hpPolicyFactory(this._course, this._raceParams, new Rule30CARng(solverRng.int32())),
 				rng: solverRng,
 				onSkillActivate: this._onSkillActivate,
 				onSkillDeactivate: this._onSkillDeactivate
