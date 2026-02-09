@@ -693,16 +693,23 @@ export class RaceSolverBuilder {
 		// must come after skill activations are decided because conditions like base_power depend on base stats
 		horse = buildAdjustedStats(horse, this._course, this._raceParams.groundCondition);
 
+		let lastskills = null;
 		for (let i = 0; i < this.nsamples; ++i) {
-			const skills = skilldata.map((sd,sdi) => ({
-				skillId: sd.skillId,
-				perspective: sd.perspective,
-				rarity: sd.rarity,
-				wisdomCheck: sd.wisdomCheck,
-				trigger: triggers[sdi][i % triggers[sdi].length],
-				extraCondition: sd.extraCondition,
-				effects: sd.effects
-			})).filter(sd => !this._useWisdomChecks || !sd.wisdomCheck || wisdomRngs.get(sd.skillId).random() < skillActivationChance);
+			let skills;
+			if (lastskills != null) {
+				skills = lastskills;
+				lastskills = null;
+			} else {
+				skills = skilldata.map((sd,sdi) => ({
+					skillId: sd.skillId,
+					perspective: sd.perspective,
+					rarity: sd.rarity,
+					wisdomCheck: sd.wisdomCheck,
+					trigger: triggers[sdi][i % triggers[sdi].length],
+					extraCondition: sd.extraCondition,
+					effects: sd.effects
+				})).filter(sd => !this._useWisdomChecks || !sd.wisdomCheck || wisdomRngs.get(sd.skillId).random() < skillActivationChance);
+			}
 
 			const backupPacerRng = new Rule30CARng(pacerRng.lo, pacerRng.hi);
 			const backupSolverRng = new Rule30CARng(solverRng.lo, solverRng.hi);
@@ -730,6 +737,7 @@ export class RaceSolverBuilder {
 				--i;
 				pacerRng = backupPacerRng;
 				solverRng = backupSolverRng;
+				lastskills = skills;
 			}
 		}
 	}
