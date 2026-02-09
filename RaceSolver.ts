@@ -248,8 +248,8 @@ export class RaceSolver {
 		skills: PendingSkill[],
 		hp: HpPolicy,
 		pacer?: RaceSolver,
-		onSkillActivate?: (s: RaceSolver, skillId: string) => void,
-		onSkillDeactivate?: (s: RaceSolver, skillId: string) => void
+		onSkillActivate?: (s: RaceSolver, skillId: string, perspective: Perspective) => void,
+		onSkillDeactivate?: (s: RaceSolver, skillId: string, perspective: Perspective) => void
 	}) {
 		// clone since green skills may modify the stat values
 		this.horse = Object.assign({}, params.horse);
