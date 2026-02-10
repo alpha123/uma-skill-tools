@@ -432,8 +432,8 @@ export class RaceSolverBuilder {
 		this._onSkillDeactivate = null;
 	}
 
-	seed(seed: number) {
-		this._rng = new Rule30CARng(seed);
+	seed(lo: number, hi: number = 0) {
+		this._rng = new Rule30CARng(lo, hi);
 		return this;
 	}
 
