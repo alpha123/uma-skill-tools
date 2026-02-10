@@ -387,8 +387,18 @@ function orderOutFilter(rate: number) {
 
 export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	accumulatetime: immediate({
-		filterGte(regions: RegionList, t: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
-			return [regions, (s: RaceState) => s.accumulatetime.t >= t] as [RegionList, DynamicCondition];
+		filterGte(regions: RegionList, t: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
+			// unfortunate hack. because we end up selecting only one region to use as the trigger, if the dynamic
+			// condition isn't satisfied there the skill fails to activate, even if it would have activated in a later
+			// region. this mostly affects じゃじゃウマ娘, where if a track starts with a hill but it takes longer than 10s
+			// to traverse the hill the skill fails to activate entirely, when really it should activate on a later hill
+			// but we threw the other regions out because it has the immediate sample policy.
+			// so resolve this by estimating where the skill can't possibly activate and then statically filtering that
+			// area out. due to the need to accelerate as well as factors like pace down etc, baseSpeed * t typically
+			// overestimates the distance traveled so use 0.85 * baseSpeed * t instead.
+			const baseSpeed = 20.0 - (course.distance - 2000) / 1000.0;
+			const rest = new Region(0.85 * baseSpeed * t, course.distance);
+			return [regions.rmap(r => r.intersect(rest)), (s: RaceState) => s.accumulatetime.t >= t] as [RegionList, DynamicCondition];
 		}
 	}),
 	activate_count_all: immediate({
