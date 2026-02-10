@@ -398,6 +398,7 @@ export class RaceSolverBuilder {
 	_skills: {id: string, p: Perspective}[]
 	_wisdomSeeds: Map<string,[number,number]>
 	_useWisdomChecks: boolean
+	_otherRawWisdom: number
 	_hpPolicyFactory: (course: CourseData, params: PartialRaceParameters, rng: PRNG) => HpPolicy
 	_samplePolicyOverride: Map<string, ActivationSamplePolicy>
 	_extraSkillHooks: ((skilldata: SkillData[], horse: HorseParameters, course: CourseData) => void)[]
@@ -423,6 +424,7 @@ export class RaceSolverBuilder {
 		this._skills = [];
 		this._wisdomSeeds = new Map();
 		this._useWisdomChecks = false;
+		this._otherRawWisdom = 2000;  // no good default really
 		this._hpPolicyFactory = (course, params, rng) => new GameHpPolicy(course, params.groundCondition, rng);
 		this._samplePolicyOverride = new Map();
 		this._extraSkillHooks = [];
@@ -624,6 +626,11 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
+	otherRawWisdom(wisdom: number) {
+		this._otherRawWisdom = wisdom;
+		return this;
+	}
+
 	addSkill(skillId: string, perspective: Perspective = Perspective.Self, samplePolicy?: ActivationSamplePolicy) {
 		this._skills.push({id: skillId, p: perspective});
 		if (samplePolicy != null) {
@@ -654,6 +661,7 @@ export class RaceSolverBuilder {
 		clone._skills = this._skills.slice();
 		clone._useWisdomChecks = this._useWisdomChecks;
 		clone._wisdomSeeds = new Map(this._wisdomSeeds.entries());
+		clone._otherRawWisdom = this._otherRawWisdom;
 		clone._hpPolicyFactory = this._hpPolicyFactory;
 		clone._samplePolicyOverride = new Map(this._samplePolicyOverride.entries());
 		clone._onSkillActivate = this._onSkillActivate;
@@ -679,7 +687,10 @@ export class RaceSolverBuilder {
 		wholeCourse.push(new Region(0, this._course.distance));
 		Object.freeze(wholeCourse);
 
-		const skillActivationChance = Math.max(1 - 90 / horse.wisdom, 0.2);
+		const otherBaseWisdom = adjustOvercap(this._otherRawWisdom) * (1 + 0.02 * this._raceParams.mood);
+		// Self = 1, Other = 2, Any = 3
+		// not clear that "always activate" is the correct behavior for Perspective.Any, however, that's not used under normal usage
+		const skillActivationChance = [0.0, Math.max(1 - 90 / horse.wisdom, 0.2), Math.max(1 - 90 / otherBaseWisdom, 0.2), 1.0];
 
 		const makeSkill = buildSkillData.bind(null, horse, this._raceParams, this._course, wholeCourse, this._parser);
 		const skilldata = this._skills.flatMap(({id,p}) => makeSkill(id, p));
@@ -708,7 +719,7 @@ export class RaceSolverBuilder {
 					trigger: triggers[sdi][i % triggers[sdi].length],
 					extraCondition: sd.extraCondition,
 					effects: sd.effects
-				})).filter(sd => !this._useWisdomChecks || !sd.wisdomCheck || wisdomRngs.get(sd.skillId).random() < skillActivationChance);
+				})).filter(sd => !this._useWisdomChecks || !sd.wisdomCheck || wisdomRngs.get(sd.skillId).random() < skillActivationChance[sd.perspective]);
 			}
 
 			const backupPacerRng = new Rule30CARng(pacerRng.lo, pacerRng.hi);
