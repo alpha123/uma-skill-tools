@@ -29,6 +29,8 @@ sub patch_modifier {
 	);
 	if (grep(/^$id$/, @scenario_skills)) {
 		return $value * 1.2;
+	} elsif ($id == 202031 || $id == 202032 || $id == 104901111) {  # あやしげな作戦 and variants
+		return $value * 0.04;  # should be random 0%-4%, TODO remove when dynamic scaling is implemented
 	} else {
 		return $value;
 	}
