@@ -899,7 +899,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		filterGt: notSupported,
 		filterGte: notSupported
 	},
-	popularity: noopImmediate,
+	popularity: valueFilter((_0: CourseData, _1: HorseParameters, extra: RaceParameters) => extra.popularity),
 	post_number: (function () {
 		function gateBlock(s: RaceState, numUmas: number) {
 			const gateNumber = s.gateRoll % numUmas;  // modulo result guaranteed to be uniformly distributed due to the properties of s.gateRoll
