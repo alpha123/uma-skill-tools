@@ -68,7 +68,7 @@ while ($get_courses->fetch) {
 		next;
 	}
 
-	my $events = decode_json(do { local(@ARGV, $/) = "$course_event_params/$id.json"; <> })->{courseParams};
+	my $events = decode_json(do { local(@ARGV, $/) = "$course_event_params/$id/CourseParamTable.json"; <> })->{courseParams};
 	my @corners;
 	my @straights;
 	my @slopes;
