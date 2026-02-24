@@ -399,6 +399,7 @@ export class RaceSolverBuilder {
 	_wisdomSeeds: Map<string,[number,number]>
 	_useWisdomChecks: boolean
 	_otherRawWisdom: number
+	_otherMood: Mood
 	_hpPolicyFactory: (course: CourseData, params: PartialRaceParameters, rng: PRNG) => HpPolicy
 	_samplePolicyOverride: Map<string, ActivationSamplePolicy>
 	_extraSkillHooks: ((skilldata: SkillData[], horse: HorseParameters, course: CourseData) => void)[]
@@ -425,6 +426,7 @@ export class RaceSolverBuilder {
 		this._wisdomSeeds = new Map();
 		this._useWisdomChecks = false;
 		this._otherRawWisdom = 2000;  // no good default really
+		this._otherMood = 2;
 		this._hpPolicyFactory = (course, params, rng) => new GameHpPolicy(course, params.groundCondition, rng);
 		this._samplePolicyOverride = new Map();
 		this._extraSkillHooks = [];
@@ -626,8 +628,9 @@ export class RaceSolverBuilder {
 		return this;
 	}
 
-	otherRawWisdom(wisdom: number) {
+	otherRawWisdom(wisdom: number, mood?: Mood) {
 		this._otherRawWisdom = wisdom;
+		this._otherMood = mood != null ? mood : this._raceParams.mood;
 		return this;
 	}
 
@@ -662,6 +665,7 @@ export class RaceSolverBuilder {
 		clone._useWisdomChecks = this._useWisdomChecks;
 		clone._wisdomSeeds = new Map(this._wisdomSeeds.entries());
 		clone._otherRawWisdom = this._otherRawWisdom;
+		clone._otherMood = this._otherMood;
 		clone._hpPolicyFactory = this._hpPolicyFactory;
 		clone._samplePolicyOverride = new Map(this._samplePolicyOverride.entries());
 		clone._onSkillActivate = this._onSkillActivate;
@@ -687,7 +691,7 @@ export class RaceSolverBuilder {
 		wholeCourse.push(new Region(0, this._course.distance));
 		Object.freeze(wholeCourse);
 
-		const otherBaseWisdom = adjustOvercap(this._otherRawWisdom) * (1 + 0.02 * this._raceParams.mood);
+		const otherBaseWisdom = adjustOvercap(this._otherRawWisdom) * (1 + 0.02 * this._otherMood);
 		// Self = 1, Other = 2, Any = 3
 		// not clear that "always activate" is the correct behavior for Perspective.Any, however, that's not used under normal usage
 		const skillActivationChance = [0.0, Math.max(1 - 90 / horse.wisdom, 0.2), Math.max(1 - 90 / otherBaseWisdom, 0.2), 1.0];
