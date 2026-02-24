@@ -8,7 +8,7 @@ binmode(STDOUT, ':encoding(UTF-8)');
 use DBI;
 use DBD::SQLite::Constants qw(:file_open);
 use JSON::PP;
-use Encoding qw(encode decode);
+use Encode qw(encode decode);
 
 my $json = JSON::PP->new;
 $json->canonical(1);
