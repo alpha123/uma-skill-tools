@@ -673,6 +673,7 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 			return [10101, 10103, 10104, 10105].indexOf(course.raceTrackId) == -1 ? regions : new RegionList();
 		}
 	}),
+	is_exist_skill_id: noopImmediate,
 	is_finalcorner: immediate({
 		filterEq(regions: RegionList, flag: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
 			assert(flag == 0 || flag == 1, 'must be is_finalcorner==0 or is_finalcorner==1');
