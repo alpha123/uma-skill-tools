@@ -56,7 +56,7 @@ export class GameHpPolicy {
 		this.subparAcceptChance = Math.round((15.0 + 0.05 * horse.wisdom) * 1000);
 	}
 
-	getStatusModifier(state: {isPaceDown: boolean, isDownhillMode: boolean}) {
+	getStatusModifier(state: {isPaceDown: boolean, isDownhillMode: boolean, isKakari: boolean}) {
 		let modifier = 1.0;
 		if (state.isPaceDown) {
 			modifier *= 0.6;
@@ -64,10 +64,13 @@ export class GameHpPolicy {
 		if (state.isDownhillMode) {
 			modifier *= 0.4;
 		}
+		if (state.isKakari) {
+			modifier *= 1.6;
+		}
 		return modifier;
 	}
 
-	hpPerSecond(state: {phase: Phase, isPaceDown: boolean, isDownhillMode: boolean}, velocity: number) {
+	hpPerSecond(state: {phase: Phase, isPaceDown: boolean, isDownhillMode: boolean, isKakari: boolean}, velocity: number) {
 		const gutsModifier = state.phase >= 2 ? this.gutsModifier : 1.0;
 		return 20.0 * Math.pow(velocity - this.baseSpeed + 12.0, 2) / 144.0 *
 			this.getStatusModifier(state) * this.groundModifier * gutsModifier;
@@ -94,7 +97,7 @@ export class GameHpPolicy {
 	getLastSpurtPair(state: RaceState, maxSpeed: number, baseTargetSpeed2: number) {
 		const maxDist = this.distance - CourseHelpers.phaseStart(this.distance, 2);
 		const s = (maxDist - 60) / maxSpeed;
-		const lastleg = {phase: 2 as Phase, isPaceDown: false, isDownhillMode: false};
+		const lastleg = {phase: 2 as Phase, isPaceDown: false, isDownhillMode: false, isKakari: false};
 		if (this.hp >= this.hpPerSecond(lastleg, maxSpeed) * s) {
 			return [-1, maxSpeed] as [number, number];
 		}

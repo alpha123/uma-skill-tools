@@ -744,7 +744,11 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 	is_move_lane: noopErlangRandom(5, 1.0),
 	is_overtake: noopErlangRandom(1, 2.0),
 	is_surrounded: noopErlangRandom(3, 2.0),
-	is_temptation: noopImmediate,
+	is_temptation: immediate({
+		filterEq(regions: RegionList, b: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
+			return [regions, (s: RaceState) => +s.isKakari == b] as [RegionList, DynamicCondition];
+		}
+	}),
 	is_used_skill_id: immediate({
 		filterEq(regions: RegionList, skillId: number, _0: CourseData, _1: HorseParameters, extra: RaceParameters) {
 			return [regions, (s: RaceState) => s.usedSkills.has('' + skillId)] as [RegionList, DynamicCondition];
@@ -969,6 +973,11 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		(_: CourseData, horse: HorseParameters, extra: RaceParameters) => +StrategyHelpers.strategyMatches(horse.strategy, Strategy.Oikomi)
 	),
 	running_style_equal_popularity_one: noopImmediate,
+	// TODO because we actually implement kakari now these should no longer be sectionRandom. unfortunately, it's not really clear what
+	// a good way to implement these would be; tentatively considering some kind of publish/subscribe mechanism among `RaceSolver`s to
+	// allow them to communicate.
+	// this also applies to the temptation_count_behind/temptation_count_infront ones
+	// also TODO: implement the _opponent ones
 	running_style_temptation_count_nige: noopSectionRandom(2,9),
 	running_style_temptation_count_senko: noopSectionRandom(2,9),
 	running_style_temptation_count_sashi: noopSectionRandom(2,9),
@@ -1013,7 +1022,13 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		filterGt: notSupported,
 		filterGte: notSupported
 	},
-	temptation_count: noopImmediate,
+	temptation_count: immediate({
+		filterEq(regions: RegionList, n: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
+			return [regions, (s: RaceState) => s.temptationCount == n] as [RegionList, DynamicCondition];
+		}
+	}),
+	// see TODO for running_style_temptation_count_* above
+	// these also have _opponent variants
 	temptation_count_behind: noopSectionRandom(2,9),
 	temptation_count_infront: noopSectionRandom(2,9),
 	time: valueFilter((_0: CourseData, _1: HorseParameters, extra: RaceParameters) => extra.time),

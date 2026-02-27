@@ -115,6 +115,8 @@ export interface RaceState {
 	readonly lastSpurtTransition: number
 	readonly isDownhillMode: boolean
 	readonly isPaceDown: boolean
+	readonly isKakari: boolean
+	readonly temptationCount: number
 	readonly phase: Phase
 	readonly pos: number
 	readonly hp: Readonly<HpPolicy>
@@ -141,10 +143,12 @@ export const enum SkillType {
 	WisdomUp = 5,
 	Recovery = 9,
 	MultiplyStartDelay = 10,
+	ExtendKakari = 13,
 	SetStartDelay = 14,
 	CurrentSpeed = 21,
 	CurrentSpeedWithNaturalDeceleration = 22,
 	TargetSpeed = 27,
+	ModifyKakariChance = 29,
 	Accel = 31,
 	ActivateRandomGold = 37,
 	ExtendEvolvedDuration = 42
@@ -222,6 +226,11 @@ export class RaceSolver {
 	onSkillActivate: (s: RaceSolver, skillId: string, perspective: Perspective) => void
 	onSkillDeactivate: (s: RaceSolver, skillId: string, perspective: Perspective) => void
 	sectionLength: number
+	kakariStart: number
+	kakariDuration: number
+	kakariTimer: Timer
+	isKakari: boolean
+	temptationCount: number
 	pacer: RaceSolver | null
 	isPaceDown: boolean
 	posKeepMinThreshold: number
@@ -239,6 +248,7 @@ export class RaceSolver {
 		accel: CompensatedAccumulator
 		oneFrameAccel: number
 		specialSkillDurationScaling: number
+		kakariChance: number
 	}
 
 	constructor(params: {
@@ -304,7 +314,8 @@ export class RaceSolver {
 			currentSpeed: new CompensatedAccumulator(0.0),
 			accel: new CompensatedAccumulator(0.0),
 			oneFrameAccel: 0.0,
-			specialSkillDurationScaling: 1.0
+			specialSkillDurationScaling: 1.0,
+			kakariChance: 0.0
 		};
 
 		// must come before the first round of skill activations so concen etc can modify it
@@ -332,6 +343,23 @@ export class RaceSolver {
 		this.baseTargetSpeed = ([0,1,2] as Phase[]).map(phase => baseTargetSpeed(this.horse, this.course, phase));
 		this.lastSpurtSpeed = lastSpurtSpeed(this.horse, this.course);
 		this.lastSpurtTransition = -1;
+
+		// roll for section first and then do the check second to avoid rolling the rng a data-dependent number of times
+		// i.e., if we did the obvious thing and did if (kakariCheck(rng)) { kakariStart = f(rng); } then the rng advances
+		// a different number of times depending on wisdom, whereas in this order it always advances twice
+		this.kakariStart = (2 + this.rng.uniform(7)) * this.sectionLength;
+		if (this.rng.random() > Math.pow(0.65 / Math.log10(0.1 * this.horse.wisdom + 1), 2) + this.modifiers.kakariChance) {
+			this.kakariStart = this.course.distance + 9999;
+		}
+		// the way this works in the game is that it rolls for kakari to end every 3 seconds (max 12s), and then after exiting re-applies kakari
+		// for the duration of any kakari debuffs
+		// however, the kakari exit roll is not dependent on any runtime race information nor any horse/course/etc data. thus there's no difference
+		// between rolling k times here and instantiating a hypothetical kakariRng and rolling that k times at runtime. a corollary of this is that
+		// it doesn't matter whether we apply kakari debuffs after exiting or just extend the timer.
+		this.kakariDuration = 3.0 * [0.0, this.rng.random(), this.rng.random(), this.rng.random(), 1.0].findIndex(x => x > 0.45);
+		this.kakariTimer = this.getNewTimer();
+		this.isKakari = false;
+		this.temptationCount = 0;
 
 		this.sectionModifier = Array.from({length: 24}, () => {
 			const max = this.horse.wisdom / 5500.0 * Math.log10(this.horse.wisdom * 0.1);
@@ -429,6 +457,7 @@ export class RaceSolver {
 		this.updateHills();
 		this.updatePhase();
 		this.processSkillActivations();
+		this.updateKakari();
 		this.updatePositionKeep();
 		this.updateLastSpurtState();
 		this.updateTargetSpeed();
@@ -443,6 +472,18 @@ export class RaceSolver {
 		this.modifiers.oneFrameAccel = 0.0;
 	}
 
+	updateKakari() {
+		if (this.temptationCount == 0 && this.pos >= this.kakariStart) {
+			this.isKakari = true;
+			this.temptationCount = 1;
+			this.kakariTimer.t = -this.kakariDuration;
+			this.onSkillActivate(this, 'kakari', Perspective.Self);
+		} else if (this.isKakari && this.kakariTimer.t >= 0) {
+			this.isKakari = false;
+			this.onSkillDeactivate(this, 'kakari', Perspective.Self);
+		}
+	}
+
 	updatePositionKeepNonNige() {
 		if (this.pos >= this.posKeepEnd) {
 			this.isPaceDown = false;
@@ -454,6 +495,7 @@ export class RaceSolver {
 			|| this.pos - this.posKeepEffectStart > this.sectionLength
 			|| this.activeTargetSpeedSkills.length > 0
 			|| this.activeCurrentSpeedSkills.length > 0
+			|| this.isKakari
 			) {
 				this.isPaceDown = false;
 				this.posKeepCooldown.t = -3.0;
@@ -463,6 +505,7 @@ export class RaceSolver {
 			   this.pacer.pos - this.pos < this.posKeepMinThreshold
 			&& this.activeTargetSpeedSkills.length == 0
 			&& this.activeCurrentSpeedSkills.length == 0
+			&& !this.isKakari
 			&& this.posKeepCooldown.t >= 0
 		) {
 			this.isPaceDown = true;
@@ -595,6 +638,8 @@ export class RaceSolver {
 			const s = this.pendingSkills[i];
 			if (this.pos >= s.trigger.end || this.pendingRemoval.has(s.skillId)) {  // NB. `Region`s are half-open [start,end) intervals. If pos == end we are out of the trigger.
 				// skill failed to activate
+				// FIXME removing from pendingSkills here means that 564 will never pick a skill that already passed its chance to activate
+				// (and failed) before 564 procced, which is wrong
 				this.pendingSkills.splice(i,1);
 				this.pendingRemoval.delete(s.skillId);
 			} else if (this.pos >= s.trigger.start && s.extraCondition(this)) {
@@ -637,12 +682,18 @@ export class RaceSolver {
 			case SkillType.MultiplyStartDelay:
 				this.startDelay *= ef.modifier;
 				break;
+			case SkillType.ExtendKakari:
+				if (this.isKakari) this.kakariTimer.t -= ef.modifier;
+				break;
 			case SkillType.SetStartDelay:
 				this.startDelay = ef.modifier;
 				break;
 			case SkillType.TargetSpeed:
 				this.modifiers.targetSpeed.add(ef.modifier);
 				this.activeTargetSpeedSkills.push({skillId: s.skillId, perspective: s.perspective, durationTimer: this.getNewTimer(-scaledDuration), modifier: ef.modifier});
+				break;
+			case SkillType.ModifyKakariChance:
+				this.modifiers.kakariChance += ef.modifier / 100.0;
 				break;
 			case SkillType.Accel:
 				this.modifiers.accel.add(ef.modifier);
