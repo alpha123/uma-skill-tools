@@ -401,7 +401,7 @@ export class RaceSolverBuilder {
 	_otherRawWisdom: number
 	_otherMood: Mood
 	_hpPolicyFactory: (course: CourseData, params: PartialRaceParameters, rng: PRNG) => HpPolicy
-	_samplePolicyOverride: Map<string, ActivationSamplePolicy>
+	_samplePolicyOverride: Map<string, ActivationSamplePolicy>[]
 	_extraSkillHooks: ((skilldata: SkillData[], horse: HorseParameters, course: CourseData) => void)[]
 	_onSkillActivate: (state: RaceSolver, skillId: string) => void
 	_onSkillDeactivate: (state: RaceSolver, skillId: string) => void
@@ -428,7 +428,7 @@ export class RaceSolverBuilder {
 		this._otherRawWisdom = 2000;  // no good default really
 		this._otherMood = 2;
 		this._hpPolicyFactory = (course, params, rng) => new GameHpPolicy(course, params.groundCondition, rng);
-		this._samplePolicyOverride = new Map();
+		this._samplePolicyOverride = [null, new Map(), new Map(), new Map()];  // Perspectives start at 1
 		this._extraSkillHooks = [];
 		this._onSkillActivate = null;
 		this._onSkillDeactivate = null;
@@ -637,7 +637,7 @@ export class RaceSolverBuilder {
 	addSkill(skillId: string, perspective: Perspective = Perspective.Self, samplePolicy?: ActivationSamplePolicy) {
 		this._skills.push({id: skillId, p: perspective});
 		if (samplePolicy != null) {
-			this._samplePolicyOverride.set(skillId, samplePolicy);
+			this._samplePolicyOverride[perspective].set(skillId, samplePolicy);
 		}
 		return this;
 	}
@@ -667,7 +667,7 @@ export class RaceSolverBuilder {
 		clone._otherRawWisdom = this._otherRawWisdom;
 		clone._otherMood = this._otherMood;
 		clone._hpPolicyFactory = this._hpPolicyFactory;
-		clone._samplePolicyOverride = new Map(this._samplePolicyOverride.entries());
+		clone._samplePolicyOverride = this._samplePolicyOverride.map(m => m == null ? null : new Map(m.entries()));
 		clone._onSkillActivate = this._onSkillActivate;
 		clone._onSkillDeactivate = this._onSkillDeactivate;
 
@@ -700,7 +700,7 @@ export class RaceSolverBuilder {
 		const skilldata = this._skills.flatMap(({id,p}) => makeSkill(id, p));
 		this._extraSkillHooks.forEach(h => h(skilldata, horse, this._course));
 		const triggers = skilldata.map(sd => {
-			const sp = this._samplePolicyOverride.get(sd.skillId) || sd.samplePolicy;
+			const sp = this._samplePolicyOverride[sd.perspective].get(sd.skillId) || sd.samplePolicy;
 			return sp.sample(sd.regions, this.nsamples, this._rng)
 		});
 		const wisdomRngs = new Map(Array.from(this._wisdomSeeds.entries()).map(([id,seed]) => [id,new Rule30CARng(...seed)]));
