@@ -119,6 +119,11 @@ export class GameHpPolicy {
 			const spurtDistance = spurtDuration * speed + 60;
 			candidates.push([this.distance - spurtDistance, speed]);
 		}
+		if (candidates.length == 0) {
+			// maxSpeed - 0.1 < baseTargetSpeed2. this can happen if the uma has very low speed, e.g. 1
+			// not clear what the correct thing to do actually is, but opt for never starting spurt
+			return [this.distance, maxSpeed] as [number, number];
+		}
 		candidates.sort((a,b) =>
 			((a[0] - state.pos) / baseTargetSpeed2 + (this.distance - a[0]) / a[1]) -
 			((b[0] - state.pos) / baseTargetSpeed2 + (this.distance - b[0]) / b[1]));
