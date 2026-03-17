@@ -944,6 +944,14 @@ export const Conditions: {[cond: string]: Condition} = Object.freeze({
 		}
 	}),
 	rotation: valueFilter((course: CourseData, _: HorseParameters, extra: RaceParameters) => course.turn),
+	run_at_full_speed_random: random({
+		filterEq(regions: RegionList, one: number, course: CourseData, _: HorseParameters, extra: RaceParameters) {
+			assert(one == 1, 'must be run_at_full_speed_random==1');
+			// TODO proc conditions are not known yet
+			const bounds = new Region(CourseHelpers.phaseStart(course.distance, 3), course.distance);
+			return regions.rmap(r => r.intersect(bounds));
+		}
+	}),
 	running_style: immediate({
 		filterEq(regions: RegionList, strategy: number, _: CourseData, horse: HorseParameters, extra: RaceParameters) {
 			StrategyHelpers.assertIsStrategy(strategy);
