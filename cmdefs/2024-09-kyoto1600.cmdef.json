@@ -1,0 +1,26 @@
+{
+	"courseid": 10805,
+	"season": "autumn",
+	"groundCondition": "good",
+	"weather": "sunny",
+	"baseStats": {
+		"speed": 1750,
+		"stamina": 800,
+		"power": 1300,
+		"guts": 1300,
+		"wisdom": 1100
+	},
+	"presupposedSkills": {
+		"nige": [900201],
+		"senkou": [900511, 900101],
+		"sasi": [900271],
+		"oikomi": [900271]
+	},
+	"totalUmas": 12,
+	"strategyPositions": {
+		"nige": [1],
+		"senkou": [1,2,3,4,5],
+		"sasi": [4,5,6,7,8,9],
+		"oikomi": [4,5,6,7,8,9,10,11,12]
+	}
+}
